@@ -1016,4 +1016,4 @@ uv run --locked python scripts/verify_desktop_upgrade.py --bundle .cache/desktop
 说明书核对日期：2026-10-17。以当前源码、配置类型和隔离验收核对；历史部署记录不代表已开启真实模型或 RAG。
 
 
-??????? EXE ??????????[????](docs/maintenance-cn.md)?
+维护检查、实际 EXE 服务复用与验收边界见[维护手册](docs/maintenance-cn.md)。
