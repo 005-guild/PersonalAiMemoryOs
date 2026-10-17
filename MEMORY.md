@@ -1,5 +1,12 @@
 # MEMORY.md
 
+## NEXT-01/03 quality and cold-boot preparation (2026-10-18)
+
+- Added a tracked six-note/ten-query Chinese corpus and a zero-call human-review packet generator. Three draft-analysis cases and four cited-QA review cases remain not_run; no paid budget was consumed and no real generation-quality gate is marked complete. Packet: .cache/quality-review/589aa2da510e4a28bbadfff8cf02291b/.
+- Added read-only Windows boot evidence and comparison. Baseline .cache/cold-boot/5c789d7e30cb48ec8dd95e47804faccf/report.json records existing services and the desktop being closed/unavailable; subsequent same-boot verification correctly returned pending. The user explicitly forbids reboot. No reboot, service stop or formal configuration change.
+- Desktop-service/cold-boot focused suite: 32 passed. Added moved relative-project binding and missing-resource rejection tests; physical cold boot and real entire-stack relocation remain pending, distinct from these path-contract tests.
+
+
 ## NEXT-02 isolated full restore drill (2026-10-18)
 
 - Added strict backup/configuration manifest verification and new-directory restoration support, with 12 tests passed. Reject incomplete, tampered, duplicate, traversal/device-path and unlisted-vault inputs before publishing a copy. SQLite connections are explicitly closed before Windows directory rename.

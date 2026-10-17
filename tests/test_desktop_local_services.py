@@ -48,6 +48,29 @@ def setup_local_startup(tmp_path, monkeypatch):
                            settings=settings, calls=calls)
 
 
+def test_relative_project_binding_follows_an_entire_isolated_stack_move(setup_local_startup, tmp_path):
+    value = setup_local_startup
+    old_parent = tmp_path / "before"
+    old_parent.mkdir()
+    source = old_parent / "runtime"
+    value.project.rename(source)
+    portable = old_parent / "portable"
+    portable.mkdir()
+    assert services._project_directory(portable, "../runtime") == source.resolve()
+    moved = tmp_path / "中文 新位置"
+    old_parent.rename(moved)
+    assert services._project_directory(moved / "portable", "../runtime") == (moved / "runtime").resolve()
+    with pytest.raises((OSError, ValueError)):
+        services._project_directory(moved / "portable", str(source))
+
+
+def test_relocated_stack_without_runtime_resources_is_refused(setup_local_startup):
+    value = setup_local_startup
+    (value.project / ".tools/ollama/ollama.exe").unlink()
+    with pytest.raises(ValueError, match="missing"):
+        services._project_directory(value.root, value.configuration["project_root"])
+
+
 @pytest.mark.parametrize("mode", ["rag_off", "absent", "disabled"])
 def test_inactive_startup_has_no_child_log_or_proxy_changes(setup_local_startup, monkeypatch, mode):
     value = setup_local_startup
