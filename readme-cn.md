@@ -2,7 +2,7 @@
 
 [English README](README.md) · [RAG 配置指南](docs/rag-guide-cn.md) · [全部配置参数](docs/config-reference-cn.md)
 
-适用版本：**0.7.0**；数据库版本：**0005**。本文介绍已实现的功能和操作，不代表已替你启用模型或搬迁资料。桌面安装固定在 `dist/PersonalAiMemoryOs-0.6.6/`；文件夹沿用原名，应用版本以窗口和接口显示为准。
+适用版本：**0.8.0**；数据库版本：**0006**。本文介绍应用功能和操作，不代表已替你启用模型。桌面安装固定在 `dist/PersonalAiMemoryOs-0.6.6/`；文件夹沿用原名，应用版本以窗口和接口显示为准。
 
 应用的完整流程是：
 
@@ -21,7 +21,8 @@
 | 批量导入知乎 Markdown 或 JSON | [6. 资料导入](#imports) |
 | 编辑笔记、批量删除、恢复 | [7. 知识笔记](#knowledge) |
 | 填写 DeepSeek 等 AI 接口 | [8. AI 配置](#ai)、[完整配置参考](docs/config-reference-cn.md) |
-| 生成、检查并采纳知识草稿 | [9. AI 草稿](#drafts) |
+| 提交分析、检查并采纳草稿 | [9. AI 分析与草稿箱](#drafts) |
+| 单独管理解析和问答 Prompt | [9.2 Prompt 中心](#prompt-center) |
 | 用外部编辑器维护 Markdown | [10. Markdown 同步](#markdown) |
 | 开启 RAG，需要哪些服务、怎么填 | [11. RAG 配置与启用](#rag)、[逐步配置指南](docs/rag-guide-cn.md) |
 | 搜索、提问、阅读引用 | [12. 搜索与问答](#search) |
@@ -217,12 +218,14 @@ Compose 只传入 `environment:` 中显式列出的变量。宿主机 `.env` 有
 
 | 页面 | Hash 路由 | 用途 |
 | --- | --- | --- |
-| 设置 | `#/settings` | 编辑 AI 配置、查看运行和存储位置 |
+| 设置 | `#/settings` | 编辑 AI／RAG 配置、主动连接测试、查看运行和存储位置 |
 | 概览 | `#/` | 查看实际数量、状态和常用入口 |
 | 资料库 | `#/sources` | 同标题分组、分页排序、查看和维护各条资料 |
 | 资料导入 | `#/imports` | 知乎 Markdown／JSON 预演、提交和报告 |
 | 知识笔记 | `#/knowledge` | 新建、编辑、预览、批量软删除和恢复笔记 |
-| AI 草稿 | `#/processing` | 生成、筛选运行记录、查看和采纳 |
+| AI 分析 | `#/processing` | 选择资料、生成参数、提交和查看任务 |
+| 草稿箱 | `#/drafts` | 待采纳／已采纳草稿列表，独立详情与采纳 |
+| Prompt 中心 | `#/prompts` | 管理笔记解析与知识库问答两类模板 |
 | 搜索问答 | `#/search` | 语义搜索和单轮引用问答 |
 | 同步与系统 | `#/system` | 同步、冲突、索引任务和配置就绪状态 |
 
@@ -247,7 +250,7 @@ Compose 只传入 `environment:` 中显式列出的变量。宿主机 `.env` 有
 1. 打开“资料库”，输入标题关键词。匹配标题中的字面包含内容，不是语义搜索。
 2. 选择“正常／回收站／全部”。
 3. 选择排序项：标题、资料数量、来源类型、更新时间；可选升序／降序，也可点击列标题。
-4. 选择每页 20／50／100 个标题；点击数字页码，或输入页码跳转。
+4. 选择每页 10／20／50／100 个标题；点击数字页码，或输入页码跳转。
 
 筛选后先按**完全相同的标题**分组，排序整个结果，再分页。默认更新时间降序；切换排序回到第一页。列表页数按标题组计算，不按原始回答总数计算。
 
@@ -255,7 +258,7 @@ Compose 只传入 `environment:` 中显式列出的变量。宿主机 `.env` 有
 
 ### 5.2 同题下有多篇回答
 
-点击标题进入组内，分别查看每条资料的作者、原文链接和完整内容。组内每页 5／10／20 篇。可以针对某一条编辑、生成草稿或查看关联笔记和处理记录。
+点击标题进入组内，分别查看每条资料的作者、原文链接和摘要，按需展开全文。组内每页可选 10／20／50／100 篇；不会为一页 100 篇自动请求全部正文。可以针对某一条编辑、生成草稿或查看关联笔记和处理记录。
 
 “关联笔记”仅筛选已有笔记。从该筛选页再点“新建笔记”不会自动继承关联，仍需在编辑器中手动选择来源。
 
@@ -356,7 +359,7 @@ source: https://www.zhihu.com/question/123/answer/456
 
 分类是自由文字，例如“数据库／工程实践”，不是固定分类树。网页标签和概念按中文逗号、英文逗号或换行分隔并去重；需要把逗号作为单个标签内容时，不宜用该网页输入方式重新编辑。
 
-笔记列表可按标题、来源和“正常／回收站／全部”筛选。笔记页目前固定每页 20 条，使用上一页／下一页；资料库的数字跳页、每页条数和四种排序不适用于此页。
+笔记列表可按标题、来源和“正常／回收站／全部”筛选，支持 10／20／50／100 条每页、数字页码及输入页码跳转。筛选、修改每页条数后从第一页开始，返回列表保留位置。删除导致当前页变空时自动调整到有效页。
 
 ### 7.2 Markdown 预览
 
@@ -455,11 +458,11 @@ Docker 设置页只读；编辑宿主机文件后重新创建 API。自定义密
 所有字段、鉴权映射、可用范围和扩展参数禁用项见 [完整配置参考](docs/config-reference-cn.md)。
 
 <a id="drafts"></a>
-## 9. AI 草稿：生成、查看与采纳
+## 9. AI 分析与草稿箱
 
 ### 9.1 选择资料与处理方式
 
-1. 进入“AI 草稿”，在复选列表按标题搜索资料，每页 20 篇，可点页码或输入页码跳转。
+1. 进入“AI 分析”，在复选列表按标题搜索资料，每页可选 10／20／50／100 篇，可点页码或输入页码跳转。
 2. 单独勾选或“当前页全选”，跨页和搜索保留选择；最多 20 篇，顶部显示已选数量，可清空。
 3. 点击资料“预览”读取完整正文。选择列表按独立 Source 展示，不受资料库同标题分组影响。
 4. 选择就绪模型、Prompt 模板和处理方式。**逐篇生成**为每篇独立调用、产生独立草稿；**合并分析**将全部所选资料发送一次，产生一份综合草稿。
@@ -468,9 +471,12 @@ Docker 设置页只读；编辑宿主机文件后重新创建 API。自定义密
 
 逐篇模式逐条校验输入上限；合并模式按所有资料正文总长度校验。默认上限 20,000 字符，可配置，超限拒绝且不截断。token 上限不是保证输出长度；开启思考时还需核对供应商的预算规则，截断不会产生笔记。
 
-### 9.2 深度解析与模板管理
+<a id="prompt-center"></a>
+### 9.2 深度解析与独立 Prompt 中心
 
-设置中的“提示词模板”可新建、编辑、复制、预览、设默认或归档。内置完整的[知乎观点深度解析 Prompt](app/prompts/zhihu_deep_analysis_v1.md)为默认，保留八阶段：理解作者、拆解论证、事实逻辑、成立边界、作者视角、综合认知、个人行动、最终判断。另保留简要整理模板。
+左侧“Prompt 中心”可搜索、新建、编辑、复制、预览、设默认或归档模板，按“笔记解析”和“知识库问答”分开管理，各有自己的默认项和修订历史。用途创建后固定；AI 分析只选解析模板，引用问答只选问答模板。
+
+笔记解析内置完整的[知乎观点深度解析 Prompt](app/prompts/zhihu_deep_analysis_v1.md)为默认，保留八阶段：理解作者、拆解论证、事实逻辑、成立边界、作者视角、综合认知、个人行动、最终判断。另保留简要整理模板。问答模板可定制语气、重点、解释方式；只用知识库证据、逐段引用、原文摘录和固定输出合同仍统一校验。
 
 本版**不联网核验**。运行约束要求模型区分原文、推论与外部知识，无法确认的关键事实标记待验证，不编造已核实来源。输出里的原文引文逐字匹配对应资料；这一检查不能代替人工评价分析质量。
 
@@ -489,9 +495,11 @@ Docker 设置页只读；编辑宿主机文件后重新创建 API。自定义密
 
 “继续待处理”只处理尚未调用的条目；“重试失败项”会再次调用模型，需单独确认。退出或重启不自动重发付费调用。客户端断连先查任务记录；相同请求标识的相同提交返回原任务，不能用不断新建请求的方式排错。
 
+若提示正文为空或超过输入上限，先检查资料原文和 AI 分析区显示的正文字符数。逐篇模式按每篇校验，合并模式还校验所有正文总和；增加分页条数不会扩大输入上限。需要分析长文时，可减少本次选中资料，或在当前运行目录的 `.env` 调整 `MEMORY_OS_AI_MAX_INPUT_CHARS` 后重启，并核对模型实际上下文额度。程序会显示出错资料、实际字符数与上限，不会自动截断或发出被拒绝的模型调用。
+
 ### 9.4 审阅与采纳
 
-查看来源快照、摘要、分类、完整正文、引文、结束原因和用量，核对后采纳。采纳仍先进入笔记编辑，保存后返回首页；合并草稿关联全部来源。
+在独立“草稿箱”按标题、状态、来源或模型查找草稿；列表只呈现可审阅的待采纳与已采纳结果。打开独立详情查看来源快照、摘要、分类、完整正文、引文、结束原因和用量，核对后采纳。运行中、失败和中断项从 AI 分析的任务记录查看。采纳仍先进入笔记编辑，保存后返回首页；合并草稿关联全部来源。
 
 **生成和预览不会创建知识笔记或 Markdown。** 采纳才产生新 Knowledge。重复或并发采纳同一草稿返回原笔记，不重复创建。
 
@@ -579,6 +587,12 @@ concepts: [B+树]
 Embedding 首版支持 `openai_embeddings` 协议，请确认服务真正提供 `/embeddings`，不是只提供聊天接口。应用不会因为你填了一个模型名而安装或启动该模型。
 
 ### 11.2 配好 Embedding
+
+桌面推荐从左上角“设置”进入 **RAG 配置**：填写向量 profile 的地址、模型、真实维度、鉴权与密钥引用，选定默认 profile 和 Qdrant 地址。密钥留空保留已有值，保存只修改下次启动配置；需要生效时选择现在重启或稍后。
+
+先保持 RAG 关闭完成接入。参数预检不发模型请求；“检测 Qdrant”只读取服务信息；“测试 Embedding”需要单独确认，发送一次短测试文本，可能计费但不建索引。配置就绪、连接通过与检索质量是不同状态。操作系统环境托管项和 Docker 只读规则继续生效。
+
+启用并重启后会自动扫描全部合格笔记并向量化。更改模型、维度或模型 revision 后按页面提示显式重建。没有选定真实向量服务时保持关闭。以下文件示例用于需要手动配置的情况：
 
 下面是格式示例，**模型名、地址、维度和密钥都要换成你实际服务的值，不能直接用占位符运行**：
 
@@ -708,7 +722,7 @@ docker compose up -d --force-recreate api
 
 ### 13.3 模型配置区
 
-展示文本生成和 Embedding 的 profile、模型、维度、功能开关和配置状态。只读状态页不会探测远程接口或调用模型。文本生成的编辑入口是“打开设置”，RAG 参数仍编辑文件。
+展示文本生成和 Embedding 的 profile、模型、维度、功能开关和配置状态。只读状态页不会探测远程接口或调用模型。进入“打开设置”，可分别编辑文本生成和 RAG 配置；连接测试是单独的主动操作。
 
 `/health` 仅维持数据库健康检查合同。健康正常不等于 Qdrant、Embedding 或生成模型可用。
 
@@ -748,15 +762,15 @@ Copy-Item -LiteralPath config -Destination (Join-Path $backupPath 'config') -Rec
 
 ### 14.3 升级便携 EXE
 
-本项目桌面安装固定为 `dist/PersonalAiMemoryOs-0.6.6/`，**以后不新建版本安装目录**。目录名保留历史名称，当前程序显示 0.7.0。
+本项目桌面安装固定为 `dist/PersonalAiMemoryOs-0.6.6/`，**以后不新建版本安装目录**。目录名保留历史名称，当前版本为 0.8.0。
 
-此次交付已完成该目录的备份、原地升级和重新打开；原资料、笔记及模型配置已保留，无需重新导入。备份位于该安装的 `backups/upgrade-20261017-135320-96403d78/`，完整验收见[工程任务记录](IMPLEMENTATION_TASKS.md)。
+此次交付已完成该目录的备份、原地升级和重新打开；原有 571 篇资料、2 篇笔记、3 条运行记录、1 个批次，以及全部知识文件和模型配置已保留，无需重新导入。备份位于该安装的 `backups/upgrade-20261017-152603-89fb11df/`，完整验收见[工程任务记录](IMPLEMENTATION_TASKS.md)。
 
 1. 在 `.cache` 中完成干净构建与隔离 EXE 验收，发行 ZIP 也从干净产物生成。
 2. 正常关闭当前程序，等待在途调用和同步结束；运行中升级器会拒绝替换。
 3. 升级器先备份并核验 SQLite、完整知识目录、`.env` 和配置，再备份旧程序资源。
 4. 原地替换清单中已纳管的程序文件；保留个人数据、日志、导出和未知文件。自定义路径与程序资源重叠或未知文件冲突时停止。
-5. 执行 `0004 → 0005`，核验全部旧记录，再从原目录启动并检查资料、笔记和设置。不要只换网页或 EXE。
+5. 执行支持版本到 `0006` 的迁移，核验全部旧记录，再从原目录启动并检查资料、笔记和设置。旧模板归入笔记解析，问答另有独立默认项；不要只换网页或 EXE。
 
 开发维护命令（先关闭 EXE，`--bundle` 填本轮验收通过的干净构建路径）：
 
@@ -789,20 +803,24 @@ uv run --locked python scripts/update_desktop.py --bundle .cache/desktop-build/�
 | 健康 | `GET /health` |
 | 原始资料 | `/api/v1/sources` 的创建／列表，`/{id}` 的详情／修改／软删除，`/{id}/restore` |
 | 知识笔记 | `/api/v1/knowledge` 及详情／修改／软删除／恢复 |
-| 网页摘要与分组 | `/api/v1/ui/overview`、`/sources`、`/knowledge`、`/source-groups`、`/source-groups/items` |
+| 网页摘要与分组 | `/api/v1/ui/overview`、`/sources`、`/knowledge`、`/drafts`、`/source-groups`、`/source-groups/items` |
 | 知乎导入 | `POST /api/v1/imports/zhihu`、`/zhihu-markdown`，`?dry_run=true` 预演 |
 | 文本模型 | `GET /api/v1/ai/profiles` |
 | 草稿运行 | `POST/GET /api/v1/processing/runs`、`GET /{id}`、`POST /{id}/adopt` |
-| 持久生成任务 | `POST/GET /api/v1/processing/batches`、`GET /{id}`、`POST /{id}/continue`、`/retry-failed`、`/cancel` |
-| 提示词模板 | `/api/v1/prompt-templates`、`/{id}`、`/{id}/revisions`、`/{id}/default`、`/{id}/archive` |
+| 持久生成任务 | `POST/GET /api/v1/processing/batches`、`GET /{id}`、`GET /{id}/items`、`GET /{id}/items/{item_id}/attempts`、`POST /{id}/continue`、`/retry-failed`、`/cancel` |
+| 提示词模板 | `/api/v1/prompt-templates?purpose=knowledge` 或 `purpose=rag_qa`、`/{id}`、`/{id}/revisions`、`/{id}/revisions/{version}`、`/{id}/default`、`/{id}/archive` |
 | 同步 | `GET /api/v1/sync/status`、`POST /api/v1/sync/run`、`GET /api/v1/sync/conflicts`、`GET /api/v1/sync/conflicts/{id}`、`POST /api/v1/sync/conflicts/{id}/resolve` |
 | RAG | `GET /api/v1/rag/embedding-profiles`、`/index/status`；`POST /index/run`、`/index/rebuild`、`/search`、`/ask` |
 | AI 设置 | `GET/PUT /api/v1/settings/ai`，本机同源与令牌保护 |
-| 桌面重启 | `POST /api/v1/desktop/restart`，仅 EXE 启用；校验 Origin、配置令牌及 revision |
+| RAG 设置 | `GET/PUT /api/v1/settings/rag`；显式 `POST /api/v1/settings/rag/test` 检查 Qdrant 或确认后测试 Embedding |
+| 分页系统明细 | `/api/v1/sync/notes`、`/sync/issues`、`/rag/index/errors`、`/rag/index/excluded`，均位于 `/api/v1` 下 |
+| 桌面重启 | `POST /api/v1/desktop/restart`，仅 EXE 启用；校验 Origin、配置令牌及 revision，可指定 `scope: "ai"` 或 `"rag"` |
 
 Source／Knowledge 修改请求 JSON 包含 `expected_version`；DELETE 使用查询参数 `?expected_version=N`；恢复在 JSON 中提交版本。生成提交 `expected_source_version`，采纳提交草稿的 `expected_version`；同步冲突解决提交 `{"choice":"database"}` 或 `{"choice":"markdown"}`，设置写入使用 `expected_revision`。版本来自刚读取的记录，不要硬编码 1 或在冲突后直接加一。
 
 Knowledge 可提交有序 `source_ids`（最多 20 个），`source_id` 保留首项兼容字段；两者同时提供须一致。设置写入与桌面重启需要同源 Origin 和本进程配置令牌。日常使用设置页；直接调用时遵循当前接口安全要求，不能把 403 当作服务器坏了。
+
+列表使用 `offset`／`limit`；网页统一提供 10／20／50／100 条每页，默认 20。摘要接口以及运行、批次、状态和模板的 `summary_only=true` 用于轻量列表；完整详情按需另取。RAG 问答可提交 `prompt_template_id` 和 `prompt_template_version`，只能选 `rag_qa` 用途；省略时使用该用途的默认模板。分页只读取已经取得的结果，不重新导入或调用模型。
 
 ### 15.2 本地 JSON 导入命令
 
@@ -825,16 +843,20 @@ uv sync --locked
 uv run --locked pytest
 $env:PLAYWRIGHT_BROWSERS_PATH = Join-Path $PWD '.cache/playwright'
 uv run --locked playwright install chromium
-uv run --locked python scripts/v06_acceptance.py --mode all
-uv run --locked python scripts/verify_settings_ui.py
-uv run --locked python scripts/verify_v07_ui.py
+docker build -t memory-os-v08-validation .
+uv run --locked python scripts/verify_v08_rag.py --mode all --image memory-os-v08-validation
+uv run --locked python scripts/verify_v08_web.py --mode local
+uv run --locked python scripts/verify_v08_web.py --mode docker --image memory-os-v08-validation
 # EXE 验收使用干净构建目录，不使用已含个人数据的安装目录。
-uv run --locked python scripts/verify_v07_local.py --bundle .cache/desktop-build/本轮编号/dist/PersonalAiMemoryOs
+uv run --locked python scripts/build_desktop.py --staging-only
+uv run --locked python scripts/verify_desktop.py --bundle .cache/desktop-build/本轮编号/dist/PersonalAiMemoryOs
+uv run --locked python scripts/verify_v08_web.py --mode desktop --bundle .cache/desktop-build/本轮编号/dist/PersonalAiMemoryOs
 uv run --locked python scripts/verify_desktop_upgrade.py --bundle .cache/desktop-build/本轮编号/dist/PersonalAiMemoryOs
-uv run --locked python scripts/verify_v07_restart_drain.py --bundle .cache/desktop-build/本轮编号/dist/PersonalAiMemoryOs
 ```
 
 综合验收使用隔离模型和真实隔离 Qdrant，需要 Docker。缓存、截图和测试资料放在 `.cache/`，生产镜像不带测试浏览器。
+
+真实 EXE 验收按顺序运行，避免同时操作多个测试窗口。旧版本布局专用脚本保留为历史证据，当前页面使用 `verify_v08_web.py`；问答页面传输和分页的受控模拟测试，与真实 Qdrant 的 HTTP 集成验收分别记录。
 
 `scripts/verify_real_provider.py --check` 仅做配置预检；`--run` 才执行真实调用。该专用第四阶段验收曾设定最多三次调用的预算，不是应用日常生成次数上限，也不自动给 Embedding／问答真实验收授权或增加预算。
 
@@ -933,13 +955,14 @@ uv run --locked python scripts/verify_v07_restart_drain.py --bundle .cache/deskt
 - 独立 Opinion 管理、资料记录自动合并、拼音排序。
 - 多用户、账号权限、云 IAM 鉴权、互联网公开部署方案。
 - 多轮聊天、问答历史、混合检索、重排序。
-- 网页编辑 Embedding／Qdrant 参数或 RAG 开关。
 - 自动更新、安装器、数字签名和跨电脑兼容保证。
 - 自动把另一个安装目录的资料迁入当前库。
 
 ### 17.3 版本和验收边界
 
-0.7.0 最终全量回归为 **1,030 项测试通过、3 项 Windows 符号链接权限跳过、1 条已有上游警告**（`.cache/v070-release-verified.log`）。本机真实 API／浏览器及实际打包 EXE 已验证逐篇、合并、完整正文、多来源采纳、保存回首页、设置重启、在途调用收尾与旧库原地升级，全部验收使用隔离数据和本地模拟模型。固定安装已备份升级并重新打开。详细结果在工程任务和记忆文档中同步，不将模拟服务成功写成真实模型质量通过。
+0.8.0 最终全量回归为 **1,088 项测试通过、3 项 Windows 符号链接权限跳过、1 条已有上游警告**（`.cache/v08/pytest-release.log`）。本机和 Docker 浏览器、实际打包 EXE、新旧库原地升级均通过验收，覆盖独立 Prompt／草稿页面、所有分页尺寸、配置跨页保存、旧响应保护及真实重启交接。真实隔离 Qdrant 的 HTTP 流程和浏览器中的受控问答传输分别验收；模型均为本地模拟，未调用真实付费服务。固定目录已升级并重新打开，原有 AI 配置保留，RAG 继续关闭。
+
+干净发行包为 `dist/PersonalAiMemoryOs-windows-x64.zip`，SHA-256：`0674f332119964ecfc1c00e7159498f961ed3da8c1819ae5e1e40b396f58d703`。Windows 长路径升级问题已修复并复验，旧数据、模板和完整知识文件均有核验备份。详细证据见[工程任务记录](IMPLEMENTATION_TASKS.md)。上版 0.7.0 的 1,030 项回归及历史交付记录继续保留。
 
 第四阶段真实 DeepSeek 质量、第五阶段真实 Embedding／问答质量仍单独验收；生产原生“另存为”交互及第二台干净电脑也保留单独验证边界。工程验收和日常功能开关是不同概念，不需要每次使用都重新执行工程验收脚本。
 

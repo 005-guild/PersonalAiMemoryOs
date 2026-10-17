@@ -1,5 +1,26 @@
 # DATABASE_DESIGN.md
 
+## v0.8.0: Purpose-Specific Prompt Defaults (`0006`)
+
+Application `0.8.0` explicitly upgrades `0005` to `0006`. Migration, full regression and portable deployment passed; retain historical acceptance below as release-specific evidence.
+
+| Change | Persistence and compatibility |
+| --- | --- |
+| `prompt_templates.purpose` | Non-null `knowledge` or `rag_qa`, with `knowledge` as the migration/server default |
+| `prompt_revisions.purpose` | Same purpose recorded on immutable revisions; old revision content, hash and version are preserved |
+| `uq_prompt_default` | Unique partial index on purpose where `is_default=1`; each purpose may have its own default |
+| Purpose checks | SQLite insert/update triggers reject unsupported purposes while avoiding a table rebuild and preserving incoming foreign keys |
+
+Existing templates and revisions migrate to `knowledge` without content/version changes. Startup seeds the cited-answer built-in only when its identity is absent and does not replace user edits or another default of the same purpose. Template APIs reject knowledge templates for question answering and answer templates for note analysis. Selecting/archiving defaults operates within one purpose; historical run/batch template snapshots remain self-contained. User-editable answer style does not change the fixed validated citation output schema.
+
+No draft/history duplication, question-history table, Source indexing, content rewrite or Markdown schema change is introduced. Existing drafts continue living in `processing_runs` and batches/items retain their previous lifecycle. The independent draft workspace uses lightweight projections and detail reads over the same records. Paginated synchronization/index diagnostics likewise query existing storage; they do not create new business entities or mutate the index.
+
+Visual RAG configuration stays outside SQLite: personal Embedding YAML and `.env` contain next-start settings and write-only key updates through the shared recoverable file transaction. Neither configuration reads/saves nor explicit connection probes add Knowledge, processing or vector-cache rows. Embedding tests have a separate explicit confirmation, make one request and return only safe dimension/usage metadata. Default RAG remains off; no real-provider quality claim follows from local preflight or a simulated probe.
+
+Ordinary Python/Docker startup continues to require an explicit migrated schema. Portable upgrades require a stopped instance and a verified complete database/vault/configuration backup; the fixed existing installation directory is retained. Full regression: 1,088 passed/3 Windows skips (`.cache/v08/pytest-release.log`). Real old-to-new EXE migration preserved all legacy columns/rows, edited templates/default/revisions and v1 file bytes (`.cache/desktop-upgrade-validation/7c15136934064799a76db88b4cd784f3/report.json`). The actual 571 Sources, 2 notes, 3 runs and 1 batch were verified before/after deployment; startup only adds the missing QA built-in and refreshes normal sync observation timestamps. See `.cache/v08/installed-audit.json` and `IMPLEMENTATION_TASKS.md` for delivery evidence. After QA templates exist, downgrade refuses to delete them automatically; restore a verified matching `0005` backup instead.
+
+Additional local/Docker HTTP acceptance passed with isolated empty storage migrated to `0006`, real Qdrant `v1.19.2`, synthetic models and post-restart SQLite integrity checks. Both modes retain one Source/one Knowledge/zero processing runs while custom RAG template revisions and literal citations remain usable. Evidence `.cache/v08-rag/f61cb47e7d2044539184c58ed8509154/report.json` confirms unchanged formal storage and complete owned-resource cleanup; this does not establish real model quality.
+
 ## v0.7.0: Versioned Prompts, Persistent Processing and Multiple Sources (`0005`)
 
 Current implementation: application `0.7.0`, explicit migration `0004 → 0005`, engineering acceptance complete. This section supersedes the single-source-only descriptions in historical release sections without rewriting their recorded results. Ordinary Python/Docker startup still checks the schema rather than migrating it. Portable startup recognizes known old schemas, requires confirmation and a verified database/full-vault backup before upgrading, and rejects unknown or newer structures.

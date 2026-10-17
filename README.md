@@ -4,27 +4,39 @@
 
 The [complete Chinese manual](readme-cn.md) covers every management page, installation, import, AI profiles, Markdown synchronization, backup and troubleshooting. See the [step-by-step RAG setup](docs/rag-guide-cn.md) and [full configuration reference](docs/config-reference-cn.md) for Embedding, Qdrant, generation, environment variables and Docker-specific settings.
 
-## Current release: 0.7.0 (schema 0005)
+## Current release: 0.8.0 (schema 0006)
 
-The desktop installation stays at **`dist/PersonalAiMemoryOs-0.6.6/`**. Its historical directory name is retained; the application reports 0.7.0. New clean distributions use `dist/PersonalAiMemoryOs-windows-x64.zip`, built from staging rather than an installation containing user data.
+The desktop installation stays at **`dist/PersonalAiMemoryOs-0.6.6/`**. Its historical directory name is retained; the application reports 0.8.0. New clean distributions use `dist/PersonalAiMemoryOs-windows-x64.zip`, built from staging rather than an installation containing user data.
 
 The AI page now supports searchable, paged source checkboxes (up to 20), lazy source preview, sequential individual drafts and one-call merged analysis. SQLite-backed tasks keep progress after navigation; cancellation drains the current call, and restart pauses remaining work. Continue pending items and retry failed calls are separate explicit actions. There are no automatic paid retries.
 
-Manage versioned Prompt templates in Settings. The default preserves the complete eight-stage Chinese critical-analysis prompt; the legacy brief template remains available. Deep analysis starts with editable 16,384-token/180-second overrides while preserving the selected model's thinking setting. No browsing is performed; uncertain facts must remain unverified. New JSON v2 retains full Markdown and exact source quotes. Old v1 drafts remain readable and adoptable.
+The independent **Prompt center** manages analysis and RAG-answer templates, each with its own default and immutable revisions. Existing templates retain their content, versions and defaults as analysis templates. The analysis default preserves the complete eight-stage Chinese prompt; the legacy brief template remains available. Deep analysis starts with editable 16,384-token/180-second overrides while preserving the selected model's thinking setting. No browsing is performed. New JSON v2 retains full Markdown and exact source quotes; old v1 drafts remain readable and adoptable. RAG answer templates customize style while the fixed JSON, literal-citation and evidence-only rules remain enforced. Each request freezes its selected revision.
+
+**AI analysis** contains source selection and generation tasks; the separate **Draft box** contains ready/adopted results and full draft details. Old run-detail links remain usable. Lists consistently offer 10/20/50/100 rows, numbered pages and page jumps; source groups load complete bodies only when expanded. This includes template pickers/revisions, tasks/items/attempts, import reports, conflicts and index issues. Paging a result never repeats its model or import request. The 20-source batch cap and search top-k limit remain separate.
+
+**Settings → RAG** saves Embedding profiles, credential references and the Qdrant address, with restart/rebuild guidance. Merely viewing or saving configuration does not probe a provider. Qdrant checking is read-only; Embedding testing requires explicit confirmation and performs one synthetic request without indexing. Saved configuration takes effect after restart. Semantic model/revision/dimension/chunk changes require an explicit index rebuild. No production Embedding service is selected; RAG remains off. Knowledge is the only indexed content, so adopt or write notes before building an index.
 
 Knowledge may link up to 20 sources; `source_id` remains the first-source compatibility field. Multi-source Markdown uses schema v2, while existing v1 files and synchronization baselines are retained. Saving a Knowledge editor, including an unchanged form, returns to the overview. Model settings offer Restart now/Later; automatic restart is desktop-only and waits for calls/sync and the single-instance handover.
 
-Use the same workspace for source changes and clean `.cache` staging for builds. The in-place updater requires a normally closed desktop, verifies backups of the database, full vault and configuration, preserves unknown files, rejects resource/data path overlaps and migrates 0004 to 0005. Tested source/document units are committed locally without private data or automatic pushes.
+Use the same workspace for source changes and clean `.cache` staging for builds. The in-place updater requires a normally closed desktop, verifies backups of the database, full vault and configuration, preserves unknown files, rejects resource/data path overlaps and migrates supported old databases to 0006. Tested source/document units are committed locally without private data or automatic pushes. Docker/source startup still requires an explicit Alembic migration.
 
 ```powershell
 uv run --locked pytest
+docker build -t memory-os-v08-validation .
+uv run --locked python scripts/verify_v08_rag.py --mode all
+uv run --locked python scripts/verify_v08_web.py --mode local
+uv run --locked python scripts/verify_v08_web.py --mode docker --image memory-os-v08-validation
 uv run --locked python scripts/build_desktop.py --staging-only
 # Replace STAGING with the tested clean directory from .cache/desktop-build-result.json.
 uv run --locked python scripts/verify_desktop.py --bundle STAGING
 uv run --locked python scripts/update_desktop.py --bundle STAGING
 ```
 
-The final complete regression passed 1,030 tests, with 3 Windows symlink skips and one existing upstream warning (`.cache/v070-release-verified.log`). Actual frozen-EXE generation, templates, settings restart, blocked-call draining and old-to-new in-place migration passed. The selected installation was backed up, upgraded and reopened, retaining its 571 Sources, 1 Knowledge, 2 runs and all configuration/vault bytes. Original AI enabled state was preserved, RAG remains off, and the formal project Docker/data were unchanged. Clean ZIP SHA-256: `a020718d2c978269340a21edab1cb2fe67e5eaa87a65b21e8bbfc68384225dc8`. Detailed evidence is recorded in [implementation tasks](IMPLEMENTATION_TASKS.md). Real provider/RAG quality gates remain pending; no paid provider calls were made by engineering checks.
+The final v0.8 regression passed **1,088 tests, 3 Windows symlink skips and one existing warning** (`.cache/v08/pytest-release.log`), with 42 ESM modules and the locked 47-package dependency set. Local/Docker browsers, the final actual EXE and the `0005 → 0006` old-to-new desktop upgrade passed. Real isolated Qdrant HTTP integration and controlled browser QA transport are recorded separately. Frozen testing includes RAG later/now restart, PID/port release, configuration activation and single-instance handoff. Deep Windows upgrade paths use short exclusive temporary files after a reproduced failure and successful rollback/regression. See [implementation tasks](IMPLEMENTATION_TASKS.md) for exact evidence and boundaries.
+
+The fixed installation was backed up at `backups/upgrade-20261017-152603-89fb11df/`, upgraded and reopened, retaining its current **571 Sources, 2 Knowledge, 3 runs, 1 batch**, existing templates, all private configuration and complete vault bytes. AI state and the user's input limit were preserved; RAG remains off. Formal Docker/project storage and other installations were unchanged. Clean ZIP SHA-256: `0674f332119964ecfc1c00e7159498f961ed3da8c1819ae5e1e40b396f58d703` (22,136,791 bytes). Real provider/RAG quality gates remain pending; engineering checks do not call paid providers.
+
+The preceding 0.7 release passed 1,030 tests with 3 Windows symlink skips and one existing warning (`.cache/v070-release-verified.log`), plus actual frozen generation/restart/upgrade checks. Its clean ZIP SHA-256 was `a020718d2c978269340a21edab1cb2fe67e5eaa87a65b21e8bbfc68384225dc8`; this is a historical artifact, not the new ZIP checksum.
 
 ## Historical Windows portable desktop (0.6.6)
 

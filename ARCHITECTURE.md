@@ -1,5 +1,25 @@
 # ARCHITECTURE.md
 
+## v0.8.0: Prompt Center, Draft Workspace, Pagination and RAG Setup
+
+Application `0.8.0` uses explicit schema `0006`. Engineering acceptance and the fixed-directory delivery are complete; historical release results below remain unchanged evidence. Real-provider quality is a separate pending gate.
+
+The workspace separates AI analysis submission/progress, saved draft browsing/detail and Prompt management into independent routes. Draft lists use small read-only projections; full source snapshots, model output and proposal Markdown are loaded only on detail access. Adoption remains explicit and keeps existing optimistic freshness, multi-source provenance and idempotent-note rules. Source and draft records do not become retrieval content without a saved Knowledge note.
+
+Prompt templates and immutable revisions now have `purpose=knowledge|rag_qa`. Each purpose owns an independent default; the full eight-stage analysis and existing edited templates remain knowledge templates. A separate cited-answer template may customize answer style, emphasis and structure. The fixed answer JSON/evidence/citation contract remains outside user-editable instructions. Requests freeze the selected revision before any remote wait. Cross-purpose selection is rejected; historical v1/v2 processing snapshots remain readable.
+
+All record-list controls converge on 10/20/50/100 items, numbered navigation, direct page entry and separate state for each list. The API continues bounded offset/limit semantics. Summary-only draft, template/revision, synchronization and index status reads avoid repeatedly loading bodies or error snapshots. Full details remain independently available. Import-report and search-result pagination operates on already obtained results and must not repeat imports, Embedding calls or answer generation. The analysis selection limit stays 20 regardless of visible page size; note bodies are not paginated or truncated.
+
+`/api/v1/settings/rag` owns next-start RAG/Embedding configuration alongside the existing AI settings service. The runtime registry remains immutable until an explicit restart. Shared configuration locking, a full-file revision, contained two-file journal commit and mutual AI/Embedding YAML path protection preserve unrelated `.env` values and prevent lost updates. Credentials are write-only shared references; read responses include configured/environment-managed flags, not values. Docker read-only settings and process-environment precedence remain authoritative.
+
+Local preflight, Qdrant connectivity and Embedding connectivity are separate states. Saving or reading settings never calls a model, creates a collection or updates an index. The explicit test endpoint checks saved-revision configuration: Qdrant uses a read-only version GET; Embedding requires a separate confirmation and makes one fixed-text call with no retry. Probe concurrency is limited and errors are sanitized. Local readiness does not assert network connectivity, retrieval quality or model availability. Default RAG remains off and no production Embedding provider is selected by this work.
+
+The existing Knowledge-only index architecture, 1.19.x Qdrant client, SQLite-authoritative publication and source/Markdown freshness rules remain in force. Visual setup does not bundle a model/Qdrant process or grant implicit real-call permission. Full regression passed 1,088 checks/3 Windows skips, with local/Docker browser, final frozen-EXE restart and old-to-new migration acceptance. The fixed installation was backed up and reopened, preserving its 571 Sources, 2 notes, 3 runs, 1 batch, private configuration and full vault. RAG remains off. Evidence and precise mock/real boundaries are recorded in `IMPLEMENTATION_TASKS.md`.
+
+Program upgrades use short exclusive sibling temporary files for atomic replacement and rollback, alongside numbered, hash-verified backups. This avoids the Windows long-path failure reproduced in the first isolated upgrade without changing business-data paths or overwriting unknown files.
+
+Real isolated local and Docker HTTP workflows now also pass against Qdrant `v1.19.2` with offline model endpoints: custom QA template identity/hash, concurrent-edit revision freezing, cross-purpose rejection, literal citations and the Knowledge-only edit/delete/restore/restart lifecycle. Evidence `.cache/v08-rag/f61cb47e7d2044539184c58ed8509154/report.json` confirms no remaining owned containers/networks/volumes and unchanged formal storage. This validates engineering integration, not real-provider answer quality.
+
 ## v0.7.0: Prompt-Selected Processing Workspace and Safe Portable Continuity
 
 Implementation and engineering acceptance are complete. Application `0.7.0` uses explicit schema `0005`; the historical release sections below remain evidence of earlier behavior.

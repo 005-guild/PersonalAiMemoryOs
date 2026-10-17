@@ -1,6 +1,6 @@
-# 配置完整参考（v0.7.0）
+# 配置完整参考（v0.8.0）
 
-本文说明当前应用实际读取哪些配置、默认值是什么、修改后怎样生效。适用于源码本机服务、Windows 便携 EXE 和项目自带 Docker Compose；数据库结构为 `0005`。模型名称和地址示例来自项目模板，不代表已经逐个完成真实服务验收。
+本文说明当前应用实际读取哪些配置、默认值是什么、修改后怎样生效。适用于源码本机服务、Windows 便携 EXE 和项目自带 Docker Compose；数据库结构为 `0006`。模型名称和地址示例来自项目模板，不代表已经逐个完成真实服务验收。
 
 日常操作见 [中文使用说明](../readme-cn.md)，向量索引、搜索和引用问答的完整步骤见 [RAG 使用指南](rag-guide-cn.md)。本文的配置依据是 [Settings](../app/config.py)、[文本配置与适配器](../app/agents/configuration.py)、[Embedding 配置](../app/vector/configuration.py) 和 [Compose](../docker-compose.yml)。
 
@@ -48,11 +48,13 @@ Compose 列的“可透传”表示当前文件已有 `${变量:-默认值}`；�
 | `MEMORY_OS_DATABASE_URL` | `sqlite:///data/memory.db` | 仅支持文件型 `sqlite` / `sqlite+pysqlite`；相对数据库文件按项目根解析。拒绝内存库、SQLite URI、查询参数和网络数据库连接信息 | 固定 `sqlite:////app/data/memory.db` |
 | `MEMORY_OS_KNOWLEDGE_DIR` | `knowledge` | 非空，必须是运行根目录内的子目录，不能直接使用运行根目录 | 固定 `/app/knowledge` |
 | `MEMORY_OS_LOG_LEVEL` | `INFO` | `DEBUG` / `INFO` / `WARNING` / `ERROR` / `CRITICAL` | 固定 `INFO` |
-| `MEMORY_OS_CONFIGURATION_READ_ONLY` | `false` | 是否禁止网页保存 AI 配置；不会禁止普通资料与笔记写入 | 固定 `true` |
+| `MEMORY_OS_CONFIGURATION_READ_ONLY` | `false` | 是否禁止网页保存 AI 与 RAG／Embedding 配置；不会禁止普通资料与笔记写入 | 固定 `true` |
 
 源码模式的数据库路径校验与 EXE 的便携隔离规则不同：EXE 还会拒绝数据库、知识或配置路径超出便携目录，并拒绝符号链接和目录联接。移动便携版时，优先保留相对路径；目录内绝对路径在整体移动后也需要核对。
 
 文本和 Embedding 配置文件必须位于运行根目录内。网页设置不能修改数据路径；网页配置写入的 YAML 目标还不能是 `.env`、数据库、知识目录、`data/` 或配置恢复目录。设置页面展示的数据库文件、数据目录和知识目录是只读信息。
+
+AI 和 Embedding YAML 也不能使用同一个路径。手工修改配置文件路径后，先重启应用再在网页保存；否则可能返回 `configuration_path_changed`，以免写入旧进程正在使用的错误位置。
 
 ### 2.2 Markdown 同步
 
@@ -252,7 +254,9 @@ api_key_ref: deepseek
 
 ### 6.1 Prompt 模板与单次生成参数
 
-Prompt 模板保存在 SQLite，不属于 YAML／`.env` 模型配置；设置中可增改、复制、设默认、归档及预览。名称最多 200、描述 2,000、正文 100,000 字符，支持输出协议 1 或 2。保存立即供新任务选择，无需重启；提交任务冻结模板版本与内容快照。
+Prompt 模板保存在 SQLite，不属于 YAML／`.env` 模型配置，在独立 Prompt 中心增改、复制、设默认、归档及预览。名称最多 200、描述 2,000、正文 100,000 字符；笔记解析支持输出协议 1／2，知识库问答使用独立的引用输出协议。保存立即供新任务选择，无需重启；提交任务冻结模板版本与内容快照。
+
+模板用途为 `knowledge` 或 `rag_qa`，创建后不可变，每类独立默认。生成页和问答页按用途选择；API 拒绝混用。问答可定制风格与重点，固定的引用、逐字摘录、依据不足与 JSON 校验仍有效。问答返回所选模板 ID、版本及 hash，不新增问答历史。
 
 内置深度模板完整保留用户提供的八阶段中文 Prompt，默认使用 v2 完整 Markdown 正文和逐来源原文引文。固定业务约束另行传递，明确本版无联网工具，关键事实不确定时标记待验证。旧简要模板与旧单篇接口维持 v1。
 
@@ -263,6 +267,10 @@ Prompt 模板保存在 SQLite，不属于 YAML／`.env` 模型配置；设置中
 进程环境变量管理的开关、默认项和密钥不能在网页中覆盖。需要在启动环境中修改后重新启动。网页密码不会进入 localStorage / sessionStorage，普通 GET 和保存响应只返回引用及“已配置”状态；`.env` 和恢复中的临时配置记录仍包含明文凭据，应按私人文件保管。
 
 ## 7. Embedding YAML：全部字段与维度语义
+
+也可在设置的 RAG 分区编辑同样参数、默认项、Qdrant URL 和开关。`GET/PUT /api/v1/settings/rag` 采用同源、配置令牌、revision 和二文件事务保护；与 AI 设置共用 `.env` 时会检测并发修改，保留其他字段、密钥及原文输入限制。模型配置保存后需重启，桌面重启入口使用 `scope=rag` 核对对应 revision。Docker 仍由宿主机配置。
+
+`POST /api/v1/settings/rag/test` 为用户主动检测：Qdrant 仅读取版本；Embedding 要求 `confirm_embedding=true`，只发一次短文本，不写向量缓存、笔记或索引。配置变化后旧 revision 不再允许测试；失败不自动重试。预检的 `network_checked=false` 表示只检查本机参数，不能当成服务连通或质量通过。
 
 Embedding 使用独立的 [公开模板](../config/embedding-providers.example.yml)，与生成模型分开配置。模板默认选择本地免密示例 `local`，其模型名 `your-local-embedding-model` 是占位值，必须按真实服务修改；模板本身不会启动或下载模型。
 

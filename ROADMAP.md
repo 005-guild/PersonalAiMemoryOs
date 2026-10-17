@@ -2,6 +2,19 @@
 
 # MVP Roadmap
 
+## v0.8.0: RAG Setup, Independent Prompts/Drafts and Consistent Pagination
+
+Status: engineering complete and deployed in the fixed portable directory on 2026-10-17; application `0.8.0`, schema `0006`. Earlier release completion statements remain historical. Real Embedding/generation quality remains pending.
+
+1. Add a visual RAG setup guide and independent Embedding profiles, Qdrant address, write-only credentials, active/next-start state, local preflight and explicit connection checks. Keep RAG off until the user chooses a service and enables it; configuration save is zero-call. A paid Embedding test requires its own confirmation and never starts indexing.
+2. Move both knowledge-analysis and cited-answer templates to an independent Prompt center with search, 10/20/50/100 paging, revisions, copy/default/archive and immediate availability for new requests. Keep per-purpose defaults and frozen request revisions; retain the complete eight-stage analysis Prompt and enforce citation safeguards outside custom instructions.
+3. Separate AI submission/progress from a draft library and draft detail. Drafts remain read-only until explicit adoption; existing source/version checks, v1/v2 compatibility and saved-note navigation stay intact. Show selected input lengths and the configured limit before generation.
+4. Apply 10/20/50/100 pagination, page-number controls and direct jump across record collections, with independent return/filter state and lazy detail reads. Use summary polling and paged diagnostics rather than repeatedly returning full snapshots. Client-side report/result paging must never repeat imports or model calls. The per-generation selection cap remains 20.
+
+Delivered in `dist/PersonalAiMemoryOs-0.6.6/` after clean staging, verified backup and stopped-instance upgrade. Full regression passed 1,088 checks/3 Windows skips; local/Docker browsers, final frozen pages/restart and real `0005 → 0006` EXE upgrade passed. Preserve all 571 Sources, 2 Knowledge, 3 runs, 1 batch, private configuration and full vault; RAG remains off. Backup `backups/upgrade-20261017-152603-89fb11df/`, installed audit `.cache/v08/installed-audit.json`. Public increments are committed locally. Phase 4/5 real model/retrieval quality remains pending and has no expanded call budget.
+
+RAG HTTP integration: both local and Docker modes passed against real isolated Qdrant and offline models (`.cache/v08-rag/f61cb47e7d2044539184c58ed8509154/report.json`), including custom QA revision freezing, citations and note edit/delete/restore/restart. Owned containers/networks/volumes were removed and formal storage remained unchanged. Full browser/frozen/artifact results and the Windows long-path upgrade fix are recorded in `IMPLEMENTATION_TASKS.md`.
+
 ## v0.7.0: Multi-Source Analysis, Prompt Templates and In-Place Desktop Updates
 
 Status: engineering complete and deployed in the fixed existing portable directory on 2026-10-17. Version `0.7.0`, database `0005`; real-provider quality remains a separate pending gate.
