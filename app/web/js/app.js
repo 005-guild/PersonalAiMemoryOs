@@ -5,7 +5,8 @@ import {installDesktopLifecycle} from './desktop.js';
 const routes = [
   ['', '概览', '◫', 'overview'], ['sources', '资料库', '▤', 'content'],
   ['imports', '资料导入', '↥', 'imports'], ['knowledge', '知识笔记', '▧', 'content'],
-  ['processing', 'AI 草稿', '✧', 'processing'], ['search', '搜索问答', '⌕', 'search'],
+  ['processing', 'AI 分析', '✧', 'processing'], ['drafts', '草稿箱', '▱', 'drafts'],
+  ['prompts', '提示词中心', '✎', 'prompts'], ['search', '搜索问答', '⌕', 'search'],
   ['system', '同步与系统', '⚙', 'system'], ['settings', '设置', '⚙', 'settings'],
 ];
 const modules = Object.fromEntries(routes.map(([key,,,file]) => [key, () => import(`./pages/${file}.js`)]));

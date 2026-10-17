@@ -2,6 +2,7 @@ import {api} from '../api.js';
 import {el, button, field, notice, empty, pageHeading, showError} from '../ui.js';
 import {MAX_IMPORT_BYTES, markdownSelection, readMarkdownSelection} from './import-files.js';
 import {publicImportReport, showImportReport} from './import-report.js';
+import {localPagination} from './list-pagination.js';
 
 export async function mount(container, context) {
   let mode = 'json', bytes = null, filename = '', previewed = false, busy = false, reading = false, selection = 0, stopped = false, report = null;
@@ -61,7 +62,7 @@ export async function mount(container, context) {
         bytes = loaded.bytes; filename = 'zhihu-markdown'; localReadErrors = loaded.errors;
         chosen.textContent = `可提交 ${loaded.files} 个 MD · 请求 ${((bytes?.byteLength || 0) / 1024).toFixed(1)} KiB；跳过 README ${group.skipped.readme} 个、其他文件 ${group.skipped.other} 个；读取失败 ${loaded.errors.length} 个。`;
         if (loaded.errors.length) localIssues.replaceChildren(notice('以下文件读取失败，未提交；其他有效文件仍可预演和导入。', 'warning'),
-          el('ul', {}, ...loaded.errors.map(error => el('li', {}, error.relative_path, '：', error.message))));
+          localPagination(loaded.errors, rows => el('ul', {}, ...rows.map(error => el('li', {}, error.relative_path, '：', error.message))), {label: '本地文件读取错误分页'}));
       } else {
         const file = selected[0]; chosen.textContent = `${file.name} · ${(file.size / 1024).toFixed(1)} KiB`;
         if (file.size > MAX_IMPORT_BYTES) throw new Error('文件超过 10 MiB，请拆分后导入。');

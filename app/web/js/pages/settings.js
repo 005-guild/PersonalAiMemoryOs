@@ -2,7 +2,8 @@ import {api} from '../api.js';
 import {el, button, badge, notice, pageHeading, confirmAction} from '../ui.js';
 import {keyValues} from './workflow-utils.js';
 import {settingsEditor} from './settings-editor.js';
-import {promptSettings} from './prompt-settings.js';
+import {ragSettings} from './rag-settings.js';
+import {offerRestart} from './settings-restart.js';
 
 export function mount(container, context) {
   const mountedHash = location.hash, controller = new AbortController();
@@ -18,8 +19,8 @@ export function mount(container, context) {
     return alive();
   }
   const messages = el('div', {className: 'stack'}), status = el('div'), body = el('div', {}, el('div', {className: 'loading'}, '正在读取本机设置…'));
-  const prompts = promptSettings(context, {alive, onDirty: value => dirty('prompts', value)});
-  container.append(pageHeading('设置', '管理模型、提示词模板和本机配置；业务数据目录保持独立。'), messages, status, body, prompts.element);
+  const rag = ragSettings({alive, onDirty: value => dirty('rag', value), hasDirty: () => dirtySections.size > 0});
+  container.append(pageHeading('设置', '管理文本生成、Embedding 与 Qdrant 配置；提示词在独立中心管理。', el('a', {className: 'btn', href: '#/prompts'}, '打开提示词中心')), messages, status, body, rag.element);
   function errorMessage(error) {
     if (error.status === 409) return '配置已在其他位置修改。你的输入仍保留，请确认后重新读取配置。';
     if (error.status === 403) return '本次保存验证已失效或当前访问方式不允许修改，请重新读取设置后再操作。';
@@ -45,7 +46,7 @@ export function mount(container, context) {
         ['数据库文件', locations.database_file || '未提供'], ['知识目录', locations.knowledge_directory || '未提供'], ['配置目录', locations.config_directory || '未提供'],
         ['模型配置', locations.ai_config_file || '未提供'], ['密钥配置', locations.env_file || '未提供']]),
       notice('便携 EXE 使用 EXE 所在目录，和项目或其他便携目录的数据相互独立。备份时请保留完整便携目录。'),
-      el('p', {className: 'muted'}, 'Embedding / RAG 继续通过本机配置文件管理，本页不修改它们的开关或参数。')));
+      el('p', {className: 'muted'}, '下方可配置 Embedding 与 Qdrant；默认保持 RAG 关闭。')));
   }
   async function reload() {
     if (saving || !alive()) return;
@@ -62,20 +63,9 @@ export function mount(container, context) {
       const value = await api('/api/v1/settings/ai', {method: 'PUT', headers: {'X-Configuration-Token': snapshot.csrf_token}, body: {expected_revision: snapshot.revision, ...values}});
       clearPendingKeys(); values = null;
       if (!await resultIsCurrent()) return;
-      editor.clearSecrets(); render(value); dirty('ai',false);
+      editor.clearSecrets(); render(value); editor.busy(true); dirty('ai',false);
       messages.replaceChildren(notice('设置已保存。完全退出应用并重新打开后，新的 AI 设置才会生效。没有发起模型调用。', 'success'));
-      if (value.restart_required) {
-        if (value.desktop?.restart_supported) {
-          const restart = await confirmAction('新的 AI 配置需要重启应用。现在重启会等待在途任务完成；选择稍后则保留当前运行状态，配置将在下次启动生效。', {title: '设置已保存', confirmLabel: '现在重启', cancelLabel: '稍后'});
-          if (restart && alive()) {
-            if (dirtySections.has('prompts')) messages.append(notice('提示词模板还有未保存修改，请先保存或取消这些修改，再退出重启。', 'warning'));
-            else try {
-              await api('/api/v1/desktop/restart', {method: 'POST', headers: {'X-Configuration-Token': value.csrf_token}, body: {expected_revision: value.revision}});
-              if (alive()) messages.append(notice('正在等待任务结束并重启应用…'));
-            } catch {if (alive()) messages.append(notice('未确认重启成功，请完全退出应用后手动重新打开。没有自动重试。', 'error'));}
-          }
-        } else messages.append(notice('当前运行方式不支持网页重启。请停止并重新启动本机或 Docker 服务。'));
-      }
+      await offerRestart(value, 'ai', messages, alive, () => dirtySections.size > 0);
     } catch (error) {
       clearPendingKeys(); values = null;
       if (!await resultIsCurrent()) return;
@@ -87,5 +77,5 @@ export function mount(container, context) {
     } finally {saving = false; if (alive()) editor.busy(false); clearPendingKeys(); values = null;}
   }
   reload();
-  return () => {disposed = true; controller.abort(); prompts.dispose(); editor?.clearSecrets(); clearPendingKeys();};
+  return () => {disposed = true; controller.abort(); rag.dispose(); editor?.clearSecrets(); clearPendingKeys();};
 }

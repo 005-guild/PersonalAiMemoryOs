@@ -12,7 +12,9 @@ export function sourceSelection({initial = [], onChange = () => {}, alive = () =
   const root = el('div', {className: 'stack source-selection', 'data-testid': `${testId}-sources`},
     field('查找资料', search, `跨页保留选择，最多 ${max} 篇；只在主动生成时调用模型。`),
     el('div', {className: 'selection-bar'}, el('label', {className: 'settings-check'}, all, '当前页全选'), clear, chosen), feedback, results, paging, reader);
-  let page = 1, rows = [], sequence = 0, previewSequence = 0, stopped = false, locked = false, controller, previewController, disabledControls=[];
+  let page = 1, size = 20, rows = [], sequence = 0, previewSequence = 0, stopped = false, locked = false, controller, previewController;
+  const disabledControls=new Map();
+  function lockControls() {for(const node of root.querySelectorAll('input,select,button')){if(!disabledControls.has(node))disabledControls.set(node,node.disabled);node.disabled=true;}}
   const current = () => !stopped && alive();
   function changed() {drawSelection(); onChange([...selected.values()]);}
   function drawSelection() {
@@ -54,20 +56,20 @@ export function sourceSelection({initial = [], onChange = () => {}, alive = () =
   async function load() {
     controller?.abort(); controller = new AbortController(); const ticket = ++sequence;
     try {
-      const value = await api(`/api/v1/ui/sources?${new URLSearchParams({state: 'active', q: search.value, offset: String((page-1)*20), limit: '20'})}`, {signal: controller.signal});
+      const value = await api(`/api/v1/ui/sources?${new URLSearchParams({state: 'active', q: search.value, offset: String((page-1)*size), limit: String(size)})}`, {signal: controller.signal});
       if (!current() || ticket !== sequence) return;
-      if (page > 1 && (page-1)*20 >= value.total) {page = Math.max(1, Math.ceil(value.total/20)); return load();}
+      if (page > 1 && (page-1)*size >= value.total) {page = Math.max(1, Math.ceil(value.total/size)); return load();}
       rows = value.items;
       results.replaceChildren(el('div', {className: 'table-wrap'}, el('table', {className: 'data-table'},
         el('thead', {}, el('tr', {}, ...['选择', '资料标题', '作者 / 类型', ...(preview ? ['正文'] : [])].map(text => el('th', {}, text)))),
         el('tbody', {}, ...rows.map(item => {
           const box = el('input', {type: 'checkbox', 'data-source-id': item.id, 'aria-label': `选择来源 ${item.title}`, onChange: event => toggle(item, event.target.checked)});
           return el('tr', {}, el('td', {}, box), el('td', {}, el('strong', {}, item.title), el('small', {className: 'record-excerpt'}, item.excerpt || '')),
-            el('td', {}, item.author || '未署名', el('small', {className: 'status-detail'}, item.source_type)), preview && el('td', {}, button('预览正文', () => showPreview(item))));
+            el('td', {}, item.author || '未署名', el('small', {className: 'status-detail'}, `${item.source_type} · ${item.content_chars ?? '未知'} 字符`)), preview && el('td', {}, button('预览正文', () => showPreview(item))));
         })))));
       if (!rows.length) results.append(notice('没有匹配的正常资料。'));
-      paging.replaceChildren(numberedPagination({total: value.total, page, size: 20, sizes: [20], sizeLabel: '来源每页条数', label: '来源资料分页', onPage: value => {if (!locked) {page = value; load();}}, onSize: () => {}}));
-      for (const node of paging.querySelectorAll('button,input,select')) node.disabled ||= locked;
+      paging.replaceChildren(numberedPagination({total: value.total, page, size, sizeLabel: '来源每页条数', label: '来源资料分页', onPage: value => {if (!locked) {page = value; load();}}, onSize: value => {if (!locked) {size = value; page = 1; load();}}}));
+      if(locked)lockControls();
       drawSelection();
     } catch (error) {if (current() && ticket === sequence) showError(error, feedback);}
   }
@@ -85,6 +87,6 @@ export function sourceSelection({initial = [], onChange = () => {}, alive = () =
   }
   return {element: root, values: () => [...selected.values()], ids: () => [...selected.keys()],
     add: (value,{notify=true}={}) => {if (current() && !selected.has(value.id) && selected.size < max) {selected.set(value.id, value);drawSelection();if(notify)onChange([...selected.values()]);}},
-    busy: value => {if(value===locked)return;locked=value;if(value){disabledControls=[...root.querySelectorAll('input,select,button')].map(node=>[node,node.disabled]);disabledControls.forEach(([node])=>node.disabled=true);}else{for(const[node,disabled]of disabledControls)if(node.isConnected)node.disabled=disabled;disabledControls=[];}drawSelection();},
+    busy: value => {locked=value;if(value)lockControls();else{for(const[node,disabled]of disabledControls)if(node.isConnected)node.disabled=disabled;disabledControls.clear();}drawSelection();},
     destroy: () => {stopped = true; controller?.abort(); previewController?.abort(); delayed.cancel(); selected.clear();}};
 }

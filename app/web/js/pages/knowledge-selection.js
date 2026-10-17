@@ -1,5 +1,6 @@
 import {api} from '../api.js';
 import {el,button,notice,confirmAction,toast} from '../ui.js';
+import {localPagination} from './list-pagination.js';
 
 // Selection is deliberately limited to the visible page and its loaded versions.
 export function knowledgeSelection({onReload,onBusyChange,isDisposed}) {
@@ -79,8 +80,8 @@ export function knowledgeSelection({onReload,onBusyChange,isDisposed}) {
     toast(summary,failures.length?'warning':'success');
     if(isDisposed())return;
     report.replaceChildren(notice(summary,failures.length?'warning':'success'));
-    if(failures.length)report.append(el('ul',{className:'bulk-failures'},...failures.map(({item,message})=>
-      el('li',{},el('a',{href:`#/knowledge/${item.id}`},item.title),'：',message))));
+    if(failures.length)report.append(localPagination(failures, rows=>el('ul',{className:'bulk-failures'},...rows.map(({item,message})=>
+      el('li',{},el('a',{href:`#/knowledge/${item.id}`},item.title),'：',message))),{label:'批量删除未完成项分页'}));
     await onReload();
   }
   return {element,report,setItems,header,cell,get busy(){return busy;}};

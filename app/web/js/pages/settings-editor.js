@@ -1,6 +1,7 @@
 import {el, button, select, field, notice, confirmAction} from '../ui.js';
 import {profileEditor} from './settings-profile.js';
 import {providerPresets, profileFromPreset} from './settings-presets.js';
+import {localPagination} from './list-pagination.js';
 
 export function settingsEditor(document, {onSave, onDirty, alive}) {
   const form = el('form', {className: 'settings-form', autocomplete: 'off'}), controls = el('fieldset', {className: 'settings-fields'});
@@ -10,6 +11,8 @@ export function settingsEditor(document, {onSave, onDirty, alive}) {
   const preset = select(providerPresets.map(([id, label]) => [id, label]), 'compatible'); preset.setAttribute('aria-label', '新配置模板');
   const errors = el('div');
   let defaultId = document.default_profile || '';
+  let pagination;
+  function redraw() {pagination = localPagination(profiles, rows => el('div', {className:'stack'}, ...rows.map(profile=>profile.node)), {label:'生成模型配置分页',key:'settings-ai-profiles'});list.replaceChildren(pagination);}
   defaultProfile.addEventListener('change', () => {defaultId = defaultProfile.value;});
   function refreshDefault(before, after) {
     if (before && defaultId === before) defaultId = after;
@@ -24,13 +27,13 @@ export function settingsEditor(document, {onSave, onDirty, alive}) {
         if (!await confirmAction('删除这套模型配置？已有处理记录和笔记不会删除，已有密钥仍保留在本机。', {title: '删除模型配置', confirmLabel: '删除配置'}) || !alive()) return;
         const index = profiles.indexOf(editor); if (index < 0) return;
         if (defaultId === editor.id()) defaultId = '';
-        editor.clearSecret(); profiles.splice(index, 1); editor.node.remove(); refreshDefault(); onDirty();
+        editor.clearSecret(); profiles.splice(index, 1); editor.node.remove(); refreshDefault(); redraw(); onDirty();
       }});
-    profiles.push(editor); list.append(editor.node); refreshDefault();
+    profiles.push(editor); refreshDefault();
   }
   const addButton = button('＋ 新建模型配置', () => {
     if (profiles.length >= 100) {errors.replaceChildren(notice('最多保留 100 套模型配置。', 'warning')); return;}
-    add(profileFromPreset(preset.value, profiles.map(profile => profile.id())), true); onDirty();
+    add(profileFromPreset(preset.value, profiles.map(profile => profile.id())), true); redraw(); pagination.reveal(profiles.length-1); onDirty();
   }, {'data-testid': 'ai-add-profile'});
   const save = el('button', {type: 'submit', className: 'btn btn-primary', 'data-testid': 'ai-settings-save'}, '保存设置');
   controls.append(el('section', {className: 'card stack'}, el('h2', {}, '文本生成 AI'),
@@ -42,18 +45,29 @@ export function settingsEditor(document, {onSave, onDirty, alive}) {
     errors, el('div', {className: 'page-actions'}, save));
   form.append(controls);
   for (const profile of document.profiles) add(profile);
+  redraw();
   refreshDefault();
   form.addEventListener('input', onDirty); form.addEventListener('change', onDirty);
   form.addEventListener('submit', event => {event.preventDefault(); onSave();});
-  controls.disabled = !document.editable;
+  // Read-only deployments still allow paging through every configuration.
+  controls.disabled = false;
+  if (!document.editable) {
+    for (const node of form.querySelectorAll('input,select,textarea,button')) if (!node.closest('nav')) node.disabled = true;
+    for (const profile of profiles) for (const node of profile.node.querySelectorAll('input,select,textarea,button')) node.disabled = true;
+  }
   return {node: form, valid: () => {
+    for (let index=0;index<profiles.length;index++) for (const control of profiles[index].node.querySelectorAll('input,select,textarea')) if (!control.checkValidity()) {
+      pagination.reveal(index); profiles[index].node.open=true;let ancestor=control.parentElement;
+      while(ancestor&&ancestor!==form){if(ancestor.tagName==='DETAILS')ancestor.open=true;ancestor=ancestor.parentElement;}
+      control.reportValidity();return false;
+    }
     for (const control of form.querySelectorAll('input,select,textarea')) if (!control.checkValidity()) {
       let ancestor = control.parentElement;
       while (ancestor && ancestor !== form) {if (ancestor.tagName === 'DETAILS') ancestor.open = true; ancestor = ancestor.parentElement;}
     }
     return form.reportValidity();
   },
-    busy: value => {controls.disabled = value || !document.editable; save.textContent = value ? '正在保存…' : '保存设置';},
+    busy: value => {controls.disabled = value; save.textContent = value ? '正在保存…' : '保存设置';},
     clearSecrets: () => profiles.forEach(profile => profile.clearSecret()),
     collect: () => {
       errors.replaceChildren();

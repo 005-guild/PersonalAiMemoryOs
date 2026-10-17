@@ -2,6 +2,7 @@ import {api} from '../api.js';
 import {el, button, notice, badge, empty, pageHeading, formatDate, confirmAction, showError} from '../ui.js';
 import {pollVisible, profilesTable, jsonView, details, keyValues} from './workflow-utils.js';
 import {conflictsPanel} from './system-conflicts.js';
+import {remoteList} from './remote-list.js';
 
 function counts(value = {}) {return el('div', {className: 'page-actions'}, ...Object.entries(value).map(([name, count]) => badge(`${({published: '已发布', pending: '待处理', failed: '失败', excluded: '已排除', synced: '已同步', conflict: '冲突', error: '错误', deleted: '已删除'})[name] || name} ${count}`)));}
 
@@ -10,11 +11,11 @@ function syncDetails(status) {
   return el('div', {className: 'stack'},
     keyValues([['自动同步', status.enabled ? '已开启' : '已关闭'], ['后台任务', status.running ? '运行中' : '已停止'], ['上次扫描', formatDate(status.last_scan_at)]]),
     counts(status.counts), status.last_error && notice(status.last_error, 'error'),
-    status.issues?.length > 0 && details(`文件问题（${status.issues.length}）`, jsonView(status.issues)),
+    el('p', {className: 'muted'}, `文件问题 ${status.issue_count || 0} 条；笔记同步记录 ${status.note_count || 0} 条。请在下方分页明细中查看。`),
     problems.length > 0 && details(`待处理 / 异常笔记（${problems.length}）`,
       el('div', {className: 'table-wrap'}, el('table', {className: 'data-table'}, el('tbody', {}, ...problems.map(note => el('tr', {},
         el('td', {}, el('a', {href: `#/knowledge/${note.knowledge_id}`}, note.path || note.knowledge_id)), el('td', {}, note.status), el('td', {}, note.last_error || '等待同步'))))))),
-    !status.last_error && !status.issues?.length && !problems.length && el('p', {className: 'muted'}, '当前没有待处理的文件问题。'));
+    !status.last_error && !status.issue_count && !status.counts?.error && !status.counts?.pending && !problems.length && el('p', {className: 'muted'}, '当前没有待处理的文件问题。'));
 }
 
 function indexDetails(status) {
@@ -23,8 +24,7 @@ function indexDetails(status) {
     counts(status.counts), status.last_error && notice(status.last_error, 'error'),
     status.enabled && status.index_incomplete && notice('索引尚未完整；检索只使用已发布且仍有效的笔记片段。', 'warning'),
     status.generation ? details('当前索引代次', jsonView(status.generation)) : el('p', {className: 'muted'}, '尚无索引代次。'),
-    status.errors?.length > 0 && details(`索引错误（${status.errors.length}）`, jsonView(status.errors)),
-    status.excluded?.length > 0 && details(`排除笔记（${status.excluded.length}）`, jsonView(status.excluded)));
+    el('p', {className: 'muted'}, `索引错误 ${status.error_count || 0} 条；排除 ${status.counts?.excluded || 0} 篇。明细独立分页。`));
 }
 
 export async function mount(container, context) {
@@ -61,11 +61,11 @@ export async function mount(container, context) {
     finally {indexBusy = false; if (!stopped) updateIndexButtons();}
   }
   async function refreshSync() {
-    try {const value = await api('/api/v1/sync/status', {signal: controller.signal}); if (!stopped) syncBody.replaceChildren(syncDetails(value));}
+    try {const value = await api('/api/v1/sync/status?summary_only=true', {signal: controller.signal}); if (!stopped) syncBody.replaceChildren(syncDetails(value));}
     catch (error) {if (!stopped) showError(error, syncBody);}
   }
   async function refreshIndex() {
-    try {const value = await api('/api/v1/rag/index/status', {signal: controller.signal}); if (!stopped) {indexState = value; indexBody.replaceChildren(indexDetails(value)); updateIndexButtons();}}
+    try {const value = await api('/api/v1/rag/index/status?summary_only=true', {signal: controller.signal}); if (!stopped) {indexState = value; indexBody.replaceChildren(indexDetails(value)); updateIndexButtons();}}
     catch (error) {if (!stopped) {indexState = null; updateIndexButtons(); showError(error, indexBody);}}
   }
   async function loadConfigs() {
@@ -78,11 +78,16 @@ export async function mount(container, context) {
         value.error_code && notice(value.error_code, 'warning'), profilesTable(value));
     }));
   }
+  const lists = [
+    ['/api/v1/sync/issues','文件问题分页'], ['/api/v1/sync/notes','笔记同步明细分页'],
+    ['/api/v1/rag/index/errors','索引错误分页'], ['/api/v1/rag/index/excluded','索引排除分页']
+  ].map(([endpoint,label]) => remoteList(endpoint, items => el('div', {className: 'stack'}, ...items.map(item => el('div', {className: 'result-card'},
+    item.knowledge_id && el('a', {href: `#/knowledge/${item.knowledge_id}`}, item.title || item.path || item.knowledge_id), jsonView(item)))), {label,alive:()=>!stopped,signal:controller.signal}));
   container.append(pageHeading('同步与系统状态', '检查文件同步、解决版本冲突、维护索引，并查看模型配置是否就绪。'),
     el('div', {className: 'grid'},
       el('section', {className: 'card stack'}, el('div', {className: 'detail-header'}, el('h2', {}, 'Markdown 同步'), syncRun), syncBody, syncErrors),
       el('section', {className: 'card stack'}, el('h2', {}, '知识索引'), el('div', {className: 'page-actions'}, indexRun, indexRetry, indexRebuild), indexBody, indexErrors)),
-    conflicts.node,
+    conflicts.node, el('section', {className: 'card stack'}, el('h2', {}, '同步与索引明细'), ...lists.map(item=>item.element)),
     el('section', {className: 'card stack'}, el('div', {className: 'detail-header'}, el('h2', {}, '模型配置（只读）'), el('div', {className: 'page-actions'}, el('a', {className: 'btn', href: '#/settings'}, '打开设置'), button('刷新配置状态', loadConfigs))),
       notice('“配置就绪”仅表示参数和所需密钥已配置，不代表真实接口连通性或生成质量已验收。本页只展示状态；文本生成配置可在设置中修改。'), configBody,
       details('如何在本机配置', el('div', {className: 'stack'},

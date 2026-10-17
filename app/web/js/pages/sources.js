@@ -9,7 +9,7 @@ let pendingControlFocus = null;
 export function mountSources(container, context) {
   const mountedHash = location.hash;
   const query = context.params.get('q') || '', stateValue = sourceState(context.params.get('state'));
-  const page = positivePage(context.params.get('page')), size = pageSize(context.params.get('per_page'), [20,50,100], 20);
+  const page = positivePage(context.params.get('page')), size = pageSize(context.params.get('per_page'), [10,20,50,100], 20);
   const sort = sourceSort(context.params);
   const current = sourceHash('', {q: query, state: stateValue, page, per_page: size, ...sort});
   const navigate = (values, preserveControl = null) => {
@@ -51,10 +51,10 @@ export function mountSources(container, context) {
         el('thead', {}, sourceSortHeaders(sort, changeSort)),
         el('tbody', {}, ...value.items.map(item => el('tr', {},
           el('td', {}, el('a', {className: 'record-title', 'data-testid': 'source-group-link',
-            href: sourceHash('group', {title: item.title, state: stateValue, page: 1, per_page: 5, return_to: current})}, item.title)),
+            href: sourceHash('group', {title: item.title, state: stateValue, page: 1, per_page: 20, return_to: current})}, item.title)),
           el('td', {}, badge(`${item.source_count} 篇`, 'info'), el('small', {className: 'status-detail'}, `正常 ${item.active_count} · 已删除 ${item.deleted_count}`)),
           el('td', {}, (item.source_types || []).join('、')), el('td', {className: 'hide-mobile'}, formatDate(item.latest_updated_at))))))));
-      results.append(numberedPagination({total: value.total, page, size, sizes: [20,50,100], sizeLabel: '每页标题数', label: '资料标题分页',
+      results.append(numberedPagination({total: value.total, page, size, sizes: [10,20,50,100], sizeLabel: '每页标题数', label: '资料标题分页',
         onPage: target => navigate({page: target}), onSize: target => navigate({page: 1, per_page: target})}));
     } catch (error) {if (isCurrent()) {results.replaceChildren(); showError(error, errorBox);}}
   }

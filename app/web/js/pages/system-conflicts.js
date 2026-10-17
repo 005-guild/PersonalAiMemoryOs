@@ -1,6 +1,7 @@
 import {api} from '../api.js';
 import {el, button, field, notice, badge, empty, renderMarkdown, formatDate, confirmAction, showError} from '../ui.js';
 import {select, pager, details, jsonView, labelStatus, keyValues, dataTable} from './workflow-utils.js';
+import {listState} from './list-pagination.js';
 
 function snapshot(title, value, deleted) {
   return el('article', {className: 'card stack'}, el('h3', {}, title), badge(deleted ? '删除状态' : '内容版本'),
@@ -10,22 +11,24 @@ function snapshot(title, value, deleted) {
 }
 
 export function conflictsPanel(context, {signal, alive = () => true} = {}) {
-  let offset = 0, selected = context.id || '', sequence = 0, busy = false;
+  const stored = listState('sync-conflicts', {status: 'open'}), state = stored.value;
+  let offset = state.offset, size = state.size, selected = context.id || '', sequence = 0, busy = false;
   const list = el('div'), detail = el('div'), errors = el('div');
-  const status = select([['open', '待解决'], ['resolved', '已解决'], ['superseded', '已有新冲突'], ['all', '全部冲突']], 'open');
+  const status = select([['open', '待解决'], ['resolved', '已解决'], ['superseded', '已有新冲突'], ['all', '全部冲突']], state.status);
   status.setAttribute('aria-label', '冲突状态');
   status.addEventListener('change', () => load(0));
-  async function load(nextOffset = offset) {
-    offset = nextOffset; const current = ++sequence;
+  async function load(nextOffset = offset, nextSize = size) {
+    offset = nextOffset; size = nextSize; Object.assign(state, {offset,size,status:status.value});stored.save();const current = ++sequence;
     try {
-      const page = await api(`/api/v1/sync/conflicts?${new URLSearchParams({status: status.value, offset: String(offset), limit: '20'})}`, {signal});
+      const page = await api(`/api/v1/sync/conflicts?${new URLSearchParams({status: status.value, offset: String(offset), limit: size, summary_only: 'true'})}`, {signal});
       if (!alive() || current !== sequence) return;
+      if(offset&&offset>=page.total)return load(Math.max(0,Math.floor((page.total-1)/size)*size));
       const rows = page.items.map(conflict => el('tr', {},
         el('td', {}, el('a', {href: `#/knowledge/${conflict.knowledge_id}`}, conflict.db_snapshot?.title || conflict.knowledge_id), el('div', {className: 'muted'}, conflict.file_path || '路径未知')),
         el('td', {}, conflict.reason, el('div', {}, badge(labelStatus(conflict.status)))), el('td', {}, formatDate(conflict.created_at)),
         el('td', {}, button('查看冲突', () => open(conflict.id), {'data-testid': 'conflict-open'}))));
       list.replaceChildren(rows.length ? dataTable(['笔记 / 路径', '原因 / 状态', '发现时间', '操作'], rows) : empty('没有待处理的冲突', '系统会保留发现的双方版本；正常变更由后台自动同步。'), pager(page, load));
-    } catch (error) {if (alive()) showError(error, list);}
+    } catch (error) {if (alive() && current === sequence) showError(error, list);}
   }
   async function open(id) {
     if (busy) return;
@@ -74,6 +77,6 @@ export function conflictsPanel(context, {signal, alive = () => true} = {}) {
   }
   const root = el('section', {className: 'stack'}, el('div', {className: 'card stack'},
     el('div', {className: 'detail-header'}, el('h2', {}, '同步冲突'), el('div', {className: 'page-actions'}, field('筛选', status), button('刷新冲突', () => load(0)))), list), detail);
-  const ready = load(0).then(() => selected ? open(selected) : undefined);
+  const ready = load().then(() => selected ? open(selected) : undefined);
   return {node: root, ready, refresh: () => load()};
 }

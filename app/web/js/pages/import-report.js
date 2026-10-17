@@ -1,5 +1,6 @@
 import {el, button, notice, badge} from '../ui.js';
 import {labelStatus, dataTable} from './workflow-utils.js';
+import {numberedPagination} from './numbered-pagination.js';
 
 // Keep downloads independent of input files, even if an unexpected server field contains content.
 export function publicImportReport(value) {
@@ -20,10 +21,10 @@ export function publicImportReport(value) {
 }
 
 export function showImportReport(target, value, {markdown = false, download}) {
-  let offset = 0;
+  let offset = 0, size = 20;
   const entries = value.items || [], table = el('div'), paging = el('div');
   function render() {
-    const rows = entries.slice(offset, offset + 50).map(item => {
+    const rows = entries.slice(offset, offset + size).map(item => {
       const itemLabel = markdown ? el('div', {}, el('div', {className: 'record-title'}, item.relative_path || '未知文件'), el('small', {className: 'muted'}, `#${item.index + 1}`)) : `#${item.index + 1}`;
       const details = el('div', {}, el('div', {}, item.reason),
         item.differing_fields?.length ? el('p', {className: 'muted'}, `差异字段：${item.differing_fields.join('、')}`) : null,
@@ -38,11 +39,7 @@ export function showImportReport(target, value, {markdown = false, download}) {
       el('td', {}, item.source_id ? el('a', {href: `#/sources/${item.source_id}`}, `查看资料 · v${item.version}`) : '—'));
     });
     table.replaceChildren(dataTable(markdown ? ['文件', '标题 / 作者', '类型', '结果', '说明 / 差异', '资料'] : ['条目', '结果', '说明 / 差异', '资料'], rows));
-    paging.replaceChildren();
-    if (entries.length > 50) paging.append(el('div', {className: 'pagination'},
-      el('span', {}, `报告共 ${entries.length} 条 · 第 ${Math.floor(offset / 50) + 1} 页`),
-      el('div', {className: 'pagination-controls'}, button('报告上一页', () => {offset -= 50; render();}, {disabled: offset === 0}),
-        button('报告下一页', () => {offset += 50; render();}, {disabled: offset + 50 >= entries.length}))));
+    paging.replaceChildren(numberedPagination({total: entries.length, page: Math.floor(offset/size)+1, size, label: '导入报告分页', onPage: page => {offset=(page-1)*size;render();}, onSize: value => {size=value;offset=0;render();}}));
   }
   target.replaceChildren(el('div', {className: 'card stack'},
     el('div', {className: 'detail-header'}, el('h2', {}, value.dry_run ? '预演结果' : '导入报告'), button('下载报告', download)),

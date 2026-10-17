@@ -1,10 +1,14 @@
 import {el, button, notice, select} from '../ui.js';
 
-export function numberedPagination({total, page, size, sizes, sizeLabel, label, onPage, onSize}) {
+export const PAGE_SIZES = [10, 20, 50, 100];
+export function numberedPagination({total, page, size, sizes = PAGE_SIZES, sizeLabel = '每页条数', label = '记录分页', onPage, onSize}) {
   const pages = Math.max(1, Math.ceil(total / size)), errors = el('div');
   const jump = el('input', {type: 'text', inputMode: 'numeric', value: String(page), 'aria-label': '跳转页码', className: 'page-jump-input'});
   const sizeSelect = select(sizes.map(value => [String(value), `${value} 条 / 页`]), String(size));
-  sizeSelect.setAttribute('aria-label', sizeLabel); sizeSelect.addEventListener('change', () => onSize(Number(sizeSelect.value)));
+  // Pagination nested in an editor is navigation, not a change to its data.
+  sizeSelect.setAttribute('aria-label', sizeLabel); sizeSelect.addEventListener('input', event => event.stopPropagation());
+  sizeSelect.addEventListener('change', event => {event.stopPropagation();onSize(Number(sizeSelect.value));});
+  for (const name of ['input','change']) jump.addEventListener(name,event=>event.stopPropagation());
   function go() {
     const value = jump.value.trim(), target = Number(value);
     if (!/^[1-9]\d*$/.test(value) || !Number.isSafeInteger(target) || target > pages) {

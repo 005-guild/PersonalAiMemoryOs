@@ -26,7 +26,7 @@ export async function mount(container) {
   let disposed = false;
   async function refresh() {
     if (document.hidden || disposed) return;
-    const results = await Promise.allSettled([api('/api/v1/ui/overview'),api('/api/v1/ui/knowledge?limit=5'),api('/api/v1/sync/status'),api('/api/v1/ai/profiles'),api('/api/v1/rag/index/status')]);
+    const results = await Promise.allSettled([api('/api/v1/ui/overview'),api('/api/v1/ui/knowledge?limit=5'),api('/api/v1/sync/status?summary_only=true'),api('/api/v1/ai/profiles'),api('/api/v1/rag/index/status?summary_only=true')]);
     if (disposed) return;
     if (results[0].status === 'fulfilled') stats.querySelectorAll('.stat-value').forEach((node,i) => node.textContent = results[0].value[values[i][2]]);
     activity.replaceChildren(el('div',{className:'section-header'},el('h2',{},'最近更新'),el('a',{href:'#/knowledge'},'全部笔记 →')));
