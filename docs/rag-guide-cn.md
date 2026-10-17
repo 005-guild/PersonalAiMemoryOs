@@ -4,6 +4,8 @@
 
 桌面推荐操作：进入左上角设置的 RAG 分区，填写真实 Embedding 地址、模型、维度、鉴权和密钥引用，选择默认项及 Qdrant 地址。先保存为关闭状态，再分别检查 Qdrant 和向量接口；确认服务可用后才开启并重启。仅保存不发模型请求，Embedding 检测需单独确认且只调用一次，不生成笔记或索引；开启后自动索引全部合格 Knowledge。没有选定向量服务时保持关闭。
 
+本机现已完成 Ollama＋BGE-M3＋Qdrant 部署，固定便携目录中的 RAG 已开启，2 篇知识笔记已发布索引。Windows 重启后的服务启动方式见 [3.4 节](#34-日常启动与检查本地模型)，实际验证范围见 [3.5 节](#35-本机已核对的模型与隔离验证)；真实 DeepSeek 引用问答尚未自动执行。
+
 引用问答可从独立 Prompt 中心选择 `rag_qa` 用途模板，定制回答重点和风格；固定的出处校验仍有效。Prompt 保存立即供新问题选择，不需重启，也不会改变在途问题使用的模板快照。AI 分析使用另一类 `knowledge` 模板，生成结果在独立草稿箱审阅和采纳。
 
 0.7.0 的合并分析采纳后形成一篇多来源 Knowledge，仍只索引该笔记。引用返回全部来源及当前路径；仅调整来源关联或顺序不改变笔记检索文本时，更新引用元数据而不重新调用 Embedding。AI 批次与引用问答共用一个文本生成额度；批次等待或执行时，问答可能提示繁忙。重启会暂停批次，索引的显式重试规则保持独立。
@@ -29,6 +31,10 @@ RAG 把知识笔记转换成向量，找出与问题有关的片段，再让生�
 生成模型与向量模型可以来自不同服务。已经配好 DeepSeek 或其他聊天模型，不代表已经拥有 Embedding 接口。本程序不会自动下载或启动本地向量模型，也不会自动为你创建供应商账号、密钥或额度。
 
 **只有已保存的“知识笔记”进入索引。** 资料库中的 Source 原文、导入的知乎资料和未采纳 AI 草稿不会直接被索引。先手动建立笔记，或生成草稿并采纳，再使用 RAG。
+
+本机采用 **Ollama＋BGE-M3＋Qdrant** 作为本地向量检索方案：Ollama 负责将笔记和问题编码，Qdrant 保存向量，引用问答继续使用现有 DeepSeek 生成配置。BGE-M3 支持多语言，官方规格为 **1024 维、最长 8192 tokens**，查询无需额外添加指令前缀；当前程序只使用它的稠密向量能力。[BGE-M3 开源说明](https://github.com/FlagOpen/FlagEmbedding/blob/master/research/BGE_M3/README.md)
+
+向量化和语义检索可在本机完成。选择 DeepSeek 进行引用问答时，问题和命中的笔记片段仍会发送到 DeepSeek；本地 Embedding 不代表整个问答流程离线。首次下载 Ollama 和模型需要联网，模型下载完成后的本地编码不需要调用付费接口。
 
 ## 2. 找对当前程序的配置目录
 
@@ -105,6 +111,102 @@ MEMORY_OS_RAG_QDRANT_URL=http://127.0.0.1:6333
 Docker API 容器里的 `127.0.0.1` 指容器自身。若向量服务运行在 Windows 宿主机，Docker Desktop 下通常应把 YAML 的 `base_url` 改为 `http://host.docker.internal:实际端口/v1`，并确认该服务允许 Docker 访问；同一 Compose 网络中的其他模型容器则使用其服务名。该名称的含义见 [Docker Desktop 官方网络说明](https://docs.docker.com/desktop/features/networking/networking-how-tos/)。
 
 现有 Compose 已显式传入 `MEMORY_OS_AI_KEYS__EMBEDDING`。若自行改成其他密钥引用，还要在 Compose 中显式传入对应变量；仅在宿主机 `.env` 新增任意变量不会自动传给 API 容器。
+
+### 3.3 本机方案：Ollama＋BGE-M3
+
+以下地址适用于 **Windows 桌面 EXE 或本机 Python**。桌面程序继续保存在 `dist/PersonalAiMemoryOs-0.6.6/`，模型服务独立运行。先准备 Ollama，再在应用设置中保存向量配置；不要把生成 AI 的 DeepSeek 配置改成向量配置。
+
+模型权重位置统一为：
+
+```text
+D:\VsCode\PersonalAiMemoryOs\.cache\ollama\models
+```
+
+Windows 用户环境变量 `OLLAMA_MODELS` 指向这个目录。修改后需要重启 Ollama 进程；已经运行的服务不会自动读取新环境变量。应用自己的 `.env` 由 Memory OS 读取，不能代替 Ollama 服务的启动环境。[Ollama 模型位置说明](https://docs.ollama.com/faq#where-are-models-stored)
+
+本项目采用官方 Windows 独立 ZIP **Ollama `0.40.6`**，保存在项目 `.tools/ollama/`，不修改全局 PATH，也不添加 Windows 自启项。官方独立版含 CLI 和 NVIDIA 运行依赖，服务由 `ollama serve` 启动。[Ollama Windows 说明](https://docs.ollama.com/windows)
+
+在项目根目录运行启动脚本，准备 Docker Desktop、项目 Qdrant 服务和后台 Ollama。脚本完成后，再手动打开原有 EXE：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start_local_rag.ps1
+```
+
+首次下载模型及检查命令如下。模型已经存在时无需重复 `pull`，避免不经确认更新同名权重：
+
+```powershell
+& .\.tools\ollama\ollama.exe pull bge-m3
+& .\.tools\ollama\ollama.exe list
+Invoke-RestMethod -Uri http://127.0.0.1:11434/api/version
+Invoke-RestMethod -Uri http://127.0.0.1:11434/api/tags
+```
+
+`pull` 下载或更新模型，不是笔记生成。上述路径从 `D:\VsCode\PersonalAiMemoryOs` 执行；若在其他目录操作，先切换到项目根目录。下载使用的代理属于 Ollama 服务进程环境，本地 `127.0.0.1` 连接不应经过代理；无需把代理写进应用的模型 API 地址。
+
+打开应用左上角“设置 → RAG”，新建并选为默认向量配置：
+
+| 设置项 | 本机值 |
+| --- | --- |
+| 配置 ID | `local_bge_m3` |
+| 协议 | `openai_embeddings` |
+| API 地址前缀 | `http://127.0.0.1:11434/v1` |
+| 模型 | `bge-m3` |
+| 模型 revision | `7907646426070047a77226ac3e684fbbe8410524f7b4a74d02837e43f2146bab` |
+| 实际维度 | `1024` |
+| 鉴权 | `none` |
+| 密钥引用 | 留空 |
+| 请求降维 | 留空，不发送 `dimensions` |
+| 批次大小 | `1` |
+| 单次超时 | `180` 秒 |
+| 扩展参数 | `{}` |
+| Qdrant 地址 | `http://127.0.0.1:6333` |
+
+Ollama 提供 `/v1/embeddings` 兼容接口。这里填写到 `/v1`，应用自行追加 `/embeddings`；不需要安装 OpenAI SDK，也无需填写虚构密钥。[Ollama 兼容接口说明](https://docs.ollama.com/api/openai-compatibility#v1embeddings)
+
+先保持 RAG 关闭，保存后检查 Qdrant 连接，再确认执行一次 Embedding 测试，预期返回 1024 维。两项通过后开启 RAG、保存并重启应用。首轮索引会自动处理全部合格知识笔记；在“同步与系统”检查已发布、待处理和失败数量，然后到“搜索问答”先做语义检索。
+
+初期保留 **1200 字符分块、200 字符重叠、top_k=5**。`batch_size=1` 和 `timeout_seconds=180` 是本机首次接入值，不改变应用通用默认值，也不提高输入长度限制。首个请求可能包含模型装载时间；若超时，先查看服务状态，确认后再显式重试失败项。
+
+记录 `.\.tools\ollama\ollama.exe --version`、`list` 中的模型 ID，以及 `/api/tags` 返回的完整 digest。`bge-m3` 标签可能更新；确定模型后，使用完整 digest 作为 `model_revision`，在服务端也保留对应权重。以后拉取到不同 digest，必须同步更新 revision 并显式重建，不能继续混用旧向量。
+
+### 3.4 日常启动与检查本地模型
+
+Windows 重启后，先从项目根目录运行 `scripts/start_local_rag.ps1`，再打开 `dist/PersonalAiMemoryOs-0.6.6/PersonalAiMemoryOs.exe`。不需要重新下载权重。仅重启 Memory OS 时，已运行的 Ollama 与 Qdrant 可以继续使用；它们不随桌面窗口关闭。
+
+启动脚本在后台启动本地服务，不会自动运行提问或生成笔记。Ollama 服务信息位于 `.cache/ollama/service.json`，输出日志位于 `.cache/ollama/server.stdout.log` 和 `server.stderr.log`；Qdrant 日志可从项目根目录用 `docker compose logs --tail 100 qdrant` 查看。
+
+```powershell
+& .\.tools\ollama\ollama.exe list
+& .\.tools\ollama\ollama.exe ps
+Invoke-RestMethod -Uri http://127.0.0.1:11434/api/version
+Invoke-RestMethod -Uri http://127.0.0.1:6333/
+```
+
+`ollama ps` 查看当前已装载模型及 `PROCESSOR`：`100% GPU` 表示全部装入显存；没有列出模型可能只是尚未执行请求或模型已经卸载，不代表服务停止。[Ollama 设备状态说明](https://docs.ollama.com/faq#how-can-i-tell-if-my-model-was-loaded-onto-the-gpu)
+
+笔记索引和搜索都正常后，再由你在“引用问答”选择已有 DeepSeek 与 `rag_qa` 模板主动提问。该操作可能计费。安装和本地检索验收不会自动调用 DeepSeek，也不把本地向量接口成功当作引用回答质量已经通过。
+
+### 3.5 本机已核对的模型与隔离验证
+
+2026-10-18 已验证官方独立 ZIP 并安装 Ollama `0.40.6`；安装包 SHA-256 为 `e359637575302f288d76c0007c408a4be9c7376d59c4f28684d63b232a44b427`。实际模型为 `bge-m3:latest`，digest 与上表 revision 相同，F16、566.70M 参数、1024 维。实测模型全部装入 GPU，记录显存约 657 MiB；这只是本机该次装载结果，不是其他机器的资源保证。
+
+模型元数据的最大上下文为 8192 tokens，本次运行时报告的上下文为 **4096 tokens**。不能把模型理论上限直接当成本地服务当前上限。当前分块仍为 1200 字符、重叠 200 字符；字符和 token 不等价，长代码等内容仍需检查实际请求是否超限。
+
+隔离库与真实本地服务验收通过，最终报告位于项目 `.cache/local-rag-validation/47027502d6f94ec29b67b4cdc1869f93/report.json`，验证脚本正常退出；另有 16 项相关测试通过。最终这一轮流程包含 12 次本地 Embedding 调用、0 次生成模型调用，覆盖三条直接或改写查询的首位相关结果、编辑后更新、删除排除、恢复、重建缓存复用、collection 丢失恢复和进程重启；隔离 collection 已清理，项目原数据库与知识目录哈希保持不变。
+
+正式便携程序已完成设置页的受保护连接测试，Qdrant 正常、Embedding 返回 1024 维。RAG 已开启，默认 profile 为 `local_bge_m3`；已发布 2 篇、待处理 0、失败 0、排除 0，`index_incomplete=false`。两条针对现有笔记的改写查询，首位均命中预期笔记。两次正常重启均完成新旧实例交接、释放旧端口，索引代次保留，未重新建立索引。
+
+此次部署保留 571 篇资料、2 篇笔记及其他既有业务记录；完整知识目录文件哈希与 AI YAML 字节不变，原 `100000` 字符 AI 输入限制保留。部署前备份位于固定便携目录的 `backups/upgrade-20261017-155556-24c86bbf/`。正式审计报告保存在项目 `.cache/local-rag-setup/14d5ad580e654dccb7a39b4135b2a0b1/audit-1792253153772117600.json`。
+
+这些结果证明该模型与当前程序的真实编码、索引和样例检索流程可用；不代表所有问题的检索质量均已验收。本次没有调用真实 DeepSeek 进行生成，第四阶段真实生成质量及第五阶段完整引用问答质量验收仍待完成；由你在问答页主动提交问题后继续检查。
+
+### 3.6 Windows 代理导致本机接口 502
+
+本机遇到过：PowerShell 直接请求 Qdrant 正常，而桌面设置中的连接测试返回 502。原因是应用 HTTPX 继承系统代理，本机 `127.0.0.1` 请求被代理处理。
+
+Windows 用户环境变量 `NO_PROXY` 已包含 `localhost,127.0.0.1,::1`。新增这些本机例外时应保留已有列表，而不是清空全部代理设置；模型下载所需的 HTTPS 代理可以继续使用。改变用户环境后，旧桌面进程和旧终端不会自动得到新值，需正常退出 Memory OS，再从已加载新环境的启动入口打开。
+
+若此现象再次发生，先检查当前启动环境是否继承本机例外，再重测 Qdrant 和 Embedding；不要把代理返回的 502 当成 collection 损坏而清库或反复重建。启动脚本自身的健康检查绕过代理，但这不等于一个早先启动的桌面进程也已更新环境。
 
 ## 4. 准备 Qdrant
 
@@ -345,6 +447,11 @@ SQLite 保存成功的向量缓存、笔记版本和发布状态，Qdrant 保存
 
 | 错误/现象 | 处理方式 |
 | --- | --- |
+| 连接 `11434` 失败 | 从项目根目录运行 `scripts/start_local_rag.ps1`，检查 Ollama 服务日志及 `/api/version`；仅打开 Memory OS 不会自动启动模型服务 |
+| Ollama 找不到 `bge-m3` | 查看 `.tools/ollama/ollama.exe list` 和服务进程的 `OLLAMA_MODELS`；确认模型已下载到项目目录，再检查应用模型名，不要改成 DeepSeek 生成模型 |
+| 重启电脑后 RAG 不可用 | 本方案不创建 Windows 自启项；重新准备 Docker Desktop、Qdrant 与 Ollama，再查看索引状态，已有模型和数据不需重新下载或重建 |
+| 本地首次编码超时或使用 CPU | 查看 `ollama ps`、服务日志、显卡驱动及显存占用；保留批次 1、180 秒超时，解决后再显式重试，不直接把应用维度改小 |
+| 浏览器/PowerShell 直连正常，桌面本机连接却 502 | 检查当前桌面进程是否继承含 `localhost,127.0.0.1,::1` 的 `NO_PROXY`；正常退出并从新环境重新打开，先排除系统代理，不要清空向量库 |
 | `rag_disabled` | 修改正确运行根目录的开关并重启；Docker 重新创建 API |
 | `embedding_configuration_missing` / `embedding_configuration_invalid` | 检查当前运行根目录 YAML 路径、UTF-8、字段类型、重复键、默认 profile 和维度 |
 | `embedding_default_profile_missing` / `embedding_profile_unknown` / `embedding_profile_disabled` | 检查 YAML 默认项、`.env` 覆盖项及 profile 的 `enabled` |

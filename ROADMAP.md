@@ -2,6 +2,14 @@
 
 # MVP Roadmap
 
+## Local RAG Connection: Ollama + BGE-M3 + Qdrant (2026-10-18)
+
+Completed the user-approved local deployment without changing `0.8.0 / 0006`: verified official Ollama `0.40.6` Windows standalone archive under `.tools/ollama`, project-local BGE-M3 weights under `.cache/ollama/models`, and loopback Qdrant `1.19.2` with its Docker named volume. The fixed used desktop now has RAG enabled with `local_bge_m3`, native 1024 dimensions, batch 1 and timeout 180s; shipped defaults stay off. Startup remains explicit through `scripts/start_local_rag.ps1`, with no new Windows autostart or API-container rollout.
+
+Real local Embedding, Chinese retrieval and edit/delete/restore/cache/restart acceptance passed in isolation. Both existing Knowledge records published successfully, two paraphrased queries returned the expected top note, and protected desktop restarts retained the same index. Business records, full vault, AI configuration and the 100,000-character input limit were preserved after a verified backup. Source-only content remains unindexed. Sixteen safety tests cover the acceptance tooling. System-proxy loopback failures were resolved through preserved user `NO_PROXY` exceptions.
+
+TASK-005 now has real local Embedding and limited retrieval evidence. Full real cited-answer quality remains pending, as does TASK-004's bounded DeepSeek quality review; this work made zero text-generation requests and does not enlarge either call budget. Detailed evidence and model revision are in `IMPLEMENTATION_TASKS.md` and the Chinese RAG guide. Earlier RAG-off statements below describe historical deployments, not this desktop's current setting.
+
 ## v0.8.0: RAG Setup, Independent Prompts/Drafts and Consistent Pagination
 
 Status: engineering complete and deployed in the fixed portable directory on 2026-10-17; application `0.8.0`, schema `0006`. Earlier release completion statements remain historical. Real Embedding/generation quality remains pending.

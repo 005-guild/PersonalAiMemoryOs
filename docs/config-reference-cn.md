@@ -325,6 +325,44 @@ authentication auth token credentials accesstoken bearertoken
 
 Embedding 语义指纹包括 `protocol`、`base_url`、`model`、`model_revision`、`dimension`、`request_dimensions` 和 `extra_body`，再与分块规则组合为索引配置。修改这些内容需显式重建；仅更换密钥、显示名、鉴权方式、超时或批大小不改变这份语义指纹。若服务在相同模型名后静默换模型，应用无法自行识别，需自行更新 `model_revision` 并重建。
 
+### 7.1 本机 Ollama＋BGE-M3 配置
+
+Windows 桌面与本机 Python 接入本地 Ollama 时，使用以下 profile；保留其他已有配置。它与 DeepSeek 文本生成配置独立，不需要向量 API 密钥：
+
+```yaml
+schema_version: 1
+default_profile: local_bge_m3
+profiles:
+  local_bge_m3:
+    label: 本地 BGE-M3
+    enabled: true
+    protocol: openai_embeddings
+    base_url: http://127.0.0.1:11434/v1
+    model: bge-m3
+    model_revision: "7907646426070047a77226ac3e684fbbe8410524f7b4a74d02837e43f2146bab"
+    dimension: 1024
+    auth: none
+    batch_size: 1
+    timeout_seconds: 180
+    extra_body: {}
+```
+
+此处省略 `api_key_ref` 与 `request_dimensions`，表示不传鉴权头和降维参数。模型的实际 1024 维必须经过一次显式测试核对；`base_url` 不重复包含 `/embeddings`。BGE-M3 的模型规格和无需查询指令前缀说明见 [FlagEmbedding 开源文档](https://github.com/FlagOpen/FlagEmbedding/blob/master/research/BGE_M3/README.md)，接口映射见 [Ollama 兼容说明](https://docs.ollama.com/api/openai-compatibility#v1embeddings)。
+
+配套运行值为 `MEMORY_OS_EMBEDDING_DEFAULT_PROFILE=local_bge_m3`、`MEMORY_OS_RAG_QDRANT_URL=http://127.0.0.1:6333`。先保存为 `MEMORY_OS_RAG_ENABLED=false`，主动检查 Qdrant 与 Embedding，两项通过后再开启并重启。设置页面会维护对应项；手动编辑时不要覆盖其他 AI、密钥和输入限制。
+
+本机固定便携目录已完成上述准备并开启 RAG，当前 `MEMORY_OS_RAG_ENABLED=true`，2 篇现有知识笔记全部发布、无失败或待处理项，正常重启后仍可检索。这是本机个人配置的实际状态，应用代码和公开发行模板的 RAG 默认值仍为 `false`。
+
+示例中的 `model_revision` 是 2026-10-18 下载并核对的 `bge-m3:latest` 完整 digest，实际返回 1024 维；记录本次权重身份，不会让 Ollama 自动锁定标签。其他电脑安装后应核对自己的 `/api/tags`，更换 digest 后更新 revision 并重建。`batch_size=1`、`timeout_seconds=180` 为此次本机方案的配置值，通用默认仍是批次 8、超时 60 秒。此次运行上下文为 4096 tokens，模型元数据的 8192 tokens 不是当前运行上限。
+
+Ollama 的 `OLLAMA_MODELS` 是 **模型服务环境变量**，不是 Memory OS Settings。本机用户值指向 `D:\VsCode\PersonalAiMemoryOs\.cache\ollama\models`；修改后重启 Ollama。独立程序位于 `.tools/ollama/`，不加入全局 PATH、不自动随 Windows 启动；从项目根目录运行 `scripts/start_local_rag.ps1` 准备本地服务。安装、日常启动、日志和索引验证的完整操作见 [RAG 指南](rag-guide-cn.md#33-本机方案ollamabge-m3)。
+
+当前 EXE 使用上述宿主机地址；Docker API 的 `127.0.0.1` 指容器自身，不能直接照抄。若另行让 API 容器连接宿主机 Ollama，须单独确认服务监听范围和容器网络可达性。本机部署保持仅本机访问，不为此放开监听到局域网。
+
+Windows 用户 `NO_PROXY` 已包含 `localhost,127.0.0.1,::1`，防止应用继承系统代理后把本机 Ollama/Qdrant 请求发给代理。它是进程网络环境变量，不属于 Memory OS Settings，也不写入模型 YAML；修改后正常退出桌面，再从新环境启动。维护列表时保留其他已有例外。出现“直连正常、桌面报 502”时先核对这一项；启动脚本自己绕过代理的健康检查不能证明旧桌面进程环境已更新。
+
+本地 Embedding 和 Qdrant 不产生云端向量服务费用；DeepSeek 引用问答仍可能计费，且会收到问题及选中的知识片段。保存设置、查看状态和语义搜索不等于调用 DeepSeek。真实问答由用户主动提交，本地接口验证不代替生成质量验收。
+
 ## 8. 哪些开关需要一起打开
 
 | 目标 | 必需配置 | 是否自动调用模型 |
