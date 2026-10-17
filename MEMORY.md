@@ -1,5 +1,11 @@
 # MEMORY.md
 
+## Reproducible maintenance checks (2026-10-18)
+
+- NEXT-04 public entry points now live in scripts/check_docs.py, documentation_checks.py, check_project.py and verify_desktop_local_startup.py. Default checks have no network/model calls and no cached-build dependency. Optional build fingerprint checking is explicit. GitHub CI is defined with read-only permissions; remote execution is not claimed before a future authorized push.
+- The user authorized progressing the seven follow-ups while away, explicitly forbidding Windows reboot. Paid model checks are being prepared without spending; license remains undecided. Do not restart Windows, delete personal data or backups, redeploy the separate formal Docker API, or push new commits.
+
+
 ## Canonical GitHub Repository (2026-10-18)
 
 - The user explicitly authorized the initial push and requested persistent association with `https://github.com/005-guild/PersonalAiMemoryOs.git`. This is the canonical `origin`, with `main` as the primary branch; keep existing local history and use normal fast-forward pushes, not a forced replacement or a new unrelated root.

@@ -1,5 +1,12 @@
 # IMPLEMENTATION_TASKS.md
 
+## NEXT-04 reproducible checks (2026-10-18)
+
+- Public documentation checker: 15 manuals, 198 links, 7 JSON and 9 YAML examples passed; three focused checker tests passed.
+- Public EXE local-service verifier passed against the existing clean bundle: .cache/desktop-local-startup/a6e50841787f4de48aa89699212883a4/report.json. It verified isolated startup, same-directory single instance, guarded restart, retained configuration, released ports, zero model calls and unchanged shared service/storage ownership. No Windows reboot.
+- Added unified offline/non-paid check entry and read-only GitHub CI definition. Full unified run follows the remaining maintenance units; remote CI has not executed.
+
+
 ## Project Documentation Review and Follow-ups (2026-10-18)
 
 Scope: documentation only, based on source revision `fc0d505` and existing verification records. Inventoried 350 tracked files, then reviewed main/API/model/service/desktop/vector/web, tests, scripts, build/configuration and documentation boundaries. No application/runtime configuration, business data, model weights or distribution was modified; no service or paid model was run. The 1,135-test result below remains previous executed evidence, not a test rerun for this review.

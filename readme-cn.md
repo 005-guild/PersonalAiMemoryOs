@@ -1014,3 +1014,6 @@ uv run --locked python scripts/verify_desktop_upgrade.py --bundle .cache/desktop
 | [AGENTS.md](AGENTS.md) | 项目协作约定 |
 
 说明书核对日期：2026-10-17。以当前源码、配置类型和隔离验收核对；历史部署记录不代表已开启真实模型或 RAG。
+
+
+??????? EXE ??????????[????](docs/maintenance-cn.md)?

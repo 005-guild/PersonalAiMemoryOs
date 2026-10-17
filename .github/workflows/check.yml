@@ -1,0 +1,22 @@
+name: Project checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m pip install uv==0.13.0
+      - run: uv sync --locked --group desktop
+      - run: uv run --locked python scripts/check_project.py --require-node
