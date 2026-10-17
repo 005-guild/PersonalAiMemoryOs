@@ -1,5 +1,69 @@
 # DATABASE_DESIGN.md
 
+## 当前数据设计（2026-10-18，应用 `0.8.0` / Alembic `0006`）
+
+本节汇总实际实现。后面的发布记录和概念模型是历史材料，其中单来源、一套 Prompt 默认值、空库及 RAG 关闭等描述只适用于当时版本。实际 ORM 见 [`app/models/`](app/models/)，完整迁移链见 [`migrations/versions/`](migrations/versions/)；不能据原始概念模型创建未实施的表。
+
+### 当前表与关系
+
+当前有 **16 张应用表**，另有 `alembic_version`。JSON 是 SQLite 列中的持久字段，不代表额外实体表。
+
+| 表 | 当前用途、关系和关键约束 |
+| --- | --- |
+| `sources` | 原始资料；UUID、标题/作者/URL/正文、来源类型、乐观版本与软删除。相同标题或通用 URL 不具有数据库唯一性 |
+| `source_origins` | 可选导入身份，一条 Source 至多一条；`source_id` 为 PK/FK，`(provider, resource_type, external_id)` 唯一。知乎 `answer/article/pin` 互相区分；删除不释放去重身份 |
+| `knowledge` | 已保存知识笔记；UUID、Markdown 正文、摘要、分类、JSON 标签/概念、乐观版本和软删除；`source_id` 是可空的首来源兼容字段 |
+| `knowledge_sources` | 笔记与 Source 的有序多对多关联；PK `(knowledge_id, source_id)`，`(knowledge_id, position)` 唯一，位置 `0..19`。列表 `source_ids` 的顺序有含义 |
+| `sync_vault` | `id=1` 的知识目录身份；token 与目录中的 `.memory-os-vault` 配对，不能单独重建或混用 |
+| `sync_states` | 每笔记一条（PK/FK `knowledge_id`）；当前路径、共同内容基线及哈希、原始文件哈希、缺失计时/次数、同步状态和错误 |
+| `sync_conflicts` | 笔记一对多冲突；保留共同基线、数据库版本/快照、文件快照/原文/路径/哈希及解决状态 |
+| `sync_operations` | 笔记一对多持久文件意图；预期版本/哈希、目标及先前内容、路径、阶段和错误，用于身份回填、写入、删除和恢复 |
+| `prompt_templates` | 可编辑模板身份、乐观版本、正文/hash、用途、默认与归档状态；用途限 `knowledge/rag_qa`，每用途至多一个默认 |
+| `prompt_revisions` | 不可变修订，PK `(template_id, version)`；冻结当时用途、正文/hash 和输出协议。模板归档不删除历史修订 |
+| `processing_runs` | 草稿/生成尝试；首来源 FK 加完整来源快照、Prompt/模型/参数快照、结果与待采纳投影、用量/安全错误、版本/状态；采纳后 `adopted_knowledge_id` 唯一指向原笔记 |
+| `processing_batches` | 持久批次；唯一 `client_request_id` 和请求哈希、逐篇/合并方式、有序来源与执行快照、状态/取消意图及乐观版本 |
+| `processing_batch_items` | 批次一对多有序明细，`(batch_id, position)` 唯一；保存来源 ID 列表、当前 run FK、历史尝试 IDs/次数及状态。JSON 历史列表不等同于数据库 FK |
+| `rag_index_generations` | 独立 collection 的代次/所有权、Embedding profile/非敏感配置指纹、维度和状态；collection 唯一 |
+| `rag_note_index_states` | PK `(generation_id, knowledge_id)`；笔记版本/语义哈希、已发布/待处理 job ID、状态与错误。两个 job ID 是逻辑引用，并非 SQL 外键 |
+| `rag_index_jobs` | 代次与笔记的任务 FK；冻结版本/内容哈希、笔记快照、分块、成功向量缓存、调用意图、待清理点及阶段/安全错误 |
+
+模型定义分别位于 [`content.py`](app/models/content.py)、[`imports.py`](app/models/imports.py)、[`sync.py`](app/models/sync.py)、[`prompts.py`](app/models/prompts.py)、[`processing.py`](app/models/processing.py)、[`batches.py`](app/models/batches.py) 和 [`rag.py`](app/models/rag.py)。没有独立 `Opinion`、`Experience`、`Decision`、问答历史、附件或分组实体表；观点保留于分析结果/笔记正文，同标题分组是查询投影。
+
+### 写入、删除和历史兼容
+
+[`VersionedRecord`](app/models/base.py) 为 Source/Knowledge 提供整数版本、UTC ISO 时间和 `deleted_at`。模板、草稿和批次有各自版本；同步/索引状态表不是通用内容版本记录。每次 SQLite 连接启用外键约束，见 [`database.py`](app/repositories/database.py)。外键主要使用 `RESTRICT`，**软删除限制另由业务层检查**：任何正常笔记关联的 Source 都不能软删除；恢复笔记须保证所有保留来源有效，或显式调整/清空关联。现有 API 不提供永久物理删除或自动历史清理。
+
+`source_ids` 最多 20 个唯一有效 UUID；`source_id` 保留为首项或 `null`。旧单字段请求仍可设置/清空整个来源关联；同时提交两种字段时必须一致。关联写入与笔记内容在同一事务完成，筛选、删除限制和 RAG 引用覆盖全部来源。JSON 中冻结的历史来源、Prompt、参数不是随当前记录级联更新的实时关系。任一来源变化或删除会阻止旧草稿采纳；重复采纳定位既有笔记，包括已进入回收站的笔记，不创建或自动恢复副本。
+
+Markdown v1 保留单来源协议；多来源笔记用 v2 `source_ids`。已有文件不批量改写，数据库兼容迁移也不替换同步基线或改变文件字节。原始知乎导入 Markdown 与软件知识笔记 frontmatter 是不同协议。同步冲突与未完成文件意图必须随数据库保留，不能因文件当前看似正常而手工删除恢复记录。
+
+### 版本、恢复与索引缓存
+
+| 迁移 | 增量 |
+| --- | --- |
+| `0001` | Source、Knowledge、知识目录身份与同步记录 |
+| `0002` | 持久导入身份 |
+| `0003` | 生成运行与草稿 |
+| `0004` | 索引代次、笔记发布状态及含向量缓存的任务 |
+| `0005` | 多来源、模板/修订、持久批次与运行快照扩展；原首来源回填关联表 |
+| `0006` | 模板与修订用途，以及按用途唯一的默认索引；旧模板迁为 `knowledge`，不改正文/版本/hash |
+
+[`0006`](migrations/versions/0006_prompt_purposes.py) 用 SQLite insert/update 触发器约束用途，避免重建被引用的表；ORM 中的用途检查并不意味着生产库经过了 `create_all`。常规 Python/Docker 只检查已迁移 schema，须停止服务、备份后显式 `alembic upgrade head`。便携版允许空库初始化，对已知旧版本先确认并验证备份再迁移；未知/更高版本、缺失知识目录或身份不匹配则拒绝启动，见 [`bootstrap.py`](app/desktop/bootstrap.py)。不要将 `0006` 库直接交给旧版应用；降级优先恢复匹配版本的完整备份。
+
+SQLite 是 RAG 发布依据，Qdrant 仅保存派生点。查询必须同时匹配当前代次、已发布 job、笔记版本和语义哈希，并排除删除/开放冲突/同步错误。缓存保存于 `rag_index_jobs.vectors`，不是单独磁盘缓存数据库；成功替换后清除旧向量，历史任务快照不因此全部删除。内容相同且配置指纹兼容可复用缓存，模型/revision/维度/分块不兼容则显式重建；缺失缓存的重新编码可能产生调用，失败/未知调用不能自动重试。见 [`rag.py`](app/repositories/rag.py) 与 [`rag_search.py`](app/services/rag_search.py)。
+
+### 备份、敏感数据与部署范围
+
+SQLite 备份必须与**完整知识目录（含身份标记）**配套，并停服务避免同步期间跨介质不一致；只复制某篇 Markdown 不足以恢复资料、草稿、模板、冲突和向量缓存。[`storage_backup.py`](app/desktop/storage_backup.py) 使用 SQLite backup API、完整目录复制和 SHA-256 清单。配置由升级/维护流程另行保留；该底层存储备份函数本身只保证数据库和知识目录。跨 SQLite/Markdown/Qdrant 没有分布式事务，恢复依靠基线、意图日志和条件发布。
+
+数据库可能包含原文、未采纳草稿、多次来源快照、冲突双方原文、Prompt 和检索片段；备份/验收报告不能视作已脱敏公开资料。API 密钥不写入业务表，但 `.env`、个人配置及配置恢复日志可能含凭证，须单独保护并排除版本控制。当前没有数据库/备份加密、自动保留期限或安全销毁功能。Qdrant 命名卷是独立的外部服务数据；可用 SQLite 当前缓存重建，是否另做卷备份要单独安排。模型权重、外部项目启动路径也不随便携目录数据库备份自动保存。
+
+当前仅支持一个应用进程/worker 写同一份 SQLite 与知识目录，不能本机服务和 Docker 同时共用；桌面按便携目录互斥不代替跨部署存储锁。近期交付审计中的固定安装已有 571 篇资料/2 篇笔记，已启用本地 BGE-M3 的真实编码和小样本检索；新发行默认关闭 RAG。历史记录中的空表及 RAG-off 是当时验收快照。真实 DeepSeek 生成质量与完整引用问答质量仍待单独验收，不能从索引表发布成功推导回答正确。
+
+## 历史版本记录与原始概念模型
+
+以下保留各发布时点的设计与验收证据，不作为当前运行状态。
+
 ## v0.8.0: Purpose-Specific Prompt Defaults (`0006`)
 
 Application `0.8.0` explicitly upgrades `0005` to `0006`. Migration, full regression and portable deployment passed; retain historical acceptance below as release-specific evidence.
@@ -69,7 +133,7 @@ No question history, Source vectorization, draft vectorization, new business not
 
 Actual v0.5 migration, full regression and real-Qdrant local/Docker engineering acceptance passed on 2026-10-17 (609 tests passed, two Windows privilege skips, one existing warning). Formal storage was backed up while stopped to `data/backups/v0.4-before-v0.5-20261017-cf037130`, every manifest entry verified, then explicitly upgraded `0003 → 0004`. SQLite integrity is `ok`; all four existing business/import/run tables and all three RAG tables remain empty, and full vault hashes are unchanged. Formal AI/RAG are disabled and no real model request was made. Evidence: `.cache/v05-deployment-result.json`; isolated workflow report: `.cache/v05-validation/0e022cb9aae0471c8ac2b0efe3c98f32/report.json`. These are engineering results, not real retrieval/answer quality acceptance.
 
-# Core Data Model
+## 原始概念模型（历史设计，非当前实际表清单）
 
 ## Source
 

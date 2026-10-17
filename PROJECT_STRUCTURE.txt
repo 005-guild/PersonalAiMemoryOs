@@ -1,3 +1,8 @@
+Historical directory notes through v0.4; not the current implementation map.
+Current v0.8.0 structure and follow-up review: docs/project-audit-cn.md
+Current architecture and tables: ARCHITECTURE.md / DATABASE_DESIGN.md
+The placeholder/future statements below belong to their original phases.
+
 personal-ai-memory-os/
 
 ├── AGENTS.md

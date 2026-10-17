@@ -4,6 +4,8 @@
 
 日常操作见 [中文使用说明](../readme-cn.md)，向量索引、搜索和引用问答的完整步骤见 [RAG 使用指南](rag-guide-cn.md)。本文的配置依据是 [Settings](../app/config.py)、[文本配置与适配器](../app/agents/configuration.py)、[Embedding 配置](../app/vector/configuration.py) 和 [Compose](../docker-compose.yml)。
 
+当前源码、固定桌面与独立旧 Docker API 的版本／存储范围见 [实例矩阵](project-audit-cn.md#current)。后续恢复、冷启动和空间保留任务见 [维护清单](project-audit-cn.md#priorities)；它们是待实施／待验收事项，不是隐藏配置项。
+
 ## 1. 配置放在哪里，按什么顺序读取
 
 | 运行方式 | 运行根目录 | 个人配置与数据 | 修改后生效方式 |

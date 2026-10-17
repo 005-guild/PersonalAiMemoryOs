@@ -2,6 +2,24 @@
 
 # MVP Roadmap
 
+## Current Summary and Follow-up Review (2026-10-18)
+
+Current source and fixed desktop: **0.8.0 / 0006**; the historical name `PersonalAiMemoryOs-0.6.6` is retained. The original EXE now prepares opted-in local Ollama/Qdrant services; current local RAG is configured, while clean distributions default off. The separate Docker API's last recorded deployment remains **0.6.0 / 0004**, AI/RAG off. Sharing its Qdrant service does not upgrade or enable that API. See the [instance matrix](docs/project-audit-cn.md#current); this documentation review did not probe or deploy services.
+
+Current follow-up queue is recorded in [项目审阅与后续补充清单](docs/project-audit-cn.md#priorities):
+
+| ID | Priority / state | Next result required |
+| --- | --- | --- |
+| NEXT-01 | P1 / pending quality acceptance | Real generation and cited-answer review, fixed samples, separate explicit budgets |
+| NEXT-02 | P1 / pending | Full isolated backup restoration, including vault/configuration and separate Qdrant route |
+| NEXT-03 | P1 / pending | Physical Windows cold boot and entire local-stack relocation; do not repeat already-passed portable-only moves |
+| NEXT-04 | P1 / pending | Track stable documentation/automatic-service acceptance tools outside `.cache`, publish a repeatable check matrix |
+| NEXT-05 | P2 / pending | External log and historical artifact retention, preserving model weights and useful backups |
+| NEXT-06 | P2 / pending | Fixed retrieval samples and synthetic capacity/latency/storage baselines |
+| NEXT-07 | P2 / decision and maintenance | Build identity/version policy, dependency review and owner-selected project licensing before public release |
+
+This review updates documentation only. Current features and evidence are summarized in [SPEC.md](SPEC.md); optional new features are not mandatory implementation commitments. TASK-004 and complete TASK-005 quality gates remain pending. Dated entries below preserve historical results; their old "current status", missing-key or Qdrant-off statements must not override this summary.
+
 ## Desktop One-Click Local RAG Preparation (2026-10-18)
 
 Complete and delivered in the same portable directory, keeping `0.8.0 / 0006`. The existing EXE now prepares opted-in local Ollama/Docker Desktop/Qdrant through its bundled hidden helper before starting the backend; the user no longer needs a PowerShell command. Optional personal `config/local-rag-startup.json` selects the project location. Missing/disabled configuration, RAG-off or different endpoints do not start services. New distributions do not enable it or bundle model weights/Docker.
@@ -112,7 +130,7 @@ Complete: - parser - importer - validation
 
 AI Processing.
 
-Current status: v0.4 engineering acceptance and bounded DeepSeek real-acceptance preparation passed; credentials are missing and zero live requests have been made. Formal AI is off. Not complete.
+Current phase status: engineering implemented; formal real-generation quality review remains pending. The earlier v0.4 closing-step snapshot had no credentials and no live calls; it does not describe today's personal desktop configuration. No new call budget is granted by this status update.
 
 Deliver: summary, classification and evidence-backed opinion extraction as previewable drafts; configurable model protocols; explicit one-time Knowledge adoption.
 
@@ -120,7 +138,7 @@ Deliver: summary, classification and evidence-backed opinion extraction as previ
 
 RAG.
 
-Current status: v0.5 engineering acceptance and formal deployment passed. Real Embedding/retrieval/answer quality acceptance remains pending; Phase 5 is not fully complete. Formal AI and RAG remain off, and formal Qdrant has not been started.
+Current phase status: engineering and real local BGE-M3 interface/lifecycle/limited-retrieval checks passed; complete real cited-answer quality remains pending. The used desktop's RAG is enabled; the separate old Docker API remains disabled. Qdrant is running for the desktop. Phase 5 is not fully complete; earlier v0.5 empty/off-state deployment details below are historical.
 
 Deliver: Knowledge-only incremental Embedding, SQLite vector caching, owned Qdrant collections, semantic search, checked citations and single-turn knowledge-only answers. Do not mark Phase 5 complete until engineering and real quality gates both pass.
 

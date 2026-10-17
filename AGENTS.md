@@ -24,6 +24,7 @@ Management Engineer
 - After each completed and appropriately verified source/documentation work unit, create a local Git commit. Never stage credentials, personal configuration, databases, knowledge files, private exports, caches or distribution artifacts. Do not push unless explicitly requested.
 - Use repository-local author PersonalAiMemoryOs Maintainer <maintainer@localhost>; do not change global Git configuration.
 - Update readme-cn.md, docs/rag-guide-cn.md and docs/config-reference-cn.md with user-visible changes.
+- Keep current summaries separate from dated history. Consult docs/project-audit-cn.md for follow-up priorities; proposed items need their stated verification before being marked complete.
 
 -   Modular design
 -   Clear responsibility boundaries

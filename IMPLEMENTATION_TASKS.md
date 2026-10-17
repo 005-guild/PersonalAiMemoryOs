@@ -1,5 +1,15 @@
 # IMPLEMENTATION_TASKS.md
 
+## Project Documentation Review and Follow-ups (2026-10-18)
+
+Scope: documentation only, based on source revision `fc0d505` and existing verification records. Inventoried 350 tracked files, then reviewed main/API/model/service/desktop/vector/web, tests, scripts, build/configuration and documentation boundaries. No application/runtime configuration, business data, model weights or distribution was modified; no service or paid model was run. The 1,135-test result below remains previous executed evidence, not a test rerun for this review.
+
+Completed: current `SPEC.md`; current architecture and 16-application-table/schema-0006 database summaries; request-aware startup prompt; historical structure labeling; source/desktop/old-Docker instance matrix; explicit single-worker/storage boundaries; complete restoration checklist and maintainer verification matrix. Added [docs/project-audit-cn.md](docs/project-audit-cn.md) with evidence and completion criteria, and linked it from the manuals and engineering rules. Older records remain historical.
+
+Registered pending work in `ROADMAP.md` as NEXT-01 through NEXT-07: real generation/answer quality, full isolated restoration, physical cold boot/local-stack relocation, version-controlled verification entry points, log/artifact retention, retrieval/capacity baselines, and release/dependency/licensing decisions. No task is marked implemented merely by being listed. Existing pagination/Prompt/draft/backup/cache-recovery/upgrade features were checked before proposing gaps, to avoid duplicating completed work. TASK-004/005 quality status and budgets are unchanged.
+
+Validation for this documentation unit: **14 Markdown documents and 195 local links/anchors** passed, including directory targets; 7 JSON/9 YAML examples and the existing Settings/profile field coverage passed. ORM inventory confirmed 16 application tables; historical/current consistency and whitespace were reviewed. Application/build fingerprint and distribution SHA-256 remain unchanged. Detailed local check results remain in `.cache/project-audit/`; no private configuration is loaded and the full application suite was not re-run. Public documentation is committed locally after checks, with no remote push.
+
 ## Desktop Automatic Local RAG Preparation (2026-10-18)
 
 Status: complete and delivered in place, retaining application `0.8.0`, schema `0006`. Double-clicking the original desktop now prepares the configured local services without a separate PowerShell step. No new dependency or schema change; model weights and Docker remain external.

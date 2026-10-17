@@ -1,5 +1,62 @@
 # ARCHITECTURE.md
 
+## 当前架构总览（2026-10-18，应用 `0.8.0` / 数据库 `0006`）
+
+本节是维护入口。后面的版本说明和原始蓝图保留为历史记录；其中“当前版本”“RAG 关闭”“单来源”等表述只适用于对应发布时点，不能替代本节。当前范围是本机个人知识管理、离线知乎导入、可选模型整理和知识笔记检索问答，不包含在线知乎抓取、账号登录、多用户或多轮问答历史。
+
+```mermaid
+flowchart LR
+    Import[JSON / Markdown 离线导入] --> Source[Source 原始资料]
+    Source --> Batch[分析任务 / 冻结 Prompt 与来源快照]
+    Batch --> Draft[processing_runs 待采纳草稿]
+    Draft -->|人工采纳| Note[SQLite Knowledge]
+    Edit[网页 / API 编辑] --> Note
+    Note <-->|基线比较 / 冲突与操作记录| Markdown[Markdown 知识目录]
+    Note -->|合格笔记增量分块| Cache[SQLite 向量缓存与发布清单]
+    Cache --> Qdrant[Qdrant 派生索引]
+    Query[问题] --> Embedding[独立 Embedding 服务]
+    Embedding --> Qdrant
+    Qdrant --> Check[SQLite 版本与有效状态复核]
+    Check --> Answer[可选生成模型 / 引用校验]
+```
+
+### 实际分层与入口
+
+| 层次 | 当前职责和主要代码 |
+| --- | --- |
+| 网页 | 同源 HTML/CSS/模块化 JavaScript、Hash 路由；资料、笔记、分析任务、草稿、Prompt、问答和设置各自组织。仅发布指定资源目录，见 [`app/web/routes.py`](app/web/routes.py) 与 [`app/web/`](app/web/) |
+| API | 请求校验、分页投影、错误映射与配置写入保护，见 [`app/api/`](app/api/)；[`app/main.py`](app/main.py) 的 `create_app` 装配服务及生命周期 |
+| 业务服务 | 内容与来源关联、逐条导入、模板与持久批次、同步、索引、引用回答分别编排，见 [`app/services/`](app/services/)；不把模型等待放入数据库事务或内容同步锁 |
+| 持久化 | [`app/models/`](app/models/) 定义实际记录，[`app/repositories/`](app/repositories/) 提供短事务查询；显式 Alembic 迁移位于 [`migrations/versions/`](migrations/versions/) |
+| 模型与向量 | [`app/agents/`](app/agents/) 适配四类文本生成协议；[`app/vector/`](app/vector/) 分离 Embedding、确定性分块与 Qdrant REST；固定协议提示词位于 [`app/prompts/`](app/prompts/) |
+| Windows 宿主 | [`app/desktop/`](app/desktop/) 管理资源/运行目录、WebView2、本机随机端口、单实例、备份升级及优雅重启；固定使用 `dist/PersonalAiMemoryOs-0.6.6/`，目录名不是应用版本 |
+
+Source 原文、处理草稿与 Knowledge 是不同业务对象。只有已保存且有效的 Knowledge 参与索引；采纳不是隐式自动操作。笔记通过有序关联表支持最多 20 个来源，兼容字段 `source_id` 始终投影首个来源；同标题资料的分组只是列表投影，不合并 Source 身份。
+
+Prompt 模板分 `knowledge` 与 `rag_qa` 两种用途，各有默认模板和不可变修订。独立 Prompt 页面修改模板后立即供新请求选择；任务冻结当时模板、模型配置和生成参数。生成任务与草稿页面分别展示调度进度和已保存结果。批次重启后暂停，取消只阻止后续调用；未知调用结果不能自动付费重试。见 [`prompt_templates.py`](app/services/prompt_templates.py)、[`processing_batches.py`](app/services/processing_batches.py) 和 [`processing_batch_store.py`](app/services/processing_batch_store.py)。
+
+### 权威数据、同步和一致性边界
+
+- **SQLite 保存业务身份、版本、来源关系、草稿和索引发布依据；Markdown 是可编辑入口。** 双方以 `sync_states` 的共同基线做三方比较，无法自动合并时保存双方快照，由用户选择；不能只用文件时间覆盖数据库。
+- **SQLite、Markdown 与 Qdrant 之间没有分布式事务。** 文件副作用先保存 `sync_operations`，用原始文件哈希和版本核验、同目录替换及重启恢复协调；目录缺失或扫描失败不得推断为批量删除。见 [`sync_reconcile.py`](app/services/sync_reconcile.py)、[`sync_operations.py`](app/services/sync_operations.py)。
+- **Qdrant 是可重建的派生存储。** 成功向量先入 SQLite，再上传属于本应用代次的 collection，重新核验笔记后条件发布；查询命中回查 SQLite，排除未发布、过期、删除、开放冲突或同步错误内容。文件移动只更新引用路径，不重新编码。见 [`rag.py`](app/repositories/rag.py)、[`rag_index_jobs.py`](app/services/rag_index_jobs.py)、[`rag_search.py`](app/services/rag_search.py)。
+- 未知或中断的 Embedding 调用须显式重试；已有缓存的 Qdrant 写入可以恢复。切换模型、revision、维度或分块规则需显式重建。索引不完整和服务故障分别报告，不能当成“知识库为空”。
+- 问答只使用本轮核验片段，固定 JSON/引用合同不能被自定义 Prompt 取消；生成后再次校验上下文，变化则返回 `409 context_changed`。没有片段时不调用生成模型。引用可追溯不等于模型结论已通过真实性审阅。
+
+### 进程、服务与配置边界
+
+当前支持 **一个存储对应一个应用进程、一个 Uvicorn worker**。[`app/main.py`](app/main.py) 的 `RLock`、[`GenerationGate`](app/agents/generation_gate.py) 及后台协调器均是进程内设施；[`Dockerfile`](Dockerfile) 固定 `--workers 1`。桌面互斥锁按便携目录区分，不能约束另一个本机/Docker 进程使用同一数据库和知识目录。不得对同一存储同时启动两种运行方式，也不能用增加 workers 直接扩容。多进程支持需要另外设计跨进程锁、任务归属和调度协调，尚未实现。
+
+AI 与 RAG/Embedding 分别配置，默认发行配置均关闭。网页保存模型设置只更新下次启动配置，连接测试由用户显式发起；模板修改则立即供新任务使用。配置写入有同源、令牌、revision 和文件恢复日志保护，运行时环境变量优先，Compose 配置只读。见 [`ai_settings.py`](app/services/ai_settings.py)、[`rag_settings.py`](app/services/rag_settings.py)、[`configuration_files.py`](app/services/configuration_files.py)。这不是账号认证体系，应用仍限定本机使用。
+
+已配置的 Windows 桌面可在双击时自动准备外部本地服务：[`local_services.py`](app/desktop/local_services.py) 读取便携目录的可选 `config/local-rag-startup.json`，只对已开启 RAG 且使用预期本机地址的配置调用随包提供的 [`start_local_rag.ps1`](scripts/start_local_rag.ps1)。它使用配置指向的项目目录中已安装的 Ollama、Docker Desktop 与 Compose Qdrant；**不内置模型、Docker 或 Qdrant，不自动下载权重，也不随窗口退出停止共享服务**。准备失败可明确选择本次关闭 RAG 继续基础管理；保存配置保持不变。整个便携目录移动后，外部项目路径及服务依赖仍需单独核对。
+
+当前这台电脑已部署 Ollama `0.40.6` / BGE-M3 1024 维和 Qdrant `1.19.2`，固定便携安装已开启 RAG；最近交付审计为 2 篇笔记已发布、0 失败，隔离生命周期、少量真实本地检索及桌面重启验证通过。新发行包仍保持默认关闭。这些是已记录的验收结果，不是对实时状态或所有问题检索质量的保证；**DeepSeek 真实生成审阅及完整真实引用问答质量验收仍待完成**。详见 [任务记录](IMPLEMENTATION_TASKS.md) 与 [RAG 指南](docs/rag-guide-cn.md)。
+
+## 历史版本记录与原始蓝图
+
+以下按原发布记录保留，涉及行为和状态时须以对应版本为范围。
+
 ## v0.8.0: Prompt Center, Draft Workspace, Pagination and RAG Setup
 
 Application `0.8.0` uses explicit schema `0006`. Engineering acceptance and the fixed-directory delivery are complete; historical release results below remain unchanged evidence. Real-provider quality is a separate pending gate.
@@ -108,7 +165,7 @@ Formal v0.6 is deployed after a verified full stopped-service backup, with schem
 
 All seven formal pages passed a read-only Chromium smoke without script errors or writes (`.cache/v06-formal-browser/report.json`). Production image inspection confirmed local licenses are present and Playwright/`.env` absent; validation resources were fully removed.
 
-# System Architecture
+## 原始系统蓝图（历史设计，非当前已实现组件清单）
 
     Data Sources
 

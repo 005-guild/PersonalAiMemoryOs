@@ -1,36 +1,75 @@
-# SPEC.md
+# Personal AI Memory OS 产品规格
 
-# Product Specification
+更新日期：2026-10-18。当前应用 **0.8.0**，数据库 **0006**。功能依据源代码和已有验收记录整理；历史交付记录见 [IMPLEMENTATION_TASKS.md](IMPLEMENTATION_TASKS.md)，后续缺口见 [项目审阅与补充清单](docs/project-audit-cn.md)。
 
-## Current Offline Collection Input (v0.6.3)
+## 1. 产品目标
 
-The workbench accepts project JSON and adapted Zhihu Markdown export folders for answers, articles and pins. Folder import is explicitly selected, previewed and committed into original Sources; it preserves text/attribution and conservatively skips existing identities. It does not fetch Zhihu online, transfer images, generate Knowledge or invoke AI/RAG. Users create Knowledge later by adopting a generated draft or editing notes manually.
+将信息转化为知识、个人洞察和决策支持，首先服务单个用户的本地知识整理：
 
-## Vision
+**离线资料 → Source 原文 → AI 分析草稿 → 人工采纳 → Knowledge 笔记 → Markdown 双向同步 → 语义检索与引用问答。**
 
-Personal AI Memory OS converts:
+用户也可以直接创建知识笔记，跳过导入和 AI。资料、草稿、笔记是不同对象；生成草稿不等于采纳，导入原文不等于建立可检索知识。
 
-Information -\> Knowledge -\> Personal Insight -\> Decision Support
+## 2. 已实现范围
 
-## MVP Goal
+| 工作区 | 当前行为 |
+| --- | --- |
+| 概览 | 真实资料、笔记、草稿、冲突计数及服务状态 |
+| 资料库 | 新建、编辑、软删除、恢复；按完全相同的标题分组阅读，各作者资料保持独立；分页、搜索及标题／数量／类型／更新时间排序 |
+| 离线导入 | 项目 JSON 和适配格式的知乎 Markdown 文件夹；回答、文章、想法；先预演再提交、逐项报告、保守去重，不联网获取正文、不复制图片 |
+| 知识笔记 | 标题、正文、摘要、分类、标签、概念；最多 20 个有序来源或无来源；列表批量软删除、回收站、安全预览；保存成功返回概览 |
+| AI 分析 | 搜索、分页勾选和原文预览；最多 20 篇逐篇处理或合并分析；持久任务、显式继续／重试／取消 |
+| 草稿箱 | 独立查看草稿、来源快照、结果与失败元数据；采纳时检查全部来源版本；重复采纳不重复创建 |
+| Prompt 中心 | 笔记解析与引用问答两种用途，各自默认模板；编辑、复制、归档、修订历史；提交时冻结模板版本 |
+| 搜索问答 | 仅索引合格 Knowledge；增量索引、显式重建／重试、语义检索、单轮带引用回答；引用回查当前数据库版本 |
+| 同步与系统 | Markdown 自动双向同步、文件移动识别、删除宽限、双方冲突及人工选择、索引进度与错误 |
+| 设置 | 文本模型和独立 Embedding；密钥只写不回显；保存下次启动值；显式连接测试与桌面重启；数据位置只读 |
 
-Build:
+记录列表统一提供 10／20／50／100 条、页码与跳转。对已经取得的导入报告和搜索结果分页，不重复导入或调用模型。分析批次上限 20 篇和检索片段上限 10 不随分页尺寸变化。
 
-Zhihu Collection -\> AI Processing -\> Markdown Knowledge Base -\>
-Search Assistant
+步骤、字段限制和错误处理以 [中文手册](readme-cn.md)、[配置参考](docs/config-reference-cn.md) 与当前 OpenAPI 为准。
 
-## First Version Features
+## 3. 模型与调用合同
 
-1.  Import Zhihu collections
-2.  Extract summaries
-3.  Classify knowledge
-4.  Extract viewpoints
-5.  Generate Markdown notes
-6.  Semantic search
+- 文本生成支持 `openai_chat`、`openai_responses`、`anthropic_messages`、`gemini_generate_content` 四类协议；供应商样例不等于逐个真实服务实测。
+- Embedding 独立配置，当前支持 `openai_embeddings`，不假定聊天模型具备向量接口。Qdrant 客户端兼容 1.19.x，项目固定 1.19.2。
+- 新发行包 AI/RAG 默认关闭。当前使用的桌面已按用户选择接通本地 Ollama／BGE-M3；这是个人部署状态，不改变通用默认值。
+- 草稿生成和引用问答共享一个进程内文本生成额度；批次顺序执行，模型等待位于长期数据库事务之外。Embedding 独立限流。
+- 不自动重发失败、结果不明或中断的模型调用；重试失败项与继续尚未调用项分别确认。
+- Prompt 不提供联网工具。无法核实的事实应标记待验证；观点、原文依据和 AI 分析应分开呈现。
+- 引用问答只依据本次检索片段；没有有效片段时不调用生成模型。引用校验可追溯出处，不能单独证明回答忠实。
 
-## Future
+## 4. 数据和一致性
 
--   ChatGPT history
--   GitHub knowledge
--   Web articles
--   Personal AI Assistant
+1. SQLite 保存业务记录、版本、来源关联、模板、任务、同步基线及向量缓存。
+2. Markdown 是知识笔记的第二编辑入口，Source 原文通过资料 API／工作台维护。已有笔记的来源关联由应用维护。
+3. API 编辑、删除与恢复校验版本；冲突时保留输入或双方快照，不自动覆盖。
+4. Qdrant 是检索索引；发布清单和有效性以 SQLite 为准，远程清理延迟不能让旧点重新成为有效引用。
+5. 按单用户、单工作进程使用。同一数据库／知识目录不应同时由多个本机或容器实例维护。
+6. 备份包含 SQLite、完整知识目录及个人配置；Qdrant 卷、模型权重与服务位置另行管理。恢复演练是独立验收事项。
+
+实际表结构见 [数据库设计](DATABASE_DESIGN.md)，职责及资源生命周期见 [架构设计](ARCHITECTURE.md)。
+
+## 5. 运行和交付
+
+- 源码本机、Docker API、Windows EXE 复用业务服务。当前源码／桌面为 0.8.0／0006，独立旧 Docker API 不能因源码更新而视为已升级。
+- 桌面固定使用 `dist/PersonalAiMemoryOs-0.6.6/`，目录名称不代表应用版本。干净发行包不含个人数据、密钥、模型或 Docker。
+- 仅本机使用，无账号或多用户隔离；设置接口的同源令牌保护不等于完整身份认证。
+- 当前桌面可自动准备本地 Ollama、Docker Desktop 和 Qdrant。失败可选择仅本次关闭 RAG、继续基础管理；不修改已保存开关，不强杀共享服务。
+- 升级在正常停机、备份及核验后原地替换资源。源码／Docker 显式迁移；桌面仅对已知受支持结构初始化或经确认升级。
+
+## 6. 验收状态与下一步
+
+| 项目 | 已有证据 | 尚需补充 |
+| --- | --- | --- |
+| 工程回归 | 最近完整回归 1,135 通过、3 个 Windows 权限跳过、1 条已有警告 | 后续代码变更按影响范围验证；本次文档审阅不冒充重跑 |
+| 本地 RAG | BGE-M3 实际 1024 维、隔离生命周期及少量现有笔记改写检索通过 | 固定检索问题集、更多规模和边界样例 |
+| 真实生成 | 四协议模拟工程验收；已有人工使用记录不等于完成质量验收 | TASK-004 受控真实生成审阅、TASK-005 完整引用问答审阅 |
+| 桌面启动 | 实际 EXE 服务复用、代理环境、单实例与受保护重启通过 | 物理 Windows 冷启动、第二台干净电脑、外部服务位置变化 |
+| 数据恢复 | 备份校验、升级回滚及索引缓存恢复有测试 | 完整恢复演练，覆盖便携数据与外部 Qdrant／模型 |
+
+## 7. 不包含的能力与候选扩展
+
+当前不包含知乎在线登录抓取、媒体导入、联网核验、自动批量采纳、多轮问答历史、混合检索／重排序、独立 Opinion 管理、多用户权限、云 IAM、安装器、自动更新或数字签名。
+
+ChatGPT 历史、GitHub 和网页资料等其他导入源仍属候选扩展。先完成质量、恢复及可重复交付的补充项，再按实际需求决定新功能；候选项不代表本轮已实现或授权自动调用外部服务。

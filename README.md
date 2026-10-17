@@ -4,6 +4,8 @@
 
 The [complete Chinese manual](readme-cn.md) covers every management page, installation, import, AI profiles, Markdown synchronization, backup and troubleshooting. See the [step-by-step RAG setup](docs/rag-guide-cn.md) and [full configuration reference](docs/config-reference-cn.md) for Embedding, Qdrant, generation, environment variables and Docker-specific settings.
 
+The [project review and follow-up checklist](docs/project-audit-cn.md) records the current instance matrix, source map, confirmed documentation fixes and prioritized work with evidence and completion criteria. It distinguishes real quality review, restoration/cold-boot exercises and maintenance work from features already implemented. This review changes documentation only; pending items are not implementation or live-call authorization.
+
 ## Current release: 0.8.0 (schema 0006)
 
 Local RAG was connected on this Windows machine on **2026-10-18**, keeping application `0.8.0` and schema `0006`. The fixed desktop uses local Ollama **0.40.6**, **BGE-M3 / 1024 dimensions** and Qdrant **1.19.2**; its two Knowledge records are indexed. Opt-in desktop preparation now runs the bundled service-start script invisibly before starting the backend: double-click the existing EXE instead of entering a PowerShell command. Its personal `config/local-rag-startup.json` selects the project location; clean distributions leave this feature off. No model download or text-generation request is triggered by preparation. Ollama lives in `.tools/ollama`, model weights in `.cache/ollama/models`; neither is bundled with the portable ZIP. Loopback `NO_PROXY` exceptions are merged into the application process. See the [complete local setup and verification](docs/rag-guide-cn.md).

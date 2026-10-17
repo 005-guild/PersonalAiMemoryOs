@@ -2,6 +2,8 @@
 
 [English README](README.md) · [RAG 配置指南](docs/rag-guide-cn.md) · [全部配置参数](docs/config-reference-cn.md)
 
+维护和后续工作见 [项目审阅与补充清单](docs/project-audit-cn.md)：包含当前实例版本、实际项目结构、优先事项、隔离恢复演练和校验矩阵。清单将已实现、待验收和可选扩展分开，不会因为登记待办就自动修改你的程序或调用模型。
+
 适用版本：**0.8.0**；数据库版本：**0006**。新安装默认关闭 AI/RAG；当前电脑的固定桌面已按用户选择接通本地 BGE-M3 并开启 RAG，见下方实际配置说明。桌面安装固定在 `dist/PersonalAiMemoryOs-0.6.6/`；文件夹沿用原名，应用版本以窗口和接口显示为准。
 
 应用的完整流程是：
@@ -31,6 +33,7 @@
 | 用脚本或 Swagger 调用接口 | [15. 接口与命令](#api) |
 | 查所有环境变量与 YAML 字段 | [完整配置参考](docs/config-reference-cn.md) |
 | 查功能限制与验收范围 | [17. 限制与工程记录](#limits) |
+| 查看后续补充、恢复演练与维护计划 | [项目审阅与补充清单](docs/project-audit-cn.md) |
 
 <a id="basics"></a>
 ## 1. 功能与基本概念
@@ -778,7 +781,7 @@ Copy-Item -LiteralPath config -Destination (Join-Path $backupPath 'config') -Rec
 
 本项目桌面安装固定为 `dist/PersonalAiMemoryOs-0.6.6/`，**以后不新建版本安装目录**。目录名保留历史名称，当前版本为 0.8.0。
 
-此次交付已完成该目录的备份、原地升级和重新打开；原有 571 篇资料、2 篇笔记、3 条运行记录、1 个批次，以及全部知识文件和模型配置已保留，无需重新导入。备份位于该安装的 `backups/upgrade-20261017-152603-89fb11df/`，完整验收见[工程任务记录](IMPLEMENTATION_TASKS.md)。
+最近的自动启动补丁已完成该目录的备份、原地升级和重新打开；当时核验的 571 篇资料、2 篇笔记、3 条运行记录、1 个批次，以及全部知识文件和模型配置均已保留。该次备份位于 `backups/upgrade-20261017-162717-811af92d/`；更早的 `152603` 备份属于最初 0.8.0 升级，内容以各自时点为准，完整验收见[工程任务记录](IMPLEMENTATION_TASKS.md)。
 
 1. 在 `.cache` 中完成干净构建与隔离 EXE 验收，发行 ZIP 也从干净产物生成。
 2. 正常关闭当前程序，等待在途调用和同步结束；运行中升级器会拒绝替换。
@@ -804,6 +807,14 @@ uv run --locked python scripts/update_desktop.py --bundle .cache/desktop-build/�
 默认相对路径随整个便携目录移动而工作；如果自己填过指向旧位置的绝对路径，需要在新目录内改为正确的相对／绝对路径，不能指向便携目录外。
 
 模型和 Qdrant 是外部服务，搬动便携目录不会同时搬走它们。另一台机器的服务地址、网络和 WebView2 运行环境需要重新核对。
+
+完整恢复演练的停机、清单校验、成对数据、配置、同步身份和独立 Qdrant 检查见 [隔离恢复演练清单](docs/project-audit-cn.md#recovery)。现有备份和升级回滚已经实现；完整演练仍是待验收事项，不要在正式库上直接试恢复。
+
+### 14.5 空间、日志与运行边界
+
+同一份 SQLite 和知识目录只由一个应用进程维护，源码／Docker／桌面不要并行共用；Uvicorn 保持一个 worker。复制完整库而共享同一 Qdrant owner 时，也不要把两份同时运行当作隔离方案。
+
+普通 `memory-os.log` 已轮转；本地服务启动日志、Ollama 输出、旧构建／验收和备份的保留策略仍待完善。`.cache/ollama/models/` 保存真实模型权重，不能把整个 `.cache` 当作可随便清空的临时目录。当前本轮未清理任何文件，建议先按 [维护清单](docs/project-audit-cn.md#storage) 分类确认用途和占用。
 
 <a id="api"></a>
 ## 15. Swagger、API 与辅助命令
