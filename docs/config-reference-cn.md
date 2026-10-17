@@ -355,13 +355,39 @@ profiles:
 
 示例中的 `model_revision` 是 2026-10-18 下载并核对的 `bge-m3:latest` 完整 digest，实际返回 1024 维；记录本次权重身份，不会让 Ollama 自动锁定标签。其他电脑安装后应核对自己的 `/api/tags`，更换 digest 后更新 revision 并重建。`batch_size=1`、`timeout_seconds=180` 为此次本机方案的配置值，通用默认仍是批次 8、超时 60 秒。此次运行上下文为 4096 tokens，模型元数据的 8192 tokens 不是当前运行上限。
 
-Ollama 的 `OLLAMA_MODELS` 是 **模型服务环境变量**，不是 Memory OS Settings。本机用户值指向 `D:\VsCode\PersonalAiMemoryOs\.cache\ollama\models`；修改后重启 Ollama。独立程序位于 `.tools/ollama/`，不加入全局 PATH、不自动随 Windows 启动；从项目根目录运行 `scripts/start_local_rag.ps1` 准备本地服务。安装、日常启动、日志和索引验证的完整操作见 [RAG 指南](rag-guide-cn.md#33-本机方案ollamabge-m3)。
+Ollama 的 `OLLAMA_MODELS` 是 **模型服务环境变量**，不是 Memory OS Settings。本机用户值指向 `D:\VsCode\PersonalAiMemoryOs\.cache\ollama\models`；修改后重启 Ollama。独立程序位于 `.tools/ollama/`，不加入全局 PATH、不自动随 Windows 启动；配置下一节的桌面自动准备后，双击 EXE 即可准备服务，手动脚本保留作源码部署或排错入口。安装、日常启动、日志和索引验证的完整操作见 [RAG 指南](rag-guide-cn.md#33-本机方案ollamabge-m3)。
 
 当前 EXE 使用上述宿主机地址；Docker API 的 `127.0.0.1` 指容器自身，不能直接照抄。若另行让 API 容器连接宿主机 Ollama，须单独确认服务监听范围和容器网络可达性。本机部署保持仅本机访问，不为此放开监听到局域网。
 
-Windows 用户 `NO_PROXY` 已包含 `localhost,127.0.0.1,::1`，防止应用继承系统代理后把本机 Ollama/Qdrant 请求发给代理。它是进程网络环境变量，不属于 Memory OS Settings，也不写入模型 YAML；修改后正常退出桌面，再从新环境启动。维护列表时保留其他已有例外。出现“直连正常、桌面报 502”时先核对这一项；启动脚本自己绕过代理的健康检查不能证明旧桌面进程环境已更新。
+桌面自动准备为当前应用进程的 `NO_PROXY` 合并 `localhost,127.0.0.1,::1`，保留已有例外，避免本机 Ollama/Qdrant 请求被系统代理处理；不修改全局代理或用户环境。该值不属于 Memory OS Settings，也不写入模型 YAML。出现“直连正常、桌面报 502”时先确认使用更新后的 EXE 并正常重启；源码进程需自行配置本机例外。
 
 本地 Embedding 和 Qdrant 不产生云端向量服务费用；DeepSeek 引用问答仍可能计费，且会收到问题及选中的知识片段。保存设置、查看状态和语义搜索不等于调用 DeepSeek。真实问答由用户主动提交，本地接口验证不代替生成质量验收。
+
+### 7.2 桌面本地服务自动准备
+
+当前固定安装已配置并实测通过自动启动，直接双击原 EXE 即可，无需执行命令。可选配置文件位于 **EXE 同级运行根目录下** 的 `config/local-rag-startup.json`：
+
+```json
+{
+  "schema_version": 1,
+  "enabled": true,
+  "project_root": "../.."
+}
+```
+
+| 字段 | 作用 |
+| --- | --- |
+| `schema_version` | 配置格式版本，当前为整数 `1` |
+| `enabled` | 是否允许桌面准备本机服务；通用发行包默认不启用 |
+| `project_root` | 相对 EXE 目录解析的项目根目录；当前固定安装位置使用 `../..` |
+
+当此配置启用、应用 RAG 已开启、默认 Embedding 指向本机 `11434/v1`、Qdrant 指向本机 `6333` 时，EXE 隐藏调用打包脚本并传入解析后的 `-ProjectRoot`。等待已有 Ollama、Docker Desktop 与 Qdrant 就绪后才继续打开工作台；不会启动另一份 Memory OS、自动下载模型或调用 DeepSeek。
+
+准备失败可选择本次 RAG 关闭后继续基础管理，保存配置仍保持原值，下次启动再次尝试。150 秒等待超时不强杀服务；关闭桌面保留共享 Ollama 和 Qdrant。通用 ZIP 不包含模型权重、Docker Desktop 或本机个人启动配置；复制到其他电脑后应重新准备依赖和项目位置。
+
+此配置只控制桌面启动，不改变 Embedding 语义指纹，不要求数据库迁移。`scripts/start_local_rag.ps1` 仍是手动排错入口，日常使用无需执行 PowerShell；源码和 Docker API 启动不读取它来准备桌面服务。
+
+本次实际 EXE 验收覆盖系统代理下的本机连接、重复启动复用及正常重启，0 次模型调用；固定目录原地升级保留既有配置、业务记录与全部知识文件，索引仍为 2 篇发布、0 失败。全量测试为 1135 项通过、3 项 Windows 符号链接测试跳过及 1 项既有警告。通用发行 ZIP 继续默认不启用本机自动准备。
 
 ## 8. 哪些开关需要一起打开
 

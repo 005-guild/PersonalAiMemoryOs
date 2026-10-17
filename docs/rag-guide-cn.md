@@ -28,7 +28,7 @@ RAG 把知识笔记转换成向量，找出与问题有关的片段，再让生�
 | Qdrant | 存储向量，查找相近片段 | 索引、检索和问答 |
 | 文本生成 AI | 根据检索片段生成带引用的回答 | 引用问答；单纯语义检索不需要 |
 
-生成模型与向量模型可以来自不同服务。已经配好 DeepSeek 或其他聊天模型，不代表已经拥有 Embedding 接口。本程序不会自动下载或启动本地向量模型，也不会自动为你创建供应商账号、密钥或额度。
+生成模型与向量模型可以来自不同服务。已经配好 DeepSeek 或其他聊天模型，不代表已经拥有 Embedding 接口。程序不会自动下载模型或创建供应商账号、密钥和额度；配置了桌面本地服务自动准备后，可在打开 EXE 时启动已安装的 Ollama 与 Qdrant。
 
 **只有已保存的“知识笔记”进入索引。** 资料库中的 Source 原文、导入的知乎资料和未采纳 AI 草稿不会直接被索引。先手动建立笔记，或生成草稿并采纳，再使用 RAG。
 
@@ -126,7 +126,7 @@ Windows 用户环境变量 `OLLAMA_MODELS` 指向这个目录。修改后需要�
 
 本项目采用官方 Windows 独立 ZIP **Ollama `0.40.6`**，保存在项目 `.tools/ollama/`，不修改全局 PATH，也不添加 Windows 自启项。官方独立版含 CLI 和 NVIDIA 运行依赖，服务由 `ollama serve` 启动。[Ollama Windows 说明](https://docs.ollama.com/windows)
 
-在项目根目录运行启动脚本，准备 Docker Desktop、项目 Qdrant 服务和后台 Ollama。脚本完成后，再手动打开原有 EXE：
+本机桌面接入采用下一节的自动准备配置，日常双击原 EXE 即可等待本地服务就绪。手动部署、源码启动或排错时，仍可从项目根目录执行下面的脚本；它不打开桌面、不调用生成模型：
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start_local_rag.ps1
@@ -171,9 +171,29 @@ Ollama 提供 `/v1/embeddings` 兼容接口。这里填写到 `/v1`，应用自�
 
 ### 3.4 日常启动与检查本地模型
 
-Windows 重启后，先从项目根目录运行 `scripts/start_local_rag.ps1`，再打开 `dist/PersonalAiMemoryOs-0.6.6/PersonalAiMemoryOs.exe`。不需要重新下载权重。仅重启 Memory OS 时，已运行的 Ollama 与 Qdrant 可以继续使用；它们不随桌面窗口关闭。
+当前安装已配置并实测通过本地服务自动准备，直接双击原 EXE 即可，无需执行命令。配置方式如下；服务安装和检索结果见下一节。
 
-启动脚本在后台启动本地服务，不会自动运行提问或生成笔记。Ollama 服务信息位于 `.cache/ollama/service.json`，输出日志位于 `.cache/ollama/server.stdout.log` 和 `server.stderr.log`；Qdrant 日志可从项目根目录用 `docker compose logs --tail 100 qdrant` 查看。
+便携目录中的可选文件 `config/local-rag-startup.json` 控制启动行为：
+
+```json
+{
+  "schema_version": 1,
+  "enabled": true,
+  "project_root": "../.."
+}
+```
+
+`project_root` 相对 **EXE 所在目录** 解析，固定目录 `dist/PersonalAiMemoryOs-0.6.6/` 的 `../..` 对应当前项目根目录，与双击时的工作目录无关。该路径指向已有 Ollama、模型缓存与 Compose 文件所在的项目；整体移动文件夹时需要保持这种关系，或者修改为实际位置。
+
+配置启用后，只需双击原 `PersonalAiMemoryOs.exe`。当应用 RAG 已开启、默认 Embedding 为本机 `11434/v1`、Qdrant 为本机 `6333` 时，EXE 隐藏执行随程序提供的启动脚本，准备已有 Ollama、Docker Desktop 和 Qdrant，等待就绪后再打开工作台。不需要手动执行 PowerShell、不重新下载权重、不新增 Windows 自启项。已有匹配服务直接复用，关闭桌面后共享服务保留。
+
+启动准备超过 150 秒不会强杀已经启动的服务。准备失败时，可选择本次关闭 RAG 继续使用资料、笔记等基础管理；已保存 RAG 配置不变，下次打开仍按配置尝试。桌面不会自动拉取模型，也不会调用 DeepSeek。
+
+通用 ZIP 默认不启用这一功能，不包含 Ollama 权重或 Docker Desktop。其他机器须先安装依赖、准备模型，并确认项目位置和配置。源码服务及 Docker API 不通过这份桌面配置自动启动本机服务。
+
+实际打包 EXE 已通过自动准备、重复启动复用、正常重启及代理环境验证：系统代理开启且启动环境没有 `NO_PROXY` 时，本机 Qdrant 连接仍正常；没有调用模型，没有重建或停止共享 Ollama、Docker/API 服务。原固定目录已备份并升级，571 篇资料、2 篇笔记、原 AI 配置和完整知识目录均保留，索引仍为 2 篇已发布、0 失败。此次升级备份位于便携目录 `backups/upgrade-20261017-162717-811af92d/`，实际安装核验记录见项目 `.cache/desktop-local-startup-installed/report.json`。
+
+服务排错时仍可手动执行 `scripts/start_local_rag.ps1`。Ollama 服务信息位于项目 `.cache/ollama/service.json`，输出日志位于 `.cache/ollama/server.stdout.log` 和 `server.stderr.log`；Qdrant 日志可从项目根目录用 `docker compose logs --tail 100 qdrant` 查看。
 
 ```powershell
 & .\.tools\ollama\ollama.exe list
@@ -204,9 +224,9 @@ Invoke-RestMethod -Uri http://127.0.0.1:6333/
 
 本机遇到过：PowerShell 直接请求 Qdrant 正常，而桌面设置中的连接测试返回 502。原因是应用 HTTPX 继承系统代理，本机 `127.0.0.1` 请求被代理处理。
 
-Windows 用户环境变量 `NO_PROXY` 已包含 `localhost,127.0.0.1,::1`。新增这些本机例外时应保留已有列表，而不是清空全部代理设置；模型下载所需的 HTTPS 代理可以继续使用。改变用户环境后，旧桌面进程和旧终端不会自动得到新值，需正常退出 Memory OS，再从已加载新环境的启动入口打开。
+桌面自动准备流程为 **当前应用进程** 的 `NO_PROXY` 合并 `localhost,127.0.0.1,::1`，保留已有例外，不修改全局代理或用户环境设置。模型下载所需的 HTTPS 代理可以继续使用；本机 Ollama/Qdrant 请求直接连接。
 
-若此现象再次发生，先检查当前启动环境是否继承本机例外，再重测 Qdrant 和 Embedding；不要把代理返回的 502 当成 collection 损坏而清库或反复重建。启动脚本自身的健康检查绕过代理，但这不等于一个早先启动的桌面进程也已更新环境。
+若此现象再次发生，先检查是否已更新桌面程序并重新启动，再重测 Qdrant 和 Embedding。源码或其他启动方式需自行维护进程的 `NO_PROXY`；不要把代理返回的 502 当成 collection 损坏而清库或反复重建。启动脚本自身的健康检查绕过代理，但这不等于一个早先启动的旧桌面进程也已更新环境。
 
 ## 4. 准备 Qdrant
 
@@ -447,11 +467,11 @@ SQLite 保存成功的向量缓存、笔记版本和发布状态，Qdrant 保存
 
 | 错误/现象 | 处理方式 |
 | --- | --- |
-| 连接 `11434` 失败 | 从项目根目录运行 `scripts/start_local_rag.ps1`，检查 Ollama 服务日志及 `/api/version`；仅打开 Memory OS 不会自动启动模型服务 |
+| 连接 `11434` 失败 | 检查桌面本地启动配置、项目路径和启动提示；排错时从项目根目录运行 `scripts/start_local_rag.ps1`，查看 Ollama 日志及 `/api/version` |
 | Ollama 找不到 `bge-m3` | 查看 `.tools/ollama/ollama.exe list` 和服务进程的 `OLLAMA_MODELS`；确认模型已下载到项目目录，再检查应用模型名，不要改成 DeepSeek 生成模型 |
-| 重启电脑后 RAG 不可用 | 本方案不创建 Windows 自启项；重新准备 Docker Desktop、Qdrant 与 Ollama，再查看索引状态，已有模型和数据不需重新下载或重建 |
+| 重启电脑后 RAG 不可用 | 双击已配置自动准备的 EXE，等待本地服务就绪；若失败先检查启动提示及项目依赖，不必重新下载模型或直接重建索引 |
 | 本地首次编码超时或使用 CPU | 查看 `ollama ps`、服务日志、显卡驱动及显存占用；保留批次 1、180 秒超时，解决后再显式重试，不直接把应用维度改小 |
-| 浏览器/PowerShell 直连正常，桌面本机连接却 502 | 检查当前桌面进程是否继承含 `localhost,127.0.0.1,::1` 的 `NO_PROXY`；正常退出并从新环境重新打开，先排除系统代理，不要清空向量库 |
+| 浏览器/PowerShell 直连正常，桌面本机连接却 502 | 先更新并正常重启桌面，确认当前进程具有本机 `NO_PROXY` 例外；源码另行维护启动环境，先排除代理，不要清空向量库 |
 | `rag_disabled` | 修改正确运行根目录的开关并重启；Docker 重新创建 API |
 | `embedding_configuration_missing` / `embedding_configuration_invalid` | 检查当前运行根目录 YAML 路径、UTF-8、字段类型、重复键、默认 profile 和维度 |
 | `embedding_default_profile_missing` / `embedding_profile_unknown` / `embedding_profile_disabled` | 检查 YAML 默认项、`.env` 覆盖项及 profile 的 `enabled` |

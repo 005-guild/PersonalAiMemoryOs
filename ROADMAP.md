@@ -2,6 +2,12 @@
 
 # MVP Roadmap
 
+## Desktop One-Click Local RAG Preparation (2026-10-18)
+
+Complete and delivered in the same portable directory, keeping `0.8.0 / 0006`. The existing EXE now prepares opted-in local Ollama/Docker Desktop/Qdrant through its bundled hidden helper before starting the backend; the user no longer needs a PowerShell command. Optional personal `config/local-rag-startup.json` selects the project location. Missing/disabled configuration, RAG-off or different endpoints do not start services. New distributions do not enable it or bundle model weights/Docker.
+
+Full regression: 1,135 passed, 3 Windows symlink skips, one existing warning. Actual baseline EXE and dedicated automatic-startup/single-instance/proxy/restart acceptance passed with zero model calls. After verified backup, the existing installation was updated in place and configured for direct double-click startup; all business/configuration/vault data and the two published notes were retained. Service preparation does not pull weights, call DeepSeek, stop shared services or redeploy other APIs. Failures offer explicit basic-management fallback with RAG off for that launch and unchanged saved configuration. TASK-004/005 real-answer quality boundaries remain unchanged.
+
 ## Local RAG Connection: Ollama + BGE-M3 + Qdrant (2026-10-18)
 
 Completed the user-approved local deployment without changing `0.8.0 / 0006`: verified official Ollama `0.40.6` Windows standalone archive under `.tools/ollama`, project-local BGE-M3 weights under `.cache/ollama/models`, and loopback Qdrant `1.19.2` with its Docker named volume. The fixed used desktop now has RAG enabled with `local_bge_m3`, native 1024 dimensions, batch 1 and timeout 180s; shipped defaults stay off. Startup remains explicit through `scripts/start_local_rag.ps1`, with no new Windows autostart or API-container rollout.

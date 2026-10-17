@@ -579,15 +579,13 @@ concepts: [B+树]
 
 固定桌面已启用 `local_bge_m3`：Ollama **0.40.6** 提供 `bge-m3` 的 **1024 维**向量，接口为 `http://127.0.0.1:11434/v1`，Qdrant **1.19.2** 为 `http://127.0.0.1:6333`。无需向量密钥；批次 1、超时 180 秒、分块 1200／重叠 200。当前 **2 篇知识笔记均已发布到索引**，两条改写查询及桌面重启后检索通过，571 篇资料仍只在资料库。
 
-本次安装使用项目内官方免安装程序 `.tools/ollama/ollama.exe`；模型放在 `.cache/ollama/models/`。没有新增 Windows 开机启动项。**下次开机后，在项目根目录先运行下面的命令，再双击原有 EXE：**
+本次安装使用项目内官方免安装程序 `.tools/ollama/ollama.exe`；模型放在 `.cache/ollama/models/`。**桌面支持自动准备本地服务：配置后，直接双击原来的 `PersonalAiMemoryOs.exe` 即可，无需先执行 PowerShell 命令。** 程序隐藏启动／复用本项目的 Ollama，必要时启动 Docker Desktop，并仅启动 Compose 的 Qdrant 服务，就绪后打开工作台。不新增 Windows 开机启动项、不重新部署 API，也不会自动下载模型或调用 DeepSeek。
 
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start_local_rag.ps1
-```
+自动准备由 EXE 旁的 `config/local-rag-startup.json` 控制，示例见 [配置参考](docs/config-reference-cn.md#72-桌面本地服务自动准备)。**当前固定安装已配置并实测通过，日常不需要你再修改文件。** `project_root` 使用 `../..`，指向现有项目目录；通用新发行包默认不启用此配置，也不包含模型权重或 Docker。整体移动项目后需保持此相对关系；单独移走 EXE 目录后应重新核对项目位置。
 
-脚本启动／复用本项目的 Ollama，必要时启动 Docker Desktop，并仅启动 Compose 的 Qdrant 服务，不重新部署 API、不请求模型。模型首次下载已完成，无需每次 `pull`；Ollama 日志在 `.cache/ollama/`。若只拥有便携 ZIP，需要按 [RAG 指南](docs/rag-guide-cn.md) 另行准备模型服务；模型权重和 Qdrant 不在应用包内。
+启动诊断写入便携目录 `logs/local-rag-startup.log`，Ollama 日志仍在项目 `.cache/ollama/`。准备失败时可选择本次关闭 RAG、继续基础管理，磁盘配置不变；下次打开会重新尝试。关闭工作台保留共享的 Ollama 和 Qdrant，避免影响其他本地调用。`scripts/start_local_rag.ps1` 保留作手动排错入口。
 
-本机已为用户环境设置 `NO_PROXY=localhost,127.0.0.1,::1`，解决系统代理把本机请求转发后返回 502 的问题；已有例外会保留。更换模型权重时记录新的 digest/revision 并显式重建，不能只把同名模型覆盖。
+桌面自动准备会为当前应用进程补齐 `NO_PROXY` 本机例外并保留已有项，避免系统代理转发本机请求；不依赖旧终端是否加载用户环境。更换模型权重时记录新的 digest/revision 并显式重建，不能只把同名模型覆盖。
 
 现在可进入“搜索问答 → 语义检索”使用。引用问答复用现有 DeepSeek；**你主动提交后，问题与检索片段会发送给 DeepSeek，可能计费**。本次只验证本地检索，未执行真实生成问答，其质量仍待人工审阅。启用前已备份 SQLite、完整知识目录及配置，位置为便携目录内 `backups/upgrade-20261017-155556-24c86bbf/`。Qdrant 数据另在 Docker 命名卷中，不能只备份便携目录就当作完整向量备份。
 
@@ -978,7 +976,9 @@ uv run --locked python scripts/verify_desktop_upgrade.py --bundle .cache/desktop
 
 0.8.0 发布时的最终全量回归为 **1,088 项测试通过、3 项 Windows 符号链接权限跳过、1 条已有上游警告**（`.cache/v08/pytest-release.log`）。本机和 Docker 浏览器、实际打包 EXE、新旧库原地升级均通过验收，覆盖独立 Prompt／草稿页面、所有分页尺寸、配置跨页保存、旧响应保护及真实重启交接。当时的模型均为本地模拟；发布默认 RAG 关闭。后续本机接入未修改应用版本、数据库结构或发行包，新增 16 项工具安全测试通过；真实 BGE-M3 隔离验收及当前桌面两篇笔记检索、重启验证已通过。
 
-干净发行包为 `dist/PersonalAiMemoryOs-windows-x64.zip`，SHA-256：`0674f332119964ecfc1c00e7159498f961ed3da8c1819ae5e1e40b396f58d703`。Windows 长路径升级问题已修复并复验，旧数据、模板和完整知识文件均有核验备份。详细证据见[工程任务记录](IMPLEMENTATION_TASKS.md)。上版 0.7.0 的 1,030 项回归及历史交付记录继续保留。
+桌面自动准备补丁的完整回归为 **1,135 项通过、3 项 Windows 符号链接权限跳过、1 条已有警告**；新包实际 EXE 基础操作、服务复用、系统代理下本机连接、重复双击及受保护重启均通过。已在原目录备份并更新，备份位于 `backups/upgrade-20261017-162717-811af92d/`，571 篇资料、2 篇笔记、既有配置和全部知识文件均已核验保留；自动准备及本次升级未发起模型调用。
+
+最新干净发行包为 `dist/PersonalAiMemoryOs-windows-x64.zip`，SHA-256：`a20ce7ba7e358807a9ce616f5c8b1997ae6b85fa8d0e18eed0b8cdd7aba9cd23`；EXE 为 `6ccffca5855bc689c9b121e0b488cd70f7a572df3cd30fa3413cd245b3f59535`。Windows 长路径升级问题已修复并复验，旧数据、模板和完整知识文件均有核验备份。详细证据见[工程任务记录](IMPLEMENTATION_TASKS.md)。上版 0.7.0 的 1,030 项回归及历史交付记录继续保留。
 
 第四阶段真实 DeepSeek 生成质量、第五阶段完整引用问答质量仍待单独验收；本地 Embedding 接口与少量检索样例通过不等于所有问题都能准确回答。生产原生“另存为”交互及第二台干净电脑也保留单独验证边界。工程验收和日常功能开关是不同概念，不需要每次使用都重新执行工程验收脚本。
 
