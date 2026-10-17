@@ -19,6 +19,7 @@ def main() -> int:
     environment = {key: value for key, value in os.environ.items() if not key.startswith("MEMORY_OS_")}
     steps = [("lock", ["uv", "lock", "--check", "--offline"]),
              ("docs", [sys.executable, "scripts/check_docs.py"]),
+             ("release", [sys.executable, "scripts/check_release.py"]),
              ("tests", [sys.executable, "-m", "pytest"])]
     records = []
     node = shutil.which("node")

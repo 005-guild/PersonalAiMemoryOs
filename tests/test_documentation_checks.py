@@ -9,6 +9,8 @@ def test_examples_ignore_shorter_fences_inside_literal():
     assert blocks("````markdown\n```python\nx\n```\n````") == [("markdown", "```python\nx\n```")]
     with pytest.raises(ValueError, match="Unclosed"):
         blocks("```json\n{}")
+    with pytest.raises(ValueError, match="encoding"):
+        blocks("?????????")
 
 
 def test_duplicate_headings_and_explicit_anchors():

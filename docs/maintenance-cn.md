@@ -90,3 +90,26 @@ uv run --locked python scripts/rotate_external_logs.py --apply
 ```
 
 仅处理三个固定日志，超过 8 MiB 才保留至多 3 份历史日志；检测进程仍存活、归属不明或 Windows 文件占用时跳过，不停止服务、不强制改名。持续运行的外部服务日志目前仍不实时限额；按盘点结果安排正常维护窗口，不能声称已经有连续轮转。2026-10-18 检查三个日志均在限额内，未进行实际轮转或清理。
+
+## 发布和依赖维护
+
+```powershell
+uv run --locked python scripts/check_release.py
+uv run --locked python scripts/audit_dependencies.py
+```
+
+发布检查离线核对 `pyproject.toml`、FastAPI 和锁文件版本、迁移链头、四个网页 vendor／许可证文件 SHA-256。依赖命令默认只生成公开包清单，不联网。维护工具变动不重新发行 EXE，本轮继续 0.8.0／0006；下次应用行为或打包资源改动至少升级补丁版本，保存 commit、构建指纹、锁文件哈希、ZIP／EXE 哈希及验收报告，避免只凭版本号辨认构建。
+
+显式在线公告检查：
+
+```powershell
+uv run --locked python scripts/audit_dependencies.py --online
+```
+
+只将锁文件中的公共 PyPI 名称／版本和两个网页 npm 包提交给 [OSV 批量接口](https://google.github.io/osv.dev/post-v1-querybatch/)，不上传源码、配置、业务数据或密钥。网络失败、响应错误或未处理完的分页结果不能记成扫描干净。可选 `--proxy` 只接受无认证的本机 HTTP 代理；不要把个人代理地址写入受控配置。
+
+2026-10-18 已查 48 个包版本组合，结果 `no_advisories_reported`，报告 `.cache/dependency-audit/report.json`。这表示查询时的数据源没有报告对应公告，不保证所有版本都已被充分覆盖，更不代表没有任何漏洞；Docker 镜像、系统、WebView2、原生 DLL 不在此次扫描范围。
+
+维护频率：每月一次公告查询；升级依赖和发布前再查一次。发现公告后先核对依赖组、实际可达路径和受影响版本，再做最小升级、锁文件更新及相关回归；涉及渲染、迁移、生命周期时补浏览器或 EXE 验收。不要无差别升级所有包或自动替换供应商模型。
+
+项目许可证暂不新增，保留现有第三方声明；现有 GitHub 可见性不作为新的项目许可证授权。签名、安装器和自动更新仍不在本轮范围。工作流及本地提交完成后不会自动推送远端，远端 CI 待下次授权推送后实际验证。

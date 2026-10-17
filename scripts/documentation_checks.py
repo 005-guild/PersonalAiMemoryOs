@@ -7,6 +7,8 @@ from urllib.parse import unquote, urlsplit
 
 
 def blocks(text: str) -> list[tuple[str, str]]:
+    if "\ufffd" in text or re.search(r"^\?{4,}", text, re.MULTILINE):
+        raise ValueError("Damaged document encoding")
     result, marker, language, current = [], None, "", []
     for line in text.splitlines():
         match = re.match(r"^\s{0,3}(`{3,}|~{3,})(.*)$", line)
