@@ -17,6 +17,13 @@ __pycache__/
 /知乎/
 /config/ai-providers.yml
 /config/embedding-providers.yml
+/config/*.yml
+!/config/*.example.yml
+/logs/
+/backups/
+/exports/
+/.webview/
+/.memory-os-upgrade.json
 .memory-os-config-transactions/
 .memory-os-ai-*.tmp
 *.db

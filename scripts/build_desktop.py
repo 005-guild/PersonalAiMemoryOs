@@ -72,6 +72,8 @@ def source_fingerprint() -> str:
 def inspect_bundle(bundle: Path) -> dict:
     expected = ["PersonalAiMemoryOs.exe", "_internal/python312.dll", "_internal/alembic.ini",
                 "_internal/.env.example", "_internal/migrations/versions/0004_rag_index.py",
+                "_internal/migrations/versions/0005_prompts_batches_sources.py",
+                "_internal/app/prompts/zhihu_deep_analysis_v1.md", "_internal/app/prompts/knowledge_v2_contract.md",
                 "_internal/app/web/index.html", "_internal/config/ai-providers.example.yml",
                 "_internal/config/embedding-providers.example.yml",
                 "_internal/webview/lib/Microsoft.Web.WebView2.Core.dll",
@@ -123,6 +125,7 @@ def publish(bundle: Path, version: str, report: dict, output_name: str = NAME) -
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--skip-sync", action="store_true", help="Reuse the already synchronized isolated build environment")
+    parser.add_argument("--staging-only", action="store_true", help="Keep the clean bundle in .cache and publish only a pristine ZIP")
     parser.add_argument("--output-name", type=portable_directory_name, default=NAME,
                         help="New directory basename beneath dist; existing runtime data is never overwritten")
     arguments = parser.parse_args()
@@ -157,13 +160,32 @@ def main() -> int:
          str(ROOT / "packaging" / "desktop.spec")], environment)
     bundle = workspace / "dist" / NAME
     shutil.copyfile(ROOT / "packaging" / "使用说明.txt", bundle / "使用说明.txt")
+    sys.path.insert(0, str(ROOT))
+    from app.desktop.update_resources import create_manifest
+    create_manifest(bundle, version, "0005")
     if input_fingerprint != source_fingerprint():
         raise RuntimeError("Build inputs changed during packaging; rerun after edits finish.")
-    report = {"version": version, "architecture": "windows-x64", "schema": "0004",
+    report = {"version": version, "architecture": "windows-x64", "schema": "0005",
               "built_at": datetime.now(timezone.utc).isoformat(), "signed": False,
               "manifest": inspect_bundle(bundle), "workspace": str(workspace),
               "source_fingerprint": input_fingerprint}
-    target = publish(bundle, version, report, arguments.output_name)
+    if arguments.staging_only:
+        destination = ROOT / "dist"
+        destination.mkdir(exist_ok=True)
+        archive = destination / f"{NAME}-windows-x64.zip"
+        temporary = archive.with_suffix(".zip.tmp")
+        with zipfile.ZipFile(temporary, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as output:
+            for file in sorted(bundle.rglob("*")):
+                if file.is_file():
+                    output.write(file, Path("PersonalAiMemoryOs-0.6.6") / file.relative_to(bundle))
+        temporary.replace(archive)
+        executable = bundle / f"{NAME}.exe"
+        checksums = f"{sha256(archive)}  {archive.name}\n{sha256(executable)}  PersonalAiMemoryOs-0.6.6/{executable.name}\n"
+        archive.with_suffix(".zip.sha256").write_text(checksums, encoding="ascii")
+        report.update(directory=str(bundle), archive=str(archive), archive_sha256=sha256(archive), executable_sha256=sha256(executable))
+        target = bundle
+    else:
+        target = publish(bundle, version, report, arguments.output_name)
     (workspace / "report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     (ROOT / ".cache" / "desktop-build-result.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"Portable bundle: {target}\nArchive: {report['archive']}\nReport: {workspace / 'report.json'}")

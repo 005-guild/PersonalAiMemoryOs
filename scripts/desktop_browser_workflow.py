@@ -77,7 +77,7 @@ def frozen_workflow(playwright, app, evidence: Path):
     assert response.value.status == 201
     note = response.value.json()
     note_id = note["id"]
-    expect(page.get_by_test_id("entity-delete")).to_be_visible()
+    page.wait_for_url(re.compile(r"/#/$"))
     path = eventually(lambda: note_path(app.root / "knowledge", note_id))
     eventually(lambda: app.request("GET", "/api/v1/knowledge/" + note_id)["sync_status"] == "synced")
 

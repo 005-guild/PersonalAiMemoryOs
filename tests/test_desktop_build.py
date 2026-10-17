@@ -58,6 +58,8 @@ def test_bundle_rejects_interrupted_configuration_secrets(builder, tmp_path, pri
     bundle = tmp_path / "bundle"
     for relative in ("PersonalAiMemoryOs.exe", "_internal/python312.dll", "_internal/alembic.ini",
                      "_internal/.env.example", "_internal/migrations/versions/0004_rag_index.py",
+                     "_internal/migrations/versions/0005_prompts_batches_sources.py",
+                     "_internal/app/prompts/zhihu_deep_analysis_v1.md", "_internal/app/prompts/knowledge_v2_contract.md",
                      "_internal/app/web/index.html", "_internal/config/ai-providers.example.yml",
                      "_internal/config/embedding-providers.example.yml",
                      "_internal/webview/lib/Microsoft.Web.WebView2.Core.dll",

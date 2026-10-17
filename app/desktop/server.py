@@ -67,4 +67,6 @@ class DesktopServer:
         # rather than waiting until lifespan shutdown after long text requests.
         if hasattr(self.app.state, "rag_index"):
             self.app.state.rag_index.request_stop()
+        if hasattr(self.app.state, "processing"):
+            self.app.state.processing.request_stop()
         self.server.should_exit = True

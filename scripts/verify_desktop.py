@@ -41,7 +41,7 @@ def main():
     portable = evidence / "中文 空格便携目录"
     shutil.copytree(bundle, portable)
     before = storage_fingerprint()
-    report = {"version": PROJECT_VERSION, "schema": "0004", "real_model_calls": 0,
+    report = {"version": PROJECT_VERSION, "schema": "0005", "real_model_calls": 0,
               "formal_before": before, "clean_second_pc_tested": False,
               "child_path": "System32 only; no Python/uv/Docker", "evidence": str(evidence),
               "bundle_directory": str(bundle),
@@ -75,7 +75,7 @@ def main():
             app.wait_closed()
             with sqlite3.connect(relocated / "data/memory.db") as database:
                 assert database.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
-                assert database.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0004"
+                assert database.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0005"
             report["workflow"]["passed"] += ["restart_persistence", "whole_directory_relocation", "sqlite_integrity"]
             report["inflight_close"] = check_inflight_close(playwright, relocated, evidence,
                                                             report["workflow"]["source_id"])

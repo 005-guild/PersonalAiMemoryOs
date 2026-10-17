@@ -52,6 +52,9 @@ def _required_tables(revision: str) -> set[str]:
         tables.add("processing_runs")
     if int(revision) >= 4:
         tables.update({"rag_index_generations", "rag_note_index_states", "rag_index_jobs"})
+    if int(revision) >= 5:
+        tables.update({"knowledge_sources", "prompt_templates", "prompt_revisions",
+                       "processing_batches", "processing_batch_items"})
     return tables
 
 
@@ -76,6 +79,8 @@ def _inspect_database(path: Path, known_revisions: set[str]) -> tuple[str | None
             raise DesktopStorageError("数据库结构不完整或未知，未执行升级。")
         for name in required:
             expected = {column.name for column in Base.metadata.tables[name].columns}
+            if name == "processing_runs" and int(revision) < 5:
+                expected -= {"source_snapshots", "prompt_snapshot", "generation_settings", "finish_reason", "failure_stage"}
             actual = {row[1] for row in connection.execute(f'PRAGMA table_info("{name}")')}
             if not expected.issubset(actual):
                 raise DesktopStorageError("数据库表结构不完整，未执行升级。")
@@ -124,6 +129,8 @@ def prepare_desktop(root: Path, confirm_upgrade: Callable[[str], bool]) -> Setti
         portable_path(root, root)
         if not root.is_dir():
             raise DesktopStorageError("便携目录不存在，请先完整解压发行包。")
+        if (root / ".memory-os-upgrade.json").exists():
+            raise DesktopStorageError("上次程序升级未完成，已停止启动。请检查升级记录和 backups 目录后恢复程序。")
         # Probe before copying templates or touching a database.
         with tempfile.TemporaryFile(prefix=".memory-os-write-check-", dir=root):
             pass
