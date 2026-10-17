@@ -2,6 +2,8 @@
 
 [中文使用说明](readme-cn.md)
 
+Maintainer checks, isolated restoration, cold-boot evidence, retention, retrieval baselines and release/advisory commands are documented in the [maintenance manual](docs/maintenance-cn.md). Start with `uv run --locked python scripts/check_project.py`; it never calls a model. This maintenance round keeps the application and installed EXE at 0.8.0 / 0006. Current progress and remaining real-quality/cold-boot gates are in the [follow-up execution table](docs/project-audit-cn.md#execution).
+
 Canonical repository: [005-guild/PersonalAiMemoryOs](https://github.com/005-guild/PersonalAiMemoryOs). The primary branch is `main`; this workspace uses that repository as `origin`. Source and public documentation are versioned; personal configuration, runtime data, model weights and portable binaries remain excluded. Verified changes are committed locally; remote pushes are performed when requested.
 
 The [complete Chinese manual](readme-cn.md) covers every management page, installation, import, AI profiles, Markdown synchronization, backup and troubleshooting. See the [step-by-step RAG setup](docs/rag-guide-cn.md) and [full configuration reference](docs/config-reference-cn.md) for Embedding, Qdrant, generation, environment variables and Docker-specific settings.

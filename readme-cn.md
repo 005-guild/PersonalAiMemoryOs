@@ -2,6 +2,8 @@
 
 [English README](README.md) · [RAG 配置指南](docs/rag-guide-cn.md) · [全部配置参数](docs/config-reference-cn.md)
 
+2026-10-18 维护更新：已补隔离恢复演练、统一检查、固定检索集、空间保留和发布／依赖检查，见[维护手册](docs/maintenance-cn.md)与[七项执行进度](docs/project-audit-cn.md#execution)。这些是开发维护工具，本轮无需替换 EXE；不会自动重启电脑或调用付费模型。
+
 项目代码仓库：[005-guild/PersonalAiMemoryOs](https://github.com/005-guild/PersonalAiMemoryOs)，主分支 `main`；当前工作目录以该地址作为 Git 远端 `origin`。仓库保存源码、公开样例与文档，个人密钥、资料、笔记、数据库、模型及发行包不随源码上传。后续修改按既定规则本地提交，明确要求时再推送。
 
 维护和后续工作见 [项目审阅与补充清单](docs/project-audit-cn.md)：包含当前实例版本、实际项目结构、优先事项、隔离恢复演练和校验矩阵。清单将已实现、待验收和可选扩展分开，不会因为登记待办就自动修改你的程序或调用模型。

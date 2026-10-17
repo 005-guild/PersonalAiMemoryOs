@@ -40,7 +40,7 @@ uv run --locked python scripts/verify_recovery.py
 
 需要本地 BGE-M3 和 Qdrant。仅使用隔离自编资料，先停止应用，再备份并核验数据库、完整知识目录和配置清单。恢复到全新目录，首次以 AI/RAG 关闭模式启动；之后验证 SQLite 向量缓存重建及语义检索。不会恢复或覆盖正式安装，也不调用 DeepSeek。
 
-2026-10-18 实测通过：`.cache/recovery-validation/08b3e7c22a0745c8a213ff7b4b6fda8d/report.json`。全部数据库记录、多来源关系、知识文件、同步身份和配置哈希保留。缓存恢复零重新向量化，确认搜索使用本地 Embedding。12 个测试覆盖篡改、路径越界、Windows 设备路径、重复键、缺失配置或标记、未登记文件。Windows 目录发布前显式关闭 SQLite 连接。
+2026-10-18 实测通过：`.cache/recovery-validation/08b3e7c22a0745c8a213ff7b4b6fda8d/report.json`。全部数据库记录、多来源关系、知识文件、同步身份和配置哈希保留。缓存恢复零重新向量化，确认搜索使用本地 Embedding。13 个测试覆盖篡改、路径越界、Windows 设备路径、重复键、缺失配置或标记、未登记文件，以及非空模板／中断草稿／暂停任务恢复后不自动调用模型。Windows 目录发布前显式关闭 SQLite 连接。
 
 底层 `scripts/recovery_support.py` 要求目标不存在；映射为 `data/memory.db`、`knowledge/`、`.env` 和 `config/`。自定义路径须另行设计映射。失败保留隔离 staging，工具不自行启动应用。本轮验证缓存重建路线，不宣称 Qdrant 快照恢复已实测。正式恢复仍需单独停机、备份和回退计划。
 
@@ -126,3 +126,26 @@ uv run --locked python scripts/benchmark_capacity.py --notes 100 1000
 第二项不调用任何模型，使用明确标为合成的 1024 维向量、真实 SQLite 和独立 Qdrant 容器／命名卷；不是 BGE-M3 吞吐测试。记录每组笔记数、1500 字符正文、列表和分组延迟、首次索引、无变化对账、单笔记更新、搜索、SQLite 缓存以及 Qdrant 存储字节。不同规模依次运行，Qdrant 字节同时报告阶段前基数与阶段内总量，不能把后者直接当作该阶段新增占用。
 
 每组结果保存进度；失败报告和隔离 SQLite 保留，清理前校验自有容器和卷标签。默认不下载镜像，缺少 `qdrant/qdrant:v1.19.2` 时明确失败；可先用 `--notes 1` 验证环境。大规模首次索引可能持续数分钟，先做 100／1000 的实测再决定是否进行 10000；不虚构吞吐或响应时间承诺。实际冷／热模型速度与合成向量基线分开记录。
+
+2026-10-18 测量结果，报告 `.cache/capacity-baseline/466c80ace32e4ea68c244f95ea97fcfd/report.json`：
+
+| 项目 | 100 篇 | 1000 篇 |
+| --- | --- | --- |
+| 首次完整索引 | 14.25 秒 | 972.70 秒 |
+| 无变化对账 | 0.51 秒 | 5.04 秒 |
+| 单笔记更新索引 | 0.76 秒 | 6.69 秒 |
+| 搜索中位／P95（10 次） | 680／714 毫秒 | 6547／6626 毫秒 |
+| 笔记列表中位（100 条） | 3.06 毫秒 | 5.61 毫秒 |
+| 资料分组中位（100 组） | 2.50 毫秒 | 4.12 毫秒 |
+| SQLite 文件 | 7,499,776 字节 | 70,963,200 字节 |
+| 缓存向量 JSON | 4,191,028 字节 | 41,703,620 字节 |
+
+硬件为 Ryzen 7 7700、约 32 GB 内存、RTX 4080 SUPER 16 GB，补充记录 `.cache/maintenance-hardware.json`。容量模型是 CPU 上的合成向量，GPU 不参与推理。千篇阶段期间还运行过全量回归和其他开发检查，主机不独占；本结果用于发现瓶颈，下一轮先 profile，再在空闲主机重复关键测量。优先关注索引发布和搜索过滤时的重复全库读取，不能通过取消版本／删除／冲突校验来换速度。
+
+`du -sb` 是文件逻辑大小，包含 Qdrant mmap 预留，不能当成 Windows 实际磁盘占用。补充命令从已停止的合成容量缓存批量上传，不调用模型：
+
+```powershell
+uv run --locked python scripts/measure_cached_vector_storage.py --database <容量报告目录>/stage-1/data/memory.db
+```
+
+仅接受项目 `.cache/capacity-baseline` 下明确标为合成模型的缓存。独立 1000 篇／2000 点实测：逻辑字节 621,025,786，Linux 文件已分配字节 19,922,944，报告 `.cache/capacity-storage/bcdf7bb1f2734132ba57bd29c343cebe/report.json`。这是运行时卷内采样，不是宿主机 Docker VHDX 总体占用，也不是应用逐篇发布吞吐；测试容器和卷已清理，源缓存哈希保持不变。

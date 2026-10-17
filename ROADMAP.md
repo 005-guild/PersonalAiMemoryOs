@@ -4,21 +4,23 @@
 
 ## Current Summary and Follow-up Review (2026-10-18)
 
-Current source and fixed desktop: **0.8.0 / 0006**; the historical name `PersonalAiMemoryOs-0.6.6` is retained. The original EXE now prepares opted-in local Ollama/Qdrant services; current local RAG is configured, while clean distributions default off. The separate Docker API's last recorded deployment remains **0.6.0 / 0004**, AI/RAG off. Sharing its Qdrant service does not upgrade or enable that API. See the [instance matrix](docs/project-audit-cn.md#current); this documentation review did not probe or deploy services.
+Current source and fixed desktop: **0.8.0 / 0006**; the historical name `PersonalAiMemoryOs-0.6.6` is retained. The original EXE now prepares opted-in local Ollama/Qdrant services; current local RAG is configured, while clean distributions default off. The separate Docker API's last recorded deployment remains **0.6.0 / 0004**, AI/RAG off. Sharing its Qdrant service does not upgrade or enable that API. See the [instance matrix](docs/project-audit-cn.md#current); this maintenance round did not change those deployments.
 
-Current follow-up queue is recorded in [项目审阅与后续补充清单](docs/project-audit-cn.md#priorities):
+Current follow-up execution is recorded in [项目审阅与后续补充清单](docs/project-audit-cn.md#execution) and the [maintenance manual](docs/maintenance-cn.md):
 
 | ID | Priority / state | Next result required |
 | --- | --- | --- |
-| NEXT-01 | P1 / pending quality acceptance | Real generation and cited-answer review, fixed samples, separate explicit budgets |
-| NEXT-02 | P1 / pending | Full isolated backup restoration, including vault/configuration and separate Qdrant route |
-| NEXT-03 | P1 / pending | Physical Windows cold boot and entire local-stack relocation; do not repeat already-passed portable-only moves |
-| NEXT-04 | P1 / pending | Track stable documentation/automatic-service acceptance tools outside `.cache`, publish a repeatable check matrix |
-| NEXT-05 | P2 / pending | External log and historical artifact retention, preserving model weights and useful backups |
-| NEXT-06 | P2 / pending | Fixed retrieval samples and synthetic capacity/latency/storage baselines |
-| NEXT-07 | P2 / decision and maintenance | Build identity/version policy, dependency review and owner-selected project licensing before public release |
+| NEXT-01 | P1 / prepared, real quality pending | Fixed review packet, no paid calls; real generation and cited-answer review remain separate |
+| NEXT-02 | P1 / passed | Full isolated SQLite/vault/configuration restore and cache-backed Qdrant recovery; no production restore |
+| NEXT-03 | P1 / tools passed, physical checks pending | User forbids Windows reboot; path relocation contract tested, actual whole-stack move not claimed |
+| NEXT-04 | P1 / local checks passed | Tracked tools, unified checks and pinned read-only CI; remote CI has not run |
+| NEXT-05 | P2 / first retention tooling implemented | Protected inventory, documented retention, explicit stopped-log rotation; live log cap remains a limitation |
+| NEXT-06 | P2 / baselines measured, optimization identified | Six-note/ten-query local baseline and 100/1000-note capacity measured; 1000-note indexing/search needs profiling and optimization |
+| NEXT-07 | P2 / engineering checks implemented | Version/vendor integrity and explicit OSV audit; project license unchanged, no automatic upgrades |
 
-This review updates documentation only. Current features and evidence are summarized in [SPEC.md](SPEC.md); optional new features are not mandatory implementation commitments. TASK-004 and complete TASK-005 quality gates remain pending. Dated entries below preserve historical results; their old "current status", missing-key or Qdrant-off statements must not override this summary.
+The follow-up work adds maintainer scripts and documentation without changing application resources, schema or installed EXE. Unified checks passed 1,163 tests/3 Windows skips/one existing warning plus 42 ESM modules; later focused tool checks also passed. Current product features remain summarized in [SPEC.md](SPEC.md). TASK-004 and complete TASK-005 quality gates remain pending. Dated entries below preserve historical results; their old "current status", missing-key or Qdrant-off statements must not override this summary.
+
+The 1000-note synthetic-vector run measured first indexing at 972.7s and median search at 6.55s. Profile repeated SQLite snapshots/publication validation before scaling to 10,000; preserve stale/deleted/conflicted-content filtering. These are development-host observations, not a throughput commitment or BGE-M3 timing. Detailed measurements and storage-size semantics are in the maintenance manual.
 
 ## Desktop One-Click Local RAG Preparation (2026-10-18)
 

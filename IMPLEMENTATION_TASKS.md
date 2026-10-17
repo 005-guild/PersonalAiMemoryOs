@@ -1,5 +1,17 @@
 # IMPLEMENTATION_TASKS.md
 
+## Seven Follow-up Maintenance Delivery (2026-10-18)
+
+Application remains **0.8.0 / 0006** with the installed resource fingerprint unchanged. No new EXE/migration/runtime dependency, paid model call, Windows reboot, production write or remote push. Current execution table: [project audit](docs/project-audit-cn.md#execution); repeatable commands: [maintenance manual](docs/maintenance-cn.md).
+
+- NEXT-02/04: full isolated SQLite/vault/configuration restore and SQLite-vector-cache recovery passed; actual clean EXE service reuse/single instance/protected restart passed from tracked scripts. Nonempty frozen templates, interrupted draft and paused-task restoration have a dedicated no-model-resume test. Recovery suite: 13 passed.
+- NEXT-01/03: fixed quality corpus/review packet and read-only boot comparison delivered. Same-boot verification remains pending as designed. No paid quality review, physical reboot or actual whole-stack relocation was claimed.
+- NEXT-05/07: metadata-only storage inventory, conservative retention rules, explicit stopped-log rotation, offline release consistency, pinned read-only CI and explicit public OSV queries delivered. Inventory deleted nothing; logs were under the 8MiB threshold. OSV returned no advisories for 48 version combinations; scan exclusions and license status are documented.
+- NEXT-06: real local six-note/ten-query evaluation measured Recall@5=1/MRR@5=1. Independent synthetic 100/1000-note Qdrant/SQLite baseline completed; 1000-note first indexing 972.70s and median search 6.55s identify a performance follow-up. No 10,000-note performance or general answer-quality claim. Capacity report: .cache/capacity-baseline/466c80ace32e4ea68c244f95ea97fcfd/report.json. Separate cached-vector storage measurement distinguishes logical file length from Linux allocated blocks, with no source mutation or model request.
+- Unified non-paid checks passed: **1,163 tests / 3 Windows skips / 1 existing Starlette-HTTPX warning**, 42 ESM modules, lock/docs/release checks. Later focused additions also passed, including resource-ownership refusal and cache-free/private-config-free documentation validation. Full report .cache/project-check/report.json; this number describes that full run, not a fabricated rerun after each small tool addition.
+- All temporary benchmark containers/volumes and isolated desktop processes were released. Shared Ollama/Qdrant were left running, test collections removed only after ownership checks, and private/formal installation data were not deployed or restored. Reports and synthetic SQLite remain under .cache for review.
+
+
 ## NEXT-01/03 quality and cold-boot preparation (2026-10-18)
 
 - Added a tracked six-note/ten-query Chinese corpus and a zero-call human-review packet generator. Three draft-analysis cases and four cited-QA review cases remain not_run; no paid budget was consumed and no real generation-quality gate is marked complete. Packet: .cache/quality-review/589aa2da510e4a28bbadfff8cf02291b/.
