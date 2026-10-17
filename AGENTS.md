@@ -19,6 +19,12 @@ Management Engineer
 
 ## Engineering Principles
 
+- Work in D:/VsCode/PersonalAiMemoryOs; do not create another project checkout or versioned installation directory.
+- Keep the desktop installation at dist/PersonalAiMemoryOs-0.6.6 even when its application version changes. Build/test under .cache and verify storage backups before in-place upgrades.
+- After each completed and appropriately verified source/documentation work unit, create a local Git commit. Never stage credentials, personal configuration, databases, knowledge files, private exports, caches or distribution artifacts. Do not push unless explicitly requested.
+- Use repository-local author PersonalAiMemoryOs Maintainer <maintainer@localhost>; do not change global Git configuration.
+- Update readme-cn.md, docs/rag-guide-cn.md and docs/config-reference-cn.md with user-visible changes.
+
 -   Modular design
 -   Clear responsibility boundaries
 -   Testable components

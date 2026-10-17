@@ -14,6 +14,7 @@ from app.agents.configuration import AIRegistry
 from app.agents.generation_gate import GenerationGate
 from app.agents.transport import ModelClient
 from app.api.health import router as health_router
+from app.api.desktop import router as desktop_router
 from app.api.imports import router as imports_router
 from app.api.content import router as content_router
 from app.api.sync import router as sync_router
@@ -113,7 +114,7 @@ def create_app(settings: Settings | None = None, *, model_client=None,
 
     app = FastAPI(
         title="Personal AI Memory OS",
-        version="0.6.6",
+        version="0.7.0",
         lifespan=lifespan,
     )
     app.state.settings = settings
@@ -142,6 +143,7 @@ def create_app(settings: Settings | None = None, *, model_client=None,
     app.include_router(rag_router)
     app.include_router(ui_router)
     app.include_router(settings_router)
+    app.include_router(desktop_router)
     app.add_middleware(ConfigurationNoStoreMiddleware)
     install_web(app)
     return app

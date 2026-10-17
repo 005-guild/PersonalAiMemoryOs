@@ -44,7 +44,15 @@ class DesktopWindow:
                 Thread(target=self._ask, name="desktop-close-confirmation", daemon=True).start()
         return False
 
-    def _ask(self):
+    def request_restart(self, restarter):
+        with self.lock:
+            if self.asking or self.stopping:
+                return False
+            self.asking = True
+        Thread(target=self._ask, kwargs={"restarter": restarter}, name="desktop-restart-confirmation", daemon=True).start()
+        return True
+
+    def _ask(self, restarter=None):
         allowed = False
         try:
             ready = self.window.run_js("typeof window.memoryOsHasUnsavedChanges === 'function'")
@@ -67,9 +75,22 @@ class DesktopWindow:
             allowed = message("无法读取页面状态，未保存的修改可能丢失。确定退出应用？", question=True)
         finally:
             with self.lock:
-                self.asking = False
+                if not (allowed and restarter is not None):
+                    self.asking = False
         if allowed:
+            if restarter is not None:
+                try:
+                    restarter.prepare()
+                except Exception as error:
+                    logger.error("Desktop restart preparation failed (%s).", type(error).__name__)
+                    restarter.cancel()
+                    with self.lock:
+                        self.asking = False
+                    message("重启准备失败，当前应用仍保持运行。请查看日志后手动退出重开。")
+                    return
             self.shutdown()
+        elif restarter is not None:
+            restarter.cancel()
 
     def shutdown(self):
         with self.lock:
@@ -89,7 +110,10 @@ class DesktopWindow:
             if not warned and time.monotonic()>deadline:
                 warned = True
                 logger.warning("Waiting for in-flight requests to finish; no forced shutdown.")
-                self.window.run_js("window.dispatchEvent(new Event('memory-os-desktop-long-shutdown')); null;")
+                try:
+                    self.window.run_js("window.dispatchEvent(new Event('memory-os-desktop-long-shutdown')); null;")
+                except Exception:
+                    pass
         self.state("stopped")
         self.allow_close = True
         self.window.destroy()

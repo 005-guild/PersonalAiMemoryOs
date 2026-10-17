@@ -61,7 +61,9 @@ async def _call(method, *args):
 @router.get("/ai")
 async def get_ai_settings(request: Request):
     service = await _service(request)
-    return await _call(service.describe)
+    result = await _call(service.describe)
+    result["desktop"] = {"restart_supported": getattr(request.app.state, "desktop_restarter", None) is not None}
+    return result
 
 
 @router.put("/ai")
@@ -84,4 +86,6 @@ async def update_ai_settings(request: Request):
         raise HTTPException(422, detail=errors) from None
     except (ValueError, UnicodeError, RecursionError):
         raise HTTPException(422, detail={"code": "configuration_invalid"}) from None
-    return await _call(service.save, payload)
+    result = await _call(service.save, payload)
+    result["desktop"] = {"restart_supported": getattr(request.app.state, "desktop_restarter", None) is not None}
+    return result

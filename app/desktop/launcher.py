@@ -28,6 +28,9 @@ def main() -> int:
     root = persistent_root() if getattr(sys, "frozen", False) else resource_root() / ".cache/desktop-dev"
     instance, backend, controller, failure = None, None, None, None
     try:
+        from app.desktop.restart import WAIT_FLAG, wait_for_restart
+        if len(sys.argv) > 1 and sys.argv[1] == WAIT_FLAG:
+            wait_for_restart(root, sys.argv[1:])
         prerequisites()
         if not getattr(sys, "frozen", False):
             root.mkdir(parents=True, exist_ok=True)
@@ -56,6 +59,9 @@ def main() -> int:
         backend = DesktopServer(settings)
         backend.start()
         controller = DesktopWindow(root, backend)
+        from app.desktop.restart import DesktopRestarter
+        if getattr(sys, "frozen", False):
+            backend.app.state.desktop_restarter = DesktopRestarter(root, controller)
         window = webview.create_window(TITLE, backend.url, width=1280, height=900,
             min_size=(960, 640), text_select=True, zoomable=True, background_color="#f5f7fb")
         controller.window = window
