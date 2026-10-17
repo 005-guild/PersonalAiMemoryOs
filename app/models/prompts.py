@@ -9,9 +9,11 @@ from app.models.base import Base, new_id, utcnow
 class PromptTemplate(Base):
     __tablename__ = "prompt_templates"
     __table_args__ = (CheckConstraint("output_schema_version IN (1, 2)", name="ck_prompt_schema"),
-        Index("uq_prompt_default", "is_default", unique=True, sqlite_where=text("is_default = 1")))
+        CheckConstraint("purpose IN ('knowledge', 'rag_qa')", name="ck_prompt_purpose"),
+        Index("uq_prompt_default", "purpose", unique=True, sqlite_where=text("is_default = 1")))
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    purpose: Mapped[str] = mapped_column(String(20), nullable=False, default="knowledge", server_default="knowledge")
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str] = mapped_column(String(2000), nullable=False, default="")
     content: Mapped[str] = mapped_column(Text, nullable=False)
@@ -26,8 +28,10 @@ class PromptTemplate(Base):
 
 class PromptRevision(Base):
     __tablename__ = "prompt_revisions"
+    __table_args__ = (CheckConstraint("purpose IN ('knowledge', 'rag_qa')", name="ck_prompt_revision_purpose"),)
     template_id: Mapped[str] = mapped_column(String(36), ForeignKey("prompt_templates.id", ondelete="RESTRICT"), primary_key=True)
     version: Mapped[int] = mapped_column(Integer, primary_key=True)
+    purpose: Mapped[str] = mapped_column(String(20), nullable=False, default="knowledge", server_default="knowledge")
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str] = mapped_column(String(2000), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)

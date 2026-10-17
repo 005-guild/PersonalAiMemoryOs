@@ -53,11 +53,11 @@ async def generate(payload: ProcessingRequest, request: Request):
 @router.get("/processing/runs", response_model=RunPage)
 def list_runs(request: Request, source_id: UUID | None = None,
               status: RunStatus | None = None, profile_id: str | None = None,
-              offset: int = Query(0, ge=0), limit: int = Query(20, ge=1, le=100)):
+              offset: int = Query(0, ge=0), limit: int = Query(20, ge=1, le=100), summary_only: bool = False):
     with _errors():
         return request.app.state.processing.list_runs(
             source_id=str(source_id) if source_id else None, status=status,
-            profile_id=profile_id, offset=offset, limit=limit,
+            profile_id=profile_id, offset=offset, limit=limit, summary_only=summary_only,
         )
 
 

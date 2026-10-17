@@ -95,6 +95,7 @@ class ProfileRead(BaseModel):
 
 class ProfilesRead(BaseModel):
     enabled: bool
+    max_input_chars: int = 20000
     default_profile: str | None
     items: list[ProfileRead]
     error_code: str | None = None

@@ -60,6 +60,7 @@ class UIRepository:
         total = self.session.scalar(select(func.count()).select_from(Source).where(*predicates)) or 0
         rows = self.session.execute(
             select(*self._record_columns(Source), Source.source_type, Source.author, Source.url,
+                   func.length(Source.content).label("content_chars"),
                    func.substr(Source.content, 1, EXCERPT_LENGTH).label("excerpt"))
             .where(*predicates).order_by(*ordering)
             .offset(offset).limit(limit)

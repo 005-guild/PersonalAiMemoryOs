@@ -70,8 +70,15 @@ class RagIndexService:
                 "index_incomplete": generation is None or blocked_active or len(published) != len(eligible),
                 "errors": problems, "excluded": excluded}
 
-    def status(self):
+    def status(self, *, summary_only=False):
+        if summary_only:
+            from app.services.rag_index_views import status
+            return self.transaction(lambda repository: status(self, repository))
         return self.transaction(self._status)
+
+    def details(self, kind, *, offset=0, limit=20):
+        from app.services.rag_index_views import details
+        return self.transaction(details, kind, offset=offset, limit=limit)
 
     def recover_interrupted(self):
         def recover(repository):

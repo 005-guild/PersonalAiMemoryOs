@@ -16,6 +16,7 @@ from app.services.processing_output import OUTPUT_SCHEMA_VERSION, render_proposa
 from app.services.processing_records import input_hash, run_dict, source_snapshot
 from app.services.processing_v2 import validate_output_v2, render_proposal_v2
 from app.services.prompt_templates import PromptTemplateService, snapshot_template
+from app.services.processing_limits import require_source_input
 
 
 class ProcessingFailure(Exception):
@@ -128,10 +129,7 @@ class ProcessingService:
             if source.deleted_at is not None:
                 raise ContentError(409, "Restore the Source before processing it.")
             ContentService.require_version(source, expected_version)
-            if not source.content.strip():
-                raise ContentError(422, "Source content must not be empty.")
-            if len(source.content) > self.registry.settings.ai_max_input_chars:
-                raise ContentError(422, "Source content exceeds the configured AI input limit.")
+            require_source_input(source, self.registry.settings.ai_max_input_chars)
             snapshot = source_snapshot(source)
             run = ProcessingRun(
                 source_id=source.id, source_version=source.version,
@@ -178,10 +176,14 @@ class ProcessingService:
         return run
 
     def list_runs(self, source_id: str | None = None, status: str | None = None,
-                  profile_id: str | None = None, offset: int = 0, limit: int = 20) -> dict:
+                  profile_id: str | None = None, offset: int = 0, limit: int = 20, summary_only: bool = False) -> dict:
         try:
             with self.lock, self.database.session() as session:
                 repository = ProcessingRepository(session)
+                if summary_only:
+                    items, total = repository.summary_page(source_id=source_id, status=status,
+                        profile_id=profile_id, offset=offset, limit=limit)
+                    return {"items": items, "total": total, "offset": offset, "limit": limit}
                 records, total = repository.page(source_id=source_id, status=status,
                                                   profile_id=profile_id, offset=offset, limit=limit)
                 return {"items": [run_dict(run, repository.source(run.source_id), detail=False)

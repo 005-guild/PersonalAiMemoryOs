@@ -18,6 +18,7 @@ class UISourceSummary(RecordRead):
     author: str | None
     url: str | None
     excerpt: str
+    content_chars: int = 0
 
 
 class UIKnowledgeSummary(RecordRead):

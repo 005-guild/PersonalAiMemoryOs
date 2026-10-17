@@ -17,6 +17,7 @@ class PromptCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     description: str = Field(default="", max_length=2000)
     content: str = Field(min_length=1, max_length=100000)
+    purpose: Literal["knowledge", "rag_qa"] = "knowledge"
     output_schema_version: Literal[1, 2] = 2
 
     @field_validator("output_schema_version", mode="before")
@@ -32,6 +33,10 @@ class PromptCreate(BaseModel):
             raise ValueError("Name and content must not be blank.")
         for value in (self.name, self.description, self.content):
             value.encode("utf-8")
+        if self.purpose == "rag_qa":
+            if "output_schema_version" in self.model_fields_set and self.output_schema_version != 1:
+                raise ValueError("RAG templates use cited-answer schema v1.")
+            self.output_schema_version = 1
         return self
 
 
@@ -71,9 +76,12 @@ class PromptAction(BaseModel):
 
 @router.get("")
 def list_templates(request: Request, include_archived: bool = False,
-                   offset: int = Query(0, ge=0), limit: int = Query(20, ge=1, le=100)):
+                   offset: int = Query(0, ge=0), limit: int = Query(20, ge=1, le=100),
+                   purpose: Literal["knowledge", "rag_qa"] = "knowledge",
+                   q: str = Query("", max_length=500), summary_only: bool = False):
     with _errors():
-        return request.app.state.processing.templates.list(include_archived=include_archived, offset=offset, limit=limit)
+        return request.app.state.processing.templates.list(include_archived=include_archived, offset=offset, limit=limit,
+                                                          purpose=purpose, q=q, summary_only=summary_only)
 
 
 @router.post("", status_code=201)
@@ -108,6 +116,14 @@ def archive_template(identifier: UUID, payload: PromptAction, request: Request):
 
 
 @router.get("/{identifier}/revisions")
-def revisions(identifier: UUID, request: Request):
+def revisions(identifier: UUID, request: Request, offset: int = Query(0, ge=0),
+              limit: int = Query(20, ge=1, le=100), summary_only: bool = False):
     with _errors():
-        return request.app.state.processing.templates.revisions(str(identifier))
+        return request.app.state.processing.templates.revisions(str(identifier), offset=offset, limit=limit,
+                                                               summary_only=summary_only)
+
+
+@router.get("/{identifier}/revisions/{version}")
+def revision(identifier: UUID, version: int, request: Request):
+    with _errors():
+        return request.app.state.processing.templates.revision(str(identifier), version)

@@ -192,6 +192,7 @@ class AIRegistry:
     def describe(self) -> dict:
         result = {
             "enabled": self.settings.ai_enabled,
+            "max_input_chars": self.settings.ai_max_input_chars,
             "default_profile": self.default_profile,
             "items": [
                 {"id": key, "label": profile.label or key, "protocol": profile.protocol,

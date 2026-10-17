@@ -61,9 +61,23 @@ def list_batches(request: Request, status: Literal["pending", "running", "paused
 
 
 @router.get("/{identifier}")
-def get_batch(identifier: UUID, request: Request):
+def get_batch(identifier: UUID, request: Request, summary_only: bool = False):
     with _errors():
-        return request.app.state.processing.batches.get(str(identifier))
+        return request.app.state.processing.batches.get(str(identifier), summary_only=summary_only)
+
+
+@router.get("/{identifier}/items")
+def batch_items(identifier: UUID, request: Request, offset: int = Query(0, ge=0),
+                limit: int = Query(20, ge=1, le=100)):
+    with _errors():
+        return request.app.state.processing.batches.store.items(str(identifier), offset=offset, limit=limit)
+
+
+@router.get("/{identifier}/items/{item_id}/attempts")
+def batch_attempts(identifier: UUID, item_id: UUID, request: Request, offset: int = Query(0, ge=0),
+                   limit: int = Query(20, ge=1, le=100)):
+    with _errors():
+        return request.app.state.processing.batches.store.attempts(str(identifier), str(item_id), offset=offset, limit=limit)
 
 
 @router.post("/{identifier}/continue")

@@ -2,9 +2,10 @@
 
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 from app.api.processing_schemas import ProfileID
+from app.models.fields import Identifier
 
 QueryText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=2000)]
 
@@ -25,6 +26,14 @@ class AskRequest(BaseModel):
     question: QueryText
     top_k: int = Field(default=5, ge=1, le=10)
     profile_id: ProfileID | None = None
+    prompt_template_id: Identifier | None = None
+    prompt_template_version: int | None = Field(default=None, ge=1)
+
+    @model_validator(mode="after")
+    def template_pair(self):
+        if self.prompt_template_version is not None and self.prompt_template_id is None:
+            raise ValueError("Select the prompt ID with its version.")
+        return self
 
 
 class SearchHit(BaseModel):
@@ -59,3 +68,4 @@ class AnswerRead(BaseModel):
     usage: dict
     prompt_version: str
     prompt_hash: str
+    prompt_template: dict | None = None

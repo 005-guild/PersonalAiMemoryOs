@@ -33,6 +33,7 @@ def test_safe_defaults_and_missing_config():
     assert registry.settings.ai_max_input_chars == 20_000
     assert registry.describe() == {
         "enabled": False, "default_profile": None, "items": [],
+        "max_input_chars": 20000,
         "error_code": "ai_configuration_missing",
     }
     with pytest.raises(AIError) as caught:

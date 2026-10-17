@@ -123,8 +123,8 @@ class ProcessingBatchService:
     def recover_interrupted(self):
         self.store.recover()
 
-    def get(self, identifier):
-        return self.store.get(identifier)
+    def get(self, identifier, *, summary_only=False):
+        return self.store.get(identifier, summary_only=summary_only)
 
     def list(self, **kwargs):
         return self.store.list(**kwargs)

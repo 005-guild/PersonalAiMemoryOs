@@ -3,6 +3,7 @@
 from sqlalchemy.orm import Session
 
 from app.repositories.ui import RecordState, SortOrder, SourceGroupSort, UIRepository
+from app.repositories.drafts import DraftRepository
 
 
 class UIService:
@@ -11,6 +12,9 @@ class UIService:
 
     def overview(self) -> dict[str, int]:
         return self.repository.overview()
+
+    def drafts(self, **kwargs) -> dict:
+        return DraftRepository(self.repository.session).page(**kwargs)
 
     def sources(self, *, q: str, state: RecordState, offset: int, limit: int) -> dict:
         items, total = self.repository.sources(q=q, state=state, offset=offset, limit=limit)

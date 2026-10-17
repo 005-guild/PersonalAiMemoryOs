@@ -1,6 +1,7 @@
 """Read-only, lightweight browser views; business writes use existing APIs."""
 
 from uuid import UUID
+from typing import Literal
 
 from fastapi import APIRouter, Query, Request
 
@@ -10,6 +11,17 @@ from app.repositories.ui import RecordState, SortOrder, SourceGroupSort
 from app.services.ui import UIService
 
 router = APIRouter(prefix="/api/v1/ui", tags=["workbench"])
+
+
+@router.get("/drafts")
+def drafts(request: Request, q: str = Query("", max_length=500),
+           state: Literal["ready", "adopted", "all"] = "all", profile_id: str | None = None,
+           source_id: UUID | None = None, prompt_template_id: UUID | None = None,
+           offset: int = Query(0, ge=0), limit: int = Query(20, ge=1, le=100)) -> dict:
+    with request_session(request) as session:
+        return UIService(session).drafts(q=q, state=state, profile_id=profile_id,
+            source_id=str(source_id) if source_id else None,
+            prompt_template_id=str(prompt_template_id) if prompt_template_id else None, offset=offset, limit=limit)
 
 
 @router.get("/overview", response_model=UIOverview)

@@ -11,6 +11,7 @@ from app.services.content import ContentError, ContentService
 from app.services.processing_batch_records import batch_dict
 from app.services.processing_records import input_hash, run_dict, source_snapshot
 from app.services.prompt_templates import snapshot_template
+from app.services.processing_limits import require_source_input
 
 
 class BatchStore:
@@ -53,12 +54,13 @@ class BatchStore:
                 if source.deleted_at is not None:
                     raise ContentError(409, "Restore selected Sources before processing them.")
                 ContentService.require_version(source, selected["expected_version"])
-                if not source.content.strip() or len(source.content) > self.owner.registry.settings.ai_max_input_chars:
-                    raise ContentError(422, "A source is empty or exceeds the configured AI input limit.")
+                require_source_input(source, self.owner.registry.settings.ai_max_input_chars)
                 snapshots.append(source_snapshot(source))
             if payload["mode"] == "merged":
-                if sum(len(source["content"]) for source in snapshots) > self.owner.registry.settings.ai_max_input_chars:
-                    raise ContentError(422, "Combined source content exceeds the configured AI input limit.")
+                total_chars = sum(len(source["content"]) for source in snapshots)
+                if total_chars > self.owner.registry.settings.ai_max_input_chars:
+                    raise ContentError(422, f"合并资料共 {total_chars} 字符，超过当前输入上限 "
+                        f"{self.owner.registry.settings.ai_max_input_chars}；请减少所选资料或调整配置后重启。")
                 if prompt["output_schema_version"] != 2:
                     raise ContentError(422, "Merged processing requires a version 2 output template.")
             settings = payload["generation_settings"]
@@ -76,18 +78,27 @@ class BatchStore:
             session.commit()
             return batch_dict(session, batch), True
 
-    def get(self, identifier):
+    def get(self, identifier, *, summary_only=False):
         with self.lock, self.database.session() as session:
+            if summary_only:
+                from app.services.processing_batch_views import summaries
+                return summaries(session, identifier=identifier)
             return batch_dict(session, self.require(session, identifier))
 
     def list(self, *, status=None, offset=0, limit=20):
         with self.lock, self.database.session() as session:
-            where = [] if status is None else [ProcessingBatch.status == status]
-            total = session.scalar(select(func.count()).select_from(ProcessingBatch).where(*where))
-            rows = session.scalars(select(ProcessingBatch).where(*where).order_by(
-                ProcessingBatch.created_at.desc(), ProcessingBatch.id.desc()).offset(offset).limit(limit))
-            return {"items": [batch_dict(session, row, detail=False) for row in rows],
-                    "total": total, "offset": offset, "limit": limit}
+            from app.services.processing_batch_views import summaries
+            return summaries(session, status=status, offset=offset, limit=limit)
+
+    def items(self, identifier, *, offset=0, limit=20):
+        from app.services.processing_batch_views import item_page
+        with self.lock, self.database.session() as session:
+            return item_page(session, identifier, offset=offset, limit=limit)
+
+    def attempts(self, identifier, item_id, *, offset=0, limit=20):
+        from app.services.processing_batch_views import attempt_page
+        with self.lock, self.database.session() as session:
+            return attempt_page(session, identifier, item_id, offset=offset, limit=limit)
 
     def action(self, identifier, expected_version, action):
         with self.lock, self.database.session() as session:
