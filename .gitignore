@@ -17,6 +17,7 @@ __pycache__/
 /知乎/
 /config/ai-providers.yml
 /config/embedding-providers.yml
+/config/local-rag-startup.json
 /config/*.yml
 !/config/*.example.yml
 /logs/

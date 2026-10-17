@@ -50,6 +50,13 @@ WebView2 官方下载：https://developer.microsoft.com/microsoft-edge/webview2/
 备份或移动前请先正常关闭窗口，再复制完整便携目录。
 
 AI 和 RAG 默认关闭。需要自行配置模型服务；语义检索另需可用的 Qdrant。
+使用本项目的本地 Ollama + Qdrant 时，可在 config/local-rag-startup.json 配置
+schema_version: 1、enabled: true 和 project_root（JSON 格式，示例在 _internal/config）。
+project_root 相对 EXE 所在目录解析，指向含 .tools/ollama 和 docker-compose.yml 的项目目录。
+启用后，双击原 EXE 会隐藏准备 Ollama、Docker Desktop 和 Qdrant，无需另运行命令。
+仅 RAG 开启且使用受支持的本机端点时执行；不会下载模型、调用 DeepSeek或重新部署 API。
+失败时可选择本次关闭 RAG 继续基础管理，已保存配置不变；日志在 logs/local-rag-startup.log。
+关闭桌面不会停止共享的模型与 Qdrant 服务。模型文件及 Docker 仍需单独准备。
 修改 .env 或 YAML 配置后请退出并重新打开。API 密钥不会随发行包提供。
 遇到问题可使用桌面菜单打开日志。关闭过程中有任务时请等待正常退出。
 此版本未签名、不含安装器或自动更新；请使用可信来源并核对 SHA-256。

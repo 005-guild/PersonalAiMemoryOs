@@ -61,6 +61,7 @@ def source_fingerprint() -> str:
                      if path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc")
     files.extend(ROOT / name for name in ("pyproject.toml", "uv.lock", "alembic.ini", ".env.example",
                  "config/ai-providers.example.yml", "config/embedding-providers.example.yml",
+                 "config/local-rag-startup.example.json", "scripts/start_local_rag.ps1",
                  "scripts/desktop_entry.py", "scripts/build_desktop.py"))
     digest = hashlib.sha256()
     for path in sorted(files):
@@ -76,6 +77,7 @@ def inspect_bundle(bundle: Path) -> dict:
                 "_internal/app/prompts/zhihu_deep_analysis_v1.md", "_internal/app/prompts/knowledge_v2_contract.md",
                 "_internal/app/web/index.html", "_internal/config/ai-providers.example.yml",
                 "_internal/config/embedding-providers.example.yml",
+                "_internal/config/local-rag-startup.example.json", "_internal/scripts/start_local_rag.ps1",
                 "_internal/webview/lib/Microsoft.Web.WebView2.Core.dll",
                 "_internal/pythonnet/runtime/Python.Runtime.dll"]
     expected.extend("_internal/" + path.relative_to(ROOT).as_posix()
@@ -84,7 +86,7 @@ def inspect_bundle(bundle: Path) -> dict:
     for file in bundle.rglob("*"):
         lowered = {part.lower() for part in file.relative_to(bundle).parts}
         if (lowered & {"playwright", "pytest", ".env", "memory.db", "ai-providers.yml",
-                       "embedding-providers.yml", ".memory-os-config-transactions"}
+                       "embedding-providers.yml", "local-rag-startup.json", ".memory-os-config-transactions"}
                 or any(part.startswith(".memory-os-ai-") and part.endswith(".tmp") for part in lowered)):
             raise RuntimeError(f"Private or development-only resource in distribution: {file}")
         if file.is_file() and file.suffix.lower() in {".db", ".sqlite", ".sqlite3"}:

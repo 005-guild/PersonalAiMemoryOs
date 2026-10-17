@@ -1,4 +1,4 @@
-"""Windowed portable entry point. No Docker, CLI installation or browser tab."""
+"""Windowed portable entry point with optional local-service preparation."""
 
 import logging
 import multiprocessing
@@ -23,6 +23,21 @@ def open_ai_settings(window) -> None:
         message("工作台尚未加载完成，请稍后再次打开设置。")
 
 
+def prepare_local_rag(root, settings):
+    """Keep basic management available when opted-in local services fail."""
+    from app.desktop.local_services import LocalServicesError, start_local_services
+
+    try:
+        start_local_services(root, settings)
+    except LocalServicesError as error:
+        logging.getLogger(__name__).warning("Local RAG startup did not complete.")
+        if not message(str(error) + "\n\n是否暂时关闭本次 RAG 并打开基础管理？"
+                "\n已保存配置不变，下次打开仍会尝试准备服务。", question=True):
+            raise DesktopPlatformError("已取消启动。请检查本地检索服务和日志后重新打开。") from None
+        return settings.model_copy(update={"rag_enabled": False})
+    return settings
+
+
 def main() -> int:
     multiprocessing.freeze_support()
     root = persistent_root() if getattr(sys, "frozen", False) else resource_root() / ".cache/desktop-dev"
@@ -42,6 +57,7 @@ def main() -> int:
         redaction = configure_logging(root)
         settings = prepare_desktop(root, lambda prompt: message(prompt, question=True))
         redaction.secrets = tuple(secret.get_secret_value() for secret in settings.ai_keys.values() if secret.get_secret_value())
+        settings = prepare_local_rag(root, settings)
         cache = portable_path(root, root / ".cache/desktop")
         temp = portable_path(root, cache / "tmp")
         profile = portable_path(root, cache / "webview")

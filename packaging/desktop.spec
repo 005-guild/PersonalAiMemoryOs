@@ -18,7 +18,8 @@ for directory in (root / "app" / "web", root / "app" / "prompts", root / "migrat
                 continue
             datas.append((str(source), str(source.relative_to(root).parent)))
 for relative in ("alembic.ini", ".env.example", "config/ai-providers.example.yml",
-                 "config/embedding-providers.example.yml"):
+                 "config/embedding-providers.example.yml", "config/local-rag-startup.example.json",
+                 "scripts/start_local_rag.ps1"):
     source = root / relative
     datas.append((str(source), str(Path(relative).parent)))
 datas += [(str(assets / "licenses"), "licenses"), (str(assets / "desktop.ico"), ".")]

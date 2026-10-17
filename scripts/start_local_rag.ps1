@@ -1,7 +1,10 @@
-param([switch]$SkipDocker)
+param(
+    [switch]$SkipDocker,
+    [string]$ProjectRoot = (Join-Path $PSScriptRoot '..')
+)
 
 $ErrorActionPreference = 'Stop'
-$projectRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+$projectRoot = [IO.Path]::GetFullPath($ProjectRoot)
 $ollamaExecutable = Join-Path $projectRoot '.tools/ollama/ollama.exe'
 $ollamaCache = Join-Path $projectRoot '.cache/ollama'
 $modelsDirectory = Join-Path $ollamaCache 'models'
@@ -62,6 +65,10 @@ if ($listener.Count) {
         try { $version = (Get-LocalJson "$ollamaUrl/api/version").version } catch { Start-Sleep -Milliseconds 250 }
     } while (-not $version -and (Get-Date) -lt $deadline)
     if (-not $version) { throw 'Ollama did not become ready within 45 seconds; inspect its logs.' }
+    $ownedListener = @(Get-NetTCPConnection -LocalPort 11434 -State Listen -ErrorAction SilentlyContinue)
+    if ($serverProcess.HasExited -or $ownedListener.OwningProcess -notcontains $serverProcess.Id) {
+        throw 'Another process acquired port 11434 during startup; its ownership record was not changed.'
+    }
     [ordered]@{ pid = $serverProcess.Id; executable = $ollamaExecutable; models_directory = $modelsDirectory;
         url = $ollamaUrl; version = $version; started_at = (Get-Date).ToUniversalTime().ToString('o') } |
         ConvertTo-Json | Set-Content -LiteralPath $serviceRecord -Encoding UTF8
