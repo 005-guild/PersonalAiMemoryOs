@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT))
 from app.agents.configuration import _ProfileDocument
 from app.services.markdown import parse_document
 from app.vector.configuration import EmbeddingProfile
-from documentation_checks import blocks, check_links
+from scripts.documentation_checks import blocks, check_links
 
 
 def check(root: Path = ROOT) -> dict:

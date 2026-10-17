@@ -27,3 +27,14 @@ def test_local_links_reject_missing_anchor_and_external_path(tmp_path):
         with pytest.raises(ValueError):
             check_links(tmp_path, path, f"[bad]({target})")
     assert check_links(tmp_path, path, "```\n[example](missing.md)\n```") == 0
+
+
+def test_document_check_needs_no_cache_or_personal_settings(monkeypatch):
+    from scripts.check_docs import check
+    original = Path.read_text
+    def safe_read(path, *args, **kwargs):
+        assert ".cache" not in path.parts
+        assert path.name not in {".env", "ai-providers.yml", "embedding-providers.yml"}
+        return original(path, *args, **kwargs)
+    monkeypatch.setattr(Path, "read_text", safe_read)
+    assert check()["status"] == "passed"
