@@ -350,3 +350,27 @@ def test_continue_preflights_changed_pending_source_without_call(ai_batches):
     assert client.post(f"{BASE}/{batch['id']}/continue", json={"expected_version": batch["version"]}).status_code == 200
     result = wait_batch(client, batch["id"])
     assert model.calls == 1 and result["items"][1]["error_code"] == "source_stale"
+
+
+def test_stop_while_profile_resolution_is_waiting_creates_no_call_intent(ai_batches, monkeypatch):
+    client, app, model = ai_batches
+    service = app.state.processing
+    resolving, release = Event(), Event()
+    original = service.batches._resolved
+    def delayed(identifier):
+        result = original(identifier)
+        resolving.set()
+        assert release.wait(3)
+        return result
+    monkeypatch.setattr(service.batches, "_resolved", delayed)
+    try:
+        batch = submit(client, [source(client)])
+        assert resolving.wait(2)
+        service.request_stop()
+        release.set()
+        paused = wait_batch(client, batch["id"], "paused")
+        assert paused["items"][0]["attempts"] == 0
+        assert paused["items"][0]["run_id"] is None
+        assert model.calls == 0
+    finally:
+        release.set()

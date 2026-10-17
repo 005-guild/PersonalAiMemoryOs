@@ -127,6 +127,11 @@ class BatchStore:
     def begin_item(self, identifier, resolved):
         with self.lock, self.database.session() as session:
             batch = self.require(session, identifier)
+            if self.owner._closing or self.owner.batches._closing:
+                if batch.status not in {"cancelled", "completed"}:
+                    batch.status, batch.error_code, batch.updated_at = "paused", "shutdown", utcnow()
+                    session.commit()
+                return None
             if batch.cancel_requested or batch.status in {"paused", "cancelled", "completed"}:
                 return None
             item = session.scalar(select(ProcessingBatchItem).where(ProcessingBatchItem.batch_id == identifier,
