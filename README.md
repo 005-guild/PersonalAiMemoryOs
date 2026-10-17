@@ -4,7 +4,29 @@
 
 The [complete Chinese manual](readme-cn.md) covers every management page, installation, import, AI profiles, Markdown synchronization, backup and troubleshooting. See the [step-by-step RAG setup](docs/rag-guide-cn.md) and [full configuration reference](docs/config-reference-cn.md) for Embedding, Qdrant, generation, environment variables and Docker-specific settings.
 
-## Windows portable desktop (0.6.6)
+## Current release: 0.7.0 (schema 0005)
+
+The desktop installation stays at **`dist/PersonalAiMemoryOs-0.6.6/`**. Its historical directory name is retained; the application reports 0.7.0. New clean distributions use `dist/PersonalAiMemoryOs-windows-x64.zip`, built from staging rather than an installation containing user data.
+
+The AI page now supports searchable, paged source checkboxes (up to 20), lazy source preview, sequential individual drafts and one-call merged analysis. SQLite-backed tasks keep progress after navigation; cancellation drains the current call, and restart pauses remaining work. Continue pending items and retry failed calls are separate explicit actions. There are no automatic paid retries.
+
+Manage versioned Prompt templates in Settings. The default preserves the complete eight-stage Chinese critical-analysis prompt; the legacy brief template remains available. Deep analysis starts with editable 16,384-token/180-second overrides while preserving the selected model's thinking setting. No browsing is performed; uncertain facts must remain unverified. New JSON v2 retains full Markdown and exact source quotes. Old v1 drafts remain readable and adoptable.
+
+Knowledge may link up to 20 sources; `source_id` remains the first-source compatibility field. Multi-source Markdown uses schema v2, while existing v1 files and synchronization baselines are retained. Saving a Knowledge editor, including an unchanged form, returns to the overview. Model settings offer Restart now/Later; automatic restart is desktop-only and waits for calls/sync and the single-instance handover.
+
+Use the same workspace for source changes and clean `.cache` staging for builds. The in-place updater requires a normally closed desktop, verifies backups of the database, full vault and configuration, preserves unknown files, rejects resource/data path overlaps and migrates 0004 to 0005. Tested source/document units are committed locally without private data or automatic pushes.
+
+```powershell
+uv run --locked pytest
+uv run --locked python scripts/build_desktop.py --staging-only
+# Replace STAGING with the tested clean directory from .cache/desktop-build-result.json.
+uv run --locked python scripts/verify_desktop.py --bundle STAGING
+uv run --locked python scripts/update_desktop.py --bundle STAGING
+```
+
+The final complete regression passed 1,030 tests, with 3 Windows symlink skips and one existing upstream warning (`.cache/v070-release-verified.log`). Actual frozen-EXE generation, templates, settings restart, blocked-call draining and old-to-new in-place migration passed. The selected installation was backed up, upgraded and reopened, retaining its 571 Sources, 1 Knowledge, 2 runs and all configuration/vault bytes. Original AI enabled state was preserved, RAG remains off, and the formal project Docker/data were unchanged. Clean ZIP SHA-256: `a020718d2c978269340a21edab1cb2fe67e5eaa87a65b21e8bbfc68384225dc8`. Detailed evidence is recorded in [implementation tasks](IMPLEMENTATION_TASKS.md). Real provider/RAG quality gates remain pending; no paid provider calls were made by engineering checks.
+
+## Historical Windows portable desktop (0.6.6)
 
 Extract `PersonalAiMemoryOs-0.6.6-windows-x64.zip` into a writable directory and double-click `PersonalAiMemoryOs.exe` in `PersonalAiMemoryOs-0.6.6/`. Keep the complete directory, including `_internal`. The frozen application embeds Python and the existing API/UI, opens its own pywebview/WebView2 window, and needs no system Python, uv or Docker for basic management. Microsoft Edge WebView2 Runtime and .NET Framework 4.8 are prerequisites; missing-runtime messages link to Microsoft's installers without installing them automatically.
 

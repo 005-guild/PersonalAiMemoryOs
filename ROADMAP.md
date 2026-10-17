@@ -2,6 +2,23 @@
 
 # MVP Roadmap
 
+## v0.7.0: Multi-Source Analysis, Prompt Templates and In-Place Desktop Updates
+
+Status: engineering complete and deployed in the fixed existing portable directory on 2026-10-17. Version `0.7.0`, database `0005`; real-provider quality remains a separate pending gate.
+
+Deliver the six confirmed improvements:
+
+1. Paged/searchable Source selection with body preview, current-page checkboxes and cross-page selection; explicit individual or merged analysis of at most 20 inputs.
+2. Align the generation button and status selection in the AI workspace.
+3. Return to the overview after a successful Knowledge save.
+4. After AI settings save, offer explicit immediate desktop restart or later restart, protecting unsaved input and draining in-flight work.
+5. Maintain the same existing portable directory through verified resource/schema upgrades, rather than making a new versioned user directory for every change; keep local Git history of public code/document changes.
+6. Manage/select multiple versioned Prompt templates; preserve the user's full eight-stage Zhihu analysis Prompt as the default and keep legacy output/run compatibility.
+
+Generation v2 stores the complete Markdown analysis plus metadata and exact source quotations. Persistent batches retain source/template/model/generation snapshots, per-item results and idempotency; restart pauses incomplete work and paid retries remain explicit. Merged Knowledge retains ordered multi-source provenance, with the first-source compatibility field, all-source restore/delete safeguards, Markdown v1/v2 compatibility and complete RAG citation metadata. Ordinary Python/Docker startup still requires explicit migration. Real web verification is not implemented by changing a Prompt.
+
+Final validation passed 1,030 tests/3 Windows skips/1 existing warning, a 47-package lock and 34 ESM checks; controlled and real local browser workflows, final actual EXE batches/templates/restart, blocked-call restart draining and real old-to-new same-directory migration all passed. The fixed `dist/PersonalAiMemoryOs-0.6.6/` was backed up, upgraded and reopened with all existing 571 Sources/1 Knowledge/2 runs and configuration retained. Detailed evidence and SHA-256 values are recorded in `IMPLEMENTATION_TASKS.md`. Historical Phase 4/5 live-quality acceptance remains separate; no new feature authorizes unattended model calls or consumes the earlier dedicated real-validation budget.
+
 ## v0.6.6: Visual AI Configuration and Storage Locations
 
 Approved scope: a prominent upper-left Settings entry, mobile top-bar link and native desktop menu; editable text-generation AI switch, default profile, multiple four-protocol profiles, write-only key updates and preserved advanced parameters. Display actual data/Knowledge/configuration locations read-only. Save next-start configuration without a model call, hot reload, automatic restart or RAG enablement. Respect environment-managed values and Docker read-only configuration. No business-path editing, Embedding/RAG editor or schema migration. Declare the already-transitive `python-dotenv` directly; the 47-package lock adds no installed package, model SDK or framework.
