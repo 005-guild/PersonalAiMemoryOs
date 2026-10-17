@@ -135,9 +135,9 @@ def assert_disabled(application: FrozenDesktop) -> None:
     assert application.request("GET", "/api/v1/rag/index/status")["enabled"] is False
 
 
-def verify_backup(backup: Path, root: Path, columns, old_rows, configs, vault_files):
+def verify_backup(backup: Path, root: Path, columns, old_rows, configs, vault_files, old_schema):
     manifest = json.loads((backup / "manifest.json").read_text(encoding="utf-8"))
-    assert manifest["schema_revision"] == "0004"
+    assert manifest["schema_revision"] == old_schema
     for entry in manifest["files"]:
         assert digest(portable_path(backup, backup / entry["path"])) == entry["sha256"]
     assert database_snapshot(backup / "memory.db", columns)[1] == old_rows
@@ -163,7 +163,10 @@ def run_upgrade(bundle: Path, archive: Path, evidence: Path, report: dict):
     try:
         application.start()
         eventually(application.window, timeout=20)
-        assert application.request("GET", "/openapi.json")["info"]["version"] == "0.6.6"
+        old_version = application.request("GET", "/openapi.json")["info"]["version"]
+        assert old_version in {"0.6.6", "0.7.0"}
+        with sqlite3.connect((root / "data/memory.db").as_uri() + "?mode=ro", uri=True) as connection:
+            old_schema = connection.execute("SELECT version_num FROM alembic_version").fetchone()[0]
         assert_disabled(application)
         assert application.request("GET", "/api/v1/sources")["total"] == 0
         assert application.request("GET", "/api/v1/knowledge")["total"] == 0
@@ -178,6 +181,12 @@ def run_upgrade(bundle: Path, archive: Path, evidence: Path, report: dict):
         eventually(lambda: application.request("GET", note_route)["sync_status"] == "synced")
         markdown = eventually(lambda: note_path(root / "knowledge", note["id"]))
         note = application.request("GET", note_route)
+        old_prompt = None
+        if int(old_schema) >= 5:
+            old_prompt = application.request("POST", "/api/v1/prompt-templates", {
+                "name": "迁移前自定义解析", "content": "保留此模板原文、版本及默认选择。", "output_schema_version": 2})
+            old_prompt = application.request("POST", "/api/v1/prompt-templates/" + old_prompt["id"] + "/default", {
+                "expected_version": old_prompt["version"]})
         for path in (root / ".env", root / "config/ai-providers.yml", root / "config/embedding-providers.yml"):
             with path.open("ab") as stream:
                 stream.write(b"\n# isolated upgrade acceptance: preserve this exact configuration\n")
@@ -208,15 +217,15 @@ def run_upgrade(bundle: Path, archive: Path, evidence: Path, report: dict):
         report["checks"].append("old_exe_graceful_close_and_port_release")
         columns, old_rows = database_snapshot(root / "data/memory.db")
         with sqlite3.connect((root / "data/memory.db").as_uri() + "?mode=ro", uri=True) as connection:
-            assert connection.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0004"
+            assert connection.execute("SELECT version_num FROM alembic_version").fetchone()[0] == old_schema
         vault_files = {path.relative_to(root / "knowledge").as_posix(): path.read_bytes()
                        for path in (root / "knowledge").rglob("*") if path.is_file()}
         with isolated_settings_environment():
             result = upgrade_portable(bundle, root, archive)
-        assert result["status"] == "upgraded" and result["schema"] == "0005"
+        assert result["status"] == "upgraded" and result["schema"] == "0006"
         assert digest(root / "PersonalAiMemoryOs.exe") == digest(bundle / "PersonalAiMemoryOs.exe")
         assert database_snapshot(root / "data/memory.db", columns)[1] == old_rows
-        verify_backup(Path(result["backup"]), root, columns, old_rows, configs, vault_files)
+        verify_backup(Path(result["backup"]), root, columns, old_rows, configs, vault_files, old_schema)
         report["checks"] += ["verified_backup", "all_legacy_columns_and_rows_preserved"]
         assert not (root / ".memory-os-upgrade.json").exists()
         assert markdown.read_bytes() == markdown_bytes and configuration_snapshot(root) == configs
@@ -234,8 +243,15 @@ def run_upgrade(bundle: Path, archive: Path, evidence: Path, report: dict):
         assert application.request("GET", "/api/v1/sources")["total"] == 2
         assert application.request("GET", "/api/v1/knowledge")["total"] == 1
         templates = application.request("GET", "/api/v1/prompt-templates")
-        assert templates["total"] == 2 and sum(item["is_default"] for item in templates["items"]) == 1
+        knowledge_template_count = 3 if old_prompt else 2
+        assert templates["total"] == knowledge_template_count and sum(item["is_default"] for item in templates["items"]) == 1
         assert {item["output_schema_version"] for item in templates["items"]} == {1, 2}
+        rag_templates = application.request("GET", "/api/v1/prompt-templates?purpose=rag_qa")
+        assert rag_templates["total"] == 1 and rag_templates["items"][0]["is_default"]
+        if old_prompt:
+            fresh_prompt = application.request("GET", "/api/v1/prompt-templates/" + old_prompt["id"])
+            assert {key: fresh_prompt[key] for key in old_prompt} == old_prompt
+            assert fresh_prompt["purpose"] == "knowledge"
         assert application.request("GET", "/api/v1/processing/runs")["total"] == 0
         assert application.request("GET", "/api/v1/processing/batches")["total"] == 0
         application.request_close()
@@ -243,18 +259,23 @@ def run_upgrade(bundle: Path, archive: Path, evidence: Path, report: dict):
         with sqlite3.connect((root / "data/memory.db").as_uri() + "?mode=ro", uri=True) as connection:
             assert connection.execute("PRAGMA integrity_check").fetchall() == [("ok",)]
             assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
-            assert connection.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0005"
+            assert connection.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0006"
             assert connection.execute("SELECT knowledge_id, source_id, position FROM knowledge_sources").fetchall() == [(note["id"], sources[0]["id"], 0)]
             assert all(connection.execute("SELECT count(*) FROM " + table).fetchone()[0] == 0 for table in (
                 "processing_runs", "processing_batches", "processing_batch_items", "rag_index_generations",
                 "rag_note_index_states", "rag_index_jobs"))
         assert markdown.read_bytes() == markdown_bytes and configuration_snapshot(root) == configs
         assert sentinel.read_bytes() == sentinel_bytes
-        assert database_snapshot(root / "data/memory.db", columns)[1] == old_rows
+        after_rows = database_snapshot(root / "data/memory.db", columns)[1]
+        for table, rows in old_rows.items():
+            if table in {"prompt_templates", "prompt_revisions"}:
+                assert set(rows).issubset(after_rows[table])
+            else:
+                assert after_rows[table] == rows
         report.update(backup=result["backup"], old_columns_and_rows_sha256=digest_json(old_rows),
             markdown_sha256=hashlib.sha256(markdown_bytes).hexdigest(), configuration_files=len(configs),
-            old_version="0.6.6", old_schema="0004", new_schema="0005", source_count=2, knowledge_count=1,
-            prompt_template_count=2, checks=["safe_previous_zip_extraction", "old_real_exe_empty_start",
+            old_version=old_version, old_schema=old_schema, new_schema="0006", source_count=2, knowledge_count=1,
+            prompt_template_count=knowledge_template_count + 1, checks=["safe_previous_zip_extraction", "old_real_exe_empty_start",
             "source_and_linked_note_creation", "v1_markdown_synced", "running_upgrade_refused_without_writes",
             "old_exe_graceful_close_and_port_release", "verified_backup", "all_legacy_columns_and_rows_preserved",
             "configuration_and_unknown_file_preserved", "same_directory_new_real_exe_start", "source_link_backfill",
@@ -278,9 +299,9 @@ def main() -> int:
     if any((bundle / name).exists() for name in (".env", "data", "knowledge", "config/ai-providers.yml")):
         parser.error("The new bundle must be pristine and contain no private/runtime data.")
     manifest = read_manifest(bundle)
-    if manifest["version"] != PROJECT_VERSION or manifest["schema"] != "0005":
-        parser.error("The bundle version/schema does not match this v0.7 upgrade verifier.")
-    cache = (PROJECT_ROOT / ".cache/v07-upgrade").resolve()
+    if manifest["version"] != PROJECT_VERSION or manifest["schema"] != "0006":
+        parser.error("The bundle version/schema does not match this upgrade verifier.")
+    cache = (PROJECT_ROOT / ".cache/desktop-upgrade-validation").resolve()
     if not cache.is_relative_to(PROJECT_ROOT.resolve()):
         parser.error("Verification data must remain inside this project workspace.")
     evidence = cache / uuid4().hex

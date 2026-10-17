@@ -13,7 +13,7 @@ def bundle(root):
         target = root / name
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(b"new resource " + name.encode())
-    create_manifest(root, "0.7.0", "0005")
+    create_manifest(root, "0.8.0", "0006")
 
 
 def test_inplace_update_preserves_private_and_unknown_files(tmp_path):
@@ -32,7 +32,7 @@ def test_inplace_update_preserves_private_and_unknown_files(tmp_path):
     (target / "PersonalAiMemoryOs.exe").write_bytes(b"old executable")
     backup.mkdir()
     result = install_resources(source, target, backup, owned)
-    assert result["version"] == "0.7.0"
+    assert result["version"] == "0.8.0"
     assert all((target / name).read_bytes() == content for name, content in private.items())
     journal = json.loads((backup / "program-update.json").read_text(encoding="utf-8"))
     saved_exe = next(item["backup"] for item in journal["files"] if item["path"] == "PersonalAiMemoryOs.exe")
@@ -117,7 +117,7 @@ def test_upgrade_migrates_in_place_with_verified_data_and_configuration(tmp_path
     config = (target / "config/ai-providers.yml").read_bytes()
     result = upgrade_portable(source, target, lease_factory=Lease)
     backup = Path(result["backup"])
-    assert revision(target / "data/memory.db") == "0005"
+    assert revision(target / "data/memory.db") == "0006"
     assert revision(backup / "memory.db") == "0004"
     assert (backup / "configuration/config/ai-providers.yml").read_bytes() == config
     assert (target / "config/ai-providers.yml").read_bytes() == config

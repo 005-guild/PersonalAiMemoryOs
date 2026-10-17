@@ -78,9 +78,9 @@ def inspect_bundle(bundle: Path) -> dict:
                 "_internal/config/embedding-providers.example.yml",
                 "_internal/webview/lib/Microsoft.Web.WebView2.Core.dll",
                 "_internal/pythonnet/runtime/Python.Runtime.dll"]
-    for relative in expected:
-        if not (bundle / relative).is_file():
-            raise RuntimeError(f"Required bundle resource missing: {relative}")
+    expected.extend("_internal/" + path.relative_to(ROOT).as_posix()
+                    for folder in (ROOT / "migrations/versions", ROOT / "app/prompts")
+                    for path in folder.glob("*") if path.is_file() and path.suffix in {".py", ".md"})
     for file in bundle.rglob("*"):
         lowered = {part.lower() for part in file.relative_to(bundle).parts}
         if (lowered & {"playwright", "pytest", ".env", "memory.db", "ai-providers.yml",
@@ -89,6 +89,9 @@ def inspect_bundle(bundle: Path) -> dict:
             raise RuntimeError(f"Private or development-only resource in distribution: {file}")
         if file.is_file() and file.suffix.lower() in {".db", ".sqlite", ".sqlite3"}:
             raise RuntimeError(f"Database in distribution: {file}")
+    for relative in expected:
+        if not (bundle / relative).is_file():
+            raise RuntimeError(f"Required bundle resource missing: {relative}")
     return {"files": sum(item.is_file() for item in bundle.rglob("*")),
             "bytes": sum(item.stat().st_size for item in bundle.rglob("*") if item.is_file())}
 
@@ -162,10 +165,13 @@ def main() -> int:
     shutil.copyfile(ROOT / "packaging" / "使用说明.txt", bundle / "使用说明.txt")
     sys.path.insert(0, str(ROOT))
     from app.desktop.update_resources import create_manifest
-    create_manifest(bundle, version, "0005")
+    from alembic.script import ScriptDirectory
+    from app.repositories.migrations import migration_config
+    schema = ScriptDirectory.from_config(migration_config()).get_current_head()
+    create_manifest(bundle, version, schema)
     if input_fingerprint != source_fingerprint():
         raise RuntimeError("Build inputs changed during packaging; rerun after edits finish.")
-    report = {"version": version, "architecture": "windows-x64", "schema": "0005",
+    report = {"version": version, "architecture": "windows-x64", "schema": schema,
               "built_at": datetime.now(timezone.utc).isoformat(), "signed": False,
               "manifest": inspect_bundle(bundle), "workspace": str(workspace),
               "source_fingerprint": input_fingerprint}
