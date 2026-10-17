@@ -1,5 +1,11 @@
 # IMPLEMENTATION_TASKS.md
 
+## NEXT-02 isolated full restore drill (2026-10-18)
+
+- Added strict backup/configuration manifest verification and new-directory restoration support, with 12 tests passed. Reject incomplete, tampered, duplicate, traversal/device-path and unlisted-vault inputs before publishing a copy. SQLite connections are explicitly closed before Windows directory rename.
+- Real local BGE-M3/Qdrant drill passed: .cache/recovery-validation/08b3e7c22a0745c8a213ff7b4b6fda8d/report.json. All database rows, multi-source relationships, full vault and configuration bytes retained before startup; AI/RAG-off first boot used no model call. The isolated original stayed stopped while its restored owner recovered lost Qdrant data using SQLite vectors with zero re-embedding for recovery; the confirming query alone used local Embedding. No paid generation, formal data changes or shared collection changes. Qdrant snapshot restoration is not claimed.
+
+
 ## NEXT-04 reproducible checks (2026-10-18)
 
 - Public documentation checker: 15 manuals, 198 links, 7 JSON and 9 YAML examples passed; three focused checker tests passed.
