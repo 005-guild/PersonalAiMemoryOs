@@ -34,7 +34,10 @@ def test_inplace_update_preserves_private_and_unknown_files(tmp_path):
     result = install_resources(source, target, backup, owned)
     assert result["version"] == "0.7.0"
     assert all((target / name).read_bytes() == content for name, content in private.items())
-    assert (backup / "program/PersonalAiMemoryOs.exe").read_bytes() == b"old executable"
+    journal = json.loads((backup / "program-update.json").read_text(encoding="utf-8"))
+    saved_exe = next(item["backup"] for item in journal["files"] if item["path"] == "PersonalAiMemoryOs.exe")
+    assert (backup / saved_exe).read_bytes() == b"old executable"
+    assert all(len(Path(item["backup"]).parts) == 2 for item in journal["files"] if item["backup"])
 
 
 def test_replacement_failure_rolls_back_without_touching_data(tmp_path, monkeypatch):

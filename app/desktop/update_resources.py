@@ -93,19 +93,23 @@ def install_resources(bundle: Path, target: Path, backup: Path, old_names: set[s
     manifest = read_manifest(bundle)
     new_names = {entry["path"] for entry in manifest["files"]} | {MANIFEST}
     records = []
-    for name in sorted(new_names | old_names):
+    for index, name in enumerate(sorted(new_names | old_names)):
         destination = portable_path(target, target / resource_name(name))
         source = portable_path(bundle, bundle / name)
         if destination.exists() and name not in old_names:
             raise ValueError("新程序文件与未纳管文件冲突，未覆盖。")
         old_hash = digest(destination)
+        backup_name = f"program/{index:06d}.bin" if old_hash else None
         if old_hash:
-            saved = backup / "program" / name
+            # Deep dependency/license paths otherwise exceed Windows MAX_PATH
+            # once the portable root and backup timestamp are prepended.
+            saved = portable_path(backup, backup / backup_name)
             saved.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(destination, saved)
             if digest(saved) != old_hash:
                 raise RuntimeError("旧程序备份校验失败。")
-        records.append({"path": name, "before": old_hash, "after": digest(source) if name in new_names else None})
+        records.append({"path": name, "backup": backup_name, "before": old_hash,
+                        "after": digest(source) if name in new_names else None})
     journal = backup / "program-update.json"
     journal.write_text(json.dumps({"phase": "prepared", "files": records}, ensure_ascii=False, indent=2), encoding="utf-8")
     changed = []
@@ -140,7 +144,7 @@ def install_resources(bundle: Path, target: Path, backup: Path, old_names: set[s
                 if record["before"] is None:
                     destination.unlink(missing_ok=True)
                 else:
-                    saved = backup / "program" / record["path"]
+                    saved = portable_path(backup, backup / record["backup"])
                     if digest(saved) != record["before"]:
                         raise RuntimeError("程序备份已损坏，停止回滚。")
                     temporary = destination.with_name(".memory-os-rollback-" + uuid4().hex + ".tmp")
