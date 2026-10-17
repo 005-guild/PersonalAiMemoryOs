@@ -61,6 +61,37 @@ def test_replacement_failure_rolls_back_without_touching_data(tmp_path, monkeypa
     assert {p.relative_to(target).as_posix(): p.read_bytes() for p in target.rglob("*") if p.is_file()} == before
 
 
+def test_deep_dependency_update_keeps_sibling_temporary_paths_below_windows_limit(tmp_path, monkeypatch):
+    source, target, backup = (tmp_path / name for name in ("bundle", "installation", "backup"))
+    bundle(source)
+    bundle(target)
+    parent = target / "_internal/licenses"
+    parent = parent / ("x" * (240 - len(str(parent)) - 1))
+    relative = (parent / "LICENSE").relative_to(target)
+    for root, content in ((source, b"new license"), (target, b"old license")):
+        path = root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(content)
+        create_manifest(root, "0.8.0", "0006")
+    owned = {item["path"] for item in read_manifest(target)["files"]} | {"program-manifest.json"}
+    backup.mkdir()
+    copy = shutil.copy2
+    temporary_paths = []
+
+    def bounded_copy(origin, destination):
+        destination = Path(destination)
+        if destination.suffix == ".tmp":
+            # Also reproduce the Windows boundary on hosts supporting long paths.
+            assert len(str(destination)) < 260
+            temporary_paths.append(destination)
+        return copy(origin, destination)
+
+    monkeypatch.setattr(shutil, "copy2", bounded_copy)
+    install_resources(source, target, backup, owned)
+    assert (target / relative).read_bytes() == b"new license"
+    assert temporary_paths and all(not path.exists() for path in temporary_paths)
+
+
 @pytest.mark.parametrize("path", ["../.env", "data/memory.db", "_internal/../data/memory.db", "D:/outside", "_internal\\file"])
 def test_manifest_cannot_target_user_data_or_escape(path):
     with pytest.raises(ValueError):

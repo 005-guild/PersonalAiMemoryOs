@@ -2,15 +2,24 @@
 
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import shutil
-from uuid import uuid4
+import tempfile
 import zipfile
 
 from app.paths import portable_path
 
 MANIFEST = "program-manifest.json"
+
+
+def _temporary(destination: Path) -> Path:
+    # Dependency/license directories can already be near Windows MAX_PATH.
+    # Reserve a short, unique sibling without replacing an unknown file.
+    descriptor, name = tempfile.mkstemp(prefix=".u-", suffix=".tmp", dir=destination.parent)
+    os.close(descriptor)
+    return Path(name)
 
 
 def digest(path: Path):
@@ -122,7 +131,7 @@ def install_resources(bundle: Path, target: Path, backup: Path, old_names: set[s
             if record["after"] is None:
                 destination.unlink(missing_ok=True)
             else:
-                temporary = portable_path(target, destination.with_name(".memory-os-update-" + uuid4().hex + ".tmp"))
+                temporary = portable_path(target, _temporary(destination))
                 try:
                     shutil.copy2(bundle / record["path"], temporary)
                     if digest(temporary) != record["after"]:
@@ -147,7 +156,7 @@ def install_resources(bundle: Path, target: Path, backup: Path, old_names: set[s
                     saved = portable_path(backup, backup / record["backup"])
                     if digest(saved) != record["before"]:
                         raise RuntimeError("程序备份已损坏，停止回滚。")
-                    temporary = destination.with_name(".memory-os-rollback-" + uuid4().hex + ".tmp")
+                    temporary = portable_path(target, _temporary(destination))
                     try:
                         shutil.copy2(saved, temporary)
                         temporary.replace(destination)
