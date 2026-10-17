@@ -48,7 +48,7 @@ export function confirmAction(message, options = {}) {
     const dialog = el('dialog', {className: 'confirm-dialog', 'aria-label': options.title || '确认操作'});
     const close = value => {dialog.close(); dialog.remove(); resolve(value);};
     dialog.append(el('h2', {}, options.title || '确认操作'), el('p', {}, message),
-      el('div', {className: 'dialog-actions'}, button('取消', () => close(false)),
+      el('div', {className: 'dialog-actions'}, button(options.cancelLabel || '取消', () => close(false)),
         button(options.confirmLabel || '确认', () => close(true), {className: 'btn btn-primary'})));
     dialog.addEventListener('cancel', event => {event.preventDefault(); close(false);});
     document.body.append(dialog); dialog.showModal();

@@ -61,6 +61,7 @@ class SettingsUIAPI:
         request = route.request; path = urlsplit(request.url).path
         self.calls.append({'method': request.method, 'path': path})
         if path == '/health': return self.reply(route, {'status': 'ok', 'database': 'ok'})
+        if path == '/api/v1/prompt-templates': return self.reply(route, {'items': [], 'total': 0, 'offset': 0, 'limit': 20})
         if path == '/api/v1/settings/ai':
             if request.method == 'GET':
                 if self.hold_get: self.pending_gets.append(route); return

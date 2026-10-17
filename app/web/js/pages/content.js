@@ -6,6 +6,7 @@ import {mountSources} from './sources.js';
 import {mountSourceGroup} from './source-group.js';
 
 export async function mount(container,context) {
+  const mountedHash=location.hash;
   const type = context.section, note = type === 'knowledge', label = note ? '知识笔记' : '原始资料';
   if (!note) {
     if (context.id === 'group') return mountSourceGroup(container, context);
@@ -24,18 +25,20 @@ export async function mount(container,context) {
     sourceFilter.addEventListener('change',()=>{sourceId=sourceFilter.value.trim();offset=0;load();});toolbar.append(sourceFilter);
   }
   const results=el('div'),errorBox=el('div');
-  let offset=0,controller,disposed=false,previousControls=[];
-  const selection=note?knowledgeSelection({onReload:load,isDisposed:()=>disposed,onBusyChange:value=>{
+  let offset=0,controller,disposed=false,previousControls=[],request=0;
+  const alive=()=>!disposed&&location.hash===mountedHash;
+  const selection=note?knowledgeSelection({onReload:load,isDisposed:()=>!alive(),onBusyChange:value=>{
     if(value){previousControls=[...card.querySelectorAll('.toolbar input,.toolbar select,.pagination button')].map(control=>[control,control.disabled]);previousControls.forEach(([control])=>control.disabled=true);}
     else{previousControls.forEach(([control,disabled])=>{if(control.isConnected)control.disabled=disabled;});previousControls=[];}
   }}):null;
   card.append(toolbar,...(selection?[selection.element,selection.report]:[]),errorBox,results);container.append(card);
   async function load() {
-    if(selection?.busy)return;
+    if(!alive()||selection?.busy)return;
+    const ticket=++request;
     controller?.abort();controller=new AbortController();errorBox.replaceChildren();selection?.setItems([]);
     const query=new URLSearchParams({q:search.value,state:state.value,offset,limit:20});if(sourceId)query.set('source_id',sourceId);
     try {
-      const page=await api(`/api/v1/ui/${type}?${query}`,{signal:controller.signal});if(disposed)return;
+      const page=await api(`/api/v1/ui/${type}?${query}`,{signal:controller.signal});if(!alive()||ticket!==request)return;
       if(offset>0&&offset>=page.total){offset=Math.max(0,Math.floor((page.total-1)/20)*20);return load();}
       selection?.setItems(page.items);
       results.replaceChildren();
@@ -52,8 +55,8 @@ export async function mount(container,context) {
       }
       results.append(el('div',{className:'pagination'},el('span',{},`共 ${page.total} 条 · 第 ${Math.floor(offset/20)+1} 页`),
         el('div',{className:'pagination-controls'},button('上一页',()=>{offset=Math.max(0,offset-20);load();},{disabled:offset===0}),button('下一页',()=>{offset+=20;load();},{disabled:offset+20>=page.total}))));
-    } catch(error){showError(error,errorBox);}
+    } catch(error){if(alive()&&ticket===request)showError(error,errorBox);}
   }
   const delayed=debounce(()=>{offset=0;load();});search.addEventListener('input',()=>{selection?.setItems([]);delayed();});state.addEventListener('change',()=>{offset=0;load();});
-  await load();return()=>{disposed=true;controller?.abort();delayed.cancel();};
+  load();return()=>{disposed=true;request++;controller?.abort();delayed.cancel();};
 }

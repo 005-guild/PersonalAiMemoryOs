@@ -2,7 +2,7 @@ import {api} from '../api.js';
 import {el, button, field, notice, empty, formatDate, showError} from '../ui.js';
 
 export const statusLabels = {running: '生成中', ready: '待采纳', failed: '失败', interrupted: '已中断', adopted: '已采纳', open: '待解决', resolved: '已解决', superseded: '已有新冲突', created: '已创建', skipped: '已跳过', invalid: '无效', would_create: '预计创建'};
-export const labelStatus = value => statusLabels[value] || value || '—';
+export const labelStatus = value => ({pending:'待处理',paused:'已暂停',completed:'已完成',cancelling:'正在取消',cancelled:'已取消'})[value] || statusLabels[value] || value || '—';
 export const select = (entries, value = '') => el('select', {}, ...entries.map(([id, label]) => el('option', {value: id, selected: id === value}, label)));
 export const jsonView = value => el('pre', {className: 'mono snapshot'}, JSON.stringify(value, null, 2));
 export const details = (title, ...content) => el('details', {}, el('summary', {}, title), ...content);

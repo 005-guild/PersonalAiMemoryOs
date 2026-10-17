@@ -41,7 +41,7 @@ def main():
                         result = check(page, api, folder)
                         assert not errors, errors
                         assert not external, external
-                        assert all(call['path'] in ['/health', '/api/v1/settings/ai', '/api/v1/ui/knowledge'] for call in api.calls), api.calls
+                        assert all(call['path'] in ['/health', '/api/v1/settings/ai', '/api/v1/ui/knowledge', '/api/v1/prompt-templates'] for call in api.calls), api.calls
                         report['cases'][name] = {**result, 'page_errors': errors, 'external_requests': external}
                         print(name + ': passed', flush=True)
                     except Exception:
