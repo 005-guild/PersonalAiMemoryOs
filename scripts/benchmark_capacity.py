@@ -24,7 +24,7 @@ from app.main import create_app
 from app.models import Knowledge, Source
 from app.repositories.migrations import upgrade_database
 from app.repositories.rag import RagRepository
-from benchmark_support import IsolatedQdrant, SyntheticEmbedding, timings
+from benchmark_support import IsolatedQdrant, SyntheticEmbedding, hardware_snapshot, timings
 from local_rag_support import ForbiddenGeneration, request
 from verification_support import isolated_proxy_environment
 from verify_local_rag import prepare_settings
@@ -81,6 +81,7 @@ def stage(workspace, count, qdrant, qdrant_url):
                 searches.append(duration)
             metrics["search"] = timings(searches)
             metrics["qdrant_storage_bytes_during_run"] = qdrant.storage_bytes()
+            metrics["qdrant_allocated_file_bytes_during_run"] = qdrant.allocated_bytes()
             metrics["synthetic_embedding_calls"] = synthetic.calls
             # Explicit full reconciliation at this size includes current N+1
             # repository snapshots; future optimizations must retain filtering.
@@ -103,7 +104,7 @@ def main():
     output.mkdir(parents=True)
     before = storage_fingerprint()
     qdrant = IsolatedQdrant()
-    report = {"status": "failed", "platform": platform.platform(), "processor": platform.processor(),
+    report = {"status": "failed", "hardware": hardware_snapshot(), "platform": platform.platform(), "processor": platform.processor(),
         "cpu_count": os.cpu_count(), "real_model_calls": 0, "generation_calls": 0,
         "scope": "Warm local process; real isolated Qdrant/SQLite; synthetic 1024D vectors, NOT embedding throughput", "stages": []}
     environment = {k: v for k, v in os.environ.items() if not k.upper().startswith("MEMORY_OS_")}

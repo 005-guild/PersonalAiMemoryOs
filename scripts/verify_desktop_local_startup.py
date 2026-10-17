@@ -9,6 +9,8 @@ import shutil
 import sqlite3
 import subprocess
 import sys
+if sys.platform != 'win32' and __name__ == '__main__':
+    raise SystemExit('Windows, WebView2, a clean bundle and running local services are required.')
 import traceback
 from urllib.error import HTTPError
 from urllib.request import ProxyHandler,Request,build_opener

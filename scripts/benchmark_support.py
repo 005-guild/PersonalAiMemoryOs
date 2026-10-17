@@ -2,7 +2,10 @@
 
 import hashlib
 import math
+import os
 from pathlib import Path
+import platform
+import shutil
 import statistics
 import subprocess
 from uuid import uuid4
@@ -12,6 +15,31 @@ import httpx
 from app.vector.embedding import EmbeddingReply
 from scripts.local_rag_support import get_json
 from scripts.verification_support import eventually
+
+
+def hardware_snapshot() -> dict:
+    """Record hardware descriptions only, without machine/user identifiers."""
+    import json
+    result = {"platform": platform.platform(), "processor_family": platform.processor(), "cpu_count": os.cpu_count()}
+    if os.name == "nt":
+        shell = Path(os.environ["SystemRoot"]) / "System32/WindowsPowerShell/v1.0/powershell.exe"
+        command = "$p=Get-CimInstance Win32_Processor; $m=Get-CimInstance Win32_ComputerSystem; @{cpu=$p.Name; ram_bytes=$m.TotalPhysicalMemory} | ConvertTo-Json -Compress"
+        try:
+            process = subprocess.run([str(shell), "-NoProfile", "-NonInteractive", "-Command", command],
+                capture_output=True, text=True, timeout=15, check=True, creationflags=subprocess.CREATE_NO_WINDOW)
+            result.update(json.loads(process.stdout))
+        except (OSError, ValueError, subprocess.SubprocessError) as error:
+            result["hardware_probe_error"] = type(error).__name__
+    gpu = shutil.which("nvidia-smi")
+    if gpu:
+        try:
+            process = subprocess.run([gpu, "--query-gpu=name,memory.total,driver_version", "--format=csv,noheader"],
+                capture_output=True, text=True, timeout=10, check=True,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            result["nvidia_gpus"] = process.stdout.strip().splitlines()
+        except (OSError, subprocess.SubprocessError) as error:
+            result["gpu_probe_error"] = type(error).__name__
+    return result
 
 
 def timings(values: list[float]) -> dict:
@@ -73,7 +101,12 @@ class IsolatedQdrant:
         return self.url
 
     def storage_bytes(self):
+        """Logical/apparent file bytes, including Qdrant mmap reservations."""
         return int(self.command("exec", self.name, "du", "-sb", "/qdrant/storage").split()[0])
+
+    def allocated_bytes(self):
+        """Linux allocated file blocks; not total Windows Docker VHDX usage."""
+        return int(self.command("exec", self.name, "du", "-s", "-B1", "/qdrant/storage").split()[0])
 
     def stop(self):
         import json

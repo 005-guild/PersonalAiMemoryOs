@@ -18,7 +18,7 @@ sys.path.insert(0, str(ROOT))
 from fastapi.testclient import TestClient
 from app.main import create_app
 from app.repositories.migrations import upgrade_database
-from benchmark_support import timings
+from benchmark_support import hardware_snapshot, timings
 from local_rag_support import ForbiddenGeneration, MeasuredEmbedding, get_json, local_url, owned_cleanup, request
 from local_rag_workflow import published, search
 from prepare_quality_review import validate_corpus
@@ -39,7 +39,7 @@ def main():
     validate_corpus(corpus)
     before = storage_fingerprint()
     measured, forbidden = MeasuredEmbedding(base), ForbiddenGeneration()
-    report = {"status": "failed", "cases": [], "generation_calls": 0, "quality_scope": "Fixed six-note Chinese corpus; no cited-answer quality claim",
+    report = {"status": "failed", "hardware": hardware_snapshot(), "cases": [], "generation_calls": 0, "quality_scope": "Fixed six-note Chinese corpus; no cited-answer quality claim",
               "platform": platform.platform(), "chunk_chars": 1200, "overlap": 200, "top_k": 5}
     environment = {k: v for k, v in os.environ.items() if not k.upper().startswith("MEMORY_OS_")}
     environment.update(isolated_proxy_environment())
