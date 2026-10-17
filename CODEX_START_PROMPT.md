@@ -24,6 +24,7 @@ Check actual files and Git status before assuming a task is unimplemented. Curre
 ## Preserve the installation and data
 
 - Work in `D:/VsCode/PersonalAiMemoryOs`, using the same repository.
+- Canonical remote is `origin` at `https://github.com/005-guild/PersonalAiMemoryOs.git`, primary branch `main`; preserve that association and its existing history. Remote push authorization is separate from automatic local commits.
 - Used desktop: `dist/PersonalAiMemoryOs-0.6.6/`. Clean builds/verification belong in `.cache`; do not create another versioned used installation.
 - Portable storage is independent of project/Docker storage. Preserve personal AI/RAG switches, profiles and limits; public defaults remain off.
 - The configured original EXE can prepare local Ollama/Qdrant. Normal startup no longer requires a manual PowerShell prerequisite. Model weights, Docker volumes and service paths remain external resources.

@@ -2,6 +2,8 @@
 
 [English README](README.md) · [RAG 配置指南](docs/rag-guide-cn.md) · [全部配置参数](docs/config-reference-cn.md)
 
+项目代码仓库：[005-guild/PersonalAiMemoryOs](https://github.com/005-guild/PersonalAiMemoryOs)，主分支 `main`；当前工作目录以该地址作为 Git 远端 `origin`。仓库保存源码、公开样例与文档，个人密钥、资料、笔记、数据库、模型及发行包不随源码上传。后续修改按既定规则本地提交，明确要求时再推送。
+
 维护和后续工作见 [项目审阅与补充清单](docs/project-audit-cn.md)：包含当前实例版本、实际项目结构、优先事项、隔离恢复演练和校验矩阵。清单将已实现、待验收和可选扩展分开，不会因为登记待办就自动修改你的程序或调用模型。
 
 适用版本：**0.8.0**；数据库版本：**0006**。新安装默认关闭 AI/RAG；当前电脑的固定桌面已按用户选择接通本地 BGE-M3 并开启 RAG，见下方实际配置说明。桌面安装固定在 `dist/PersonalAiMemoryOs-0.6.6/`；文件夹沿用原名，应用版本以窗口和接口显示为准。

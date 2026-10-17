@@ -1,5 +1,12 @@
 # MEMORY.md
 
+## Canonical GitHub Repository (2026-10-18)
+
+- The user explicitly authorized the initial push and requested persistent association with `https://github.com/005-guild/PersonalAiMemoryOs.git`. This is the canonical `origin`, with `main` as the primary branch; keep existing local history and use normal fast-forward pushes, not a forced replacement or a new unrelated root.
+- The target was an empty public repository at connection time. The user authenticated Git through Git Credential Manager; credentials stay in its credential store, never source files. This computer's existing GitHub proxy is configured only for this repository URL in local Git configuration, not globally or in tracked files.
+- Publish only reviewed source, public examples and documentation. Keep personal configuration, original exports, databases, knowledge, weights, caches, reports and distribution artifacts ignored across history as well as the current tree. Preserve the repository-local maintainer author identity.
+- The current request authorizes this initial publication. Future verified work units still receive automatic local commits; remote pushes require explicit authorization. Use the associated origin/main tracking branch after successful initial push.
+
 ## Documentation Audit and Follow-up Queue (2026-10-18)
 
 - The user requested a project-wide review and recording of omissions in Markdown. This unit changes documentation only; no automatic feature implementation, deployment, data restoration, environment edit or model call. Source baseline `fc0d505` had 350 tracked files; inventory and focused code/test/document cross-review are distinct from executing every test or a security/quality audit.
