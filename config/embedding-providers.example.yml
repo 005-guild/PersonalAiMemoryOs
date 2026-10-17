@@ -1,0 +1,28 @@
+# Copy to embedding-providers.yml, select a profile, and supply credentials via .env.
+# Models below are examples; choose a model and dimension available in your service.
+schema_version: 1
+default_profile: local
+profiles:
+  local:
+    label: Local OpenAI-compatible embedding service
+    enabled: true
+    protocol: openai_embeddings
+    base_url: http://127.0.0.1:8080/v1
+    model: your-local-embedding-model
+    dimension: 1024
+    auth: none
+    batch_size: 8
+    timeout_seconds: 60
+  openai:
+    label: OpenAI embedding example
+    enabled: false
+    protocol: openai_embeddings
+    base_url: https://api.openai.com/v1
+    model: text-embedding-3-small
+    api_key_ref: openai
+    dimension: 1536
+    auth: bearer
+    batch_size: 8
+    timeout_seconds: 60
+# request_dimensions is optional. Set it only if the chosen model supports it,
+# and set dimension to the same value. model_revision can pin a service revision.

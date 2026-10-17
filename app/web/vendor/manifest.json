@@ -1,0 +1,26 @@
+{
+  "marked": "18.1.1",
+  "dompurify": "3.4.17",
+  "files": {
+    "marked.js": {
+      "source": "https://registry.npmjs.org/marked/-/marked-18.1.1.tgz",
+      "member": "package/lib/marked.esm.js",
+      "archive_integrity": "sha512-zEGgrtUG8crk+TrMacJSVABU4DYDDkS8uqgU3ohrn/2fW9C2AEfUrO3m6IhpIpQpl7YcVpiXXC9cSMWDANT3dg==",
+      "sha256": "930457e5d55439f90465015cc507d3323366e80df5f7a701b61189d4e1046bda"
+    },
+    "marked.LICENSE": {
+      "source": "https://registry.npmjs.org/marked/-/marked-18.1.1.tgz",
+      "member": "package/LICENSE",
+      "archive_integrity": "sha512-zEGgrtUG8crk+TrMacJSVABU4DYDDkS8uqgU3ohrn/2fW9C2AEfUrO3m6IhpIpQpl7YcVpiXXC9cSMWDANT3dg==",
+      "sha256": "8e3a3f82f59a60958f56ca08f445647c32a4733dc7ca6c2c46f6eb898471ab9c"
+    },
+    "purify.js": {
+      "source": "https://raw.githubusercontent.com/cure53/DOMPurify/3.4.17/dist/purify.es.mjs",
+      "sha256": "60c5d5ccbb466de3de3ba863461a92bf134f8c156cef7992da43e0f659bc5cbd"
+    },
+    "DOMPurify.LICENSE": {
+      "source": "https://raw.githubusercontent.com/cure53/DOMPurify/3.4.17/LICENSE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    }
+  }
+}

@@ -1,0 +1,50 @@
+Personal AI Memory OS 便携桌面版
+
+请先完整解压 ZIP，再双击 PersonalAiMemoryOs.exe。请保留整个目录，包括 _internal。
+基础资料、笔记、Markdown 同步无需安装 Python、uv 或 Docker。
+需要 Windows x64、.NET Framework 4.8 和 Microsoft Edge WebView2 运行环境。
+WebView2 官方下载：https://developer.microsoft.com/microsoft-edge/webview2/
+
+首次启动会在 EXE 所在目录创建空数据库、知识目录、个人配置、日志和浏览器缓存。
+此目录应可写；请放在自己的用户目录，不要放在 Program Files 或只读介质。
+建议配置文件和数据目录保持默认设置。桌面版不会读取其他项目的数据库。
+
+0.6.6 可视化设置：点击工作台左上角“设置”，或桌面菜单“设置 → AI 接口设置”。
+在页面填写服务地址、模型、协议及密钥，支持多套配置和高级参数。
+密钥不回显；已有密钥留空会保留。保存不调用模型，也不会立即启用当前运行进程。
+保存成功后请完全退出程序，再重新打开。启用真实模型后主动生成会产生供应商费用。
+页面只读展示运行、配置和数据位置；Embedding、Qdrant 与 RAG 仍按配置文件维护。
+环境变量托管的设置不能在页面覆盖；Docker 配置由宿主机管理，网页只读。
+若提示配置已被修改，先保留自己的输入，再明确选择重新读取；程序不会自动覆盖。
+
+0.6.4 资料库：同标题显示为一组，进入后分别阅读各作者的回答；原始记录保持独立。
+列表支持每页 20/50/100 个标题、点击页码与输入页码跳转，组内支持每页 5/10/20 篇。
+0.6.5 可按标题、资料数量、来源类型、更新时间排序，支持升序/降序与点击表头切换。
+排序后再分页；翻页和返回列表保留排序。标题/类型按字符顺序，混合类型组取最前的类型。
+升级已有便携版时，请先正常关闭旧程序并备份完整旧目录，再将 .env、config/、data/
+以及完整 knowledge/（含隐藏标记）复制到尚未运行的新版目录。自定义路径的目录内数据也需保留。
+不要覆盖正在运行的旧程序，不要仅替换网页或 EXE；本版需要完整后端与 _internal。
+
+数据、配置与备份：
+- data/memory.db：SQLite 数据库
+- knowledge/：Markdown 知识库，包含用于识别目录的标记文件
+- config/：个人模型和 Embedding 配置
+- .env：开关、密钥与运行配置；不要将密钥发给他人
+- logs/：轮转运行日志
+- .cache/：浏览器和运行缓存
+备份或移动前请先正常关闭窗口，再复制完整便携目录。
+
+AI 和 RAG 默认关闭。需要自行配置模型服务；语义检索另需可用的 Qdrant。
+修改 .env 或 YAML 配置后请退出并重新打开。API 密钥不会随发行包提供。
+遇到问题可使用桌面菜单打开日志。关闭过程中有任务时请等待正常退出。
+此版本未签名、不含安装器或自动更新；请使用可信来源并核对 SHA-256。
+第三方依赖许可证见 _internal/licenses；网页依赖许可证见 _internal/app/web/vendor。
+
+Portable desktop edition (Windows x64)
+Extract the entire ZIP and keep _internal beside PersonalAiMemoryOs.exe.
+Basic management is self-contained; system WebView2 and .NET Framework 4.8 are required.
+User data, configuration and logs stay beside the EXE. AI/RAG are disabled initially.
+Use the upper-left Settings entry to edit AI profiles. Blank keys retain existing values.
+Saving makes no model calls; fully exit and reopen the application for changes to take effect.
+Close the application before copying or backing up its complete directory.
+This build is unsigned. It does not install or update itself.

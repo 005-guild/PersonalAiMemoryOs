@@ -1,0 +1,56 @@
+services:
+  api:
+    build:
+      context: .
+    environment:
+      MEMORY_OS_DATABASE_URL: sqlite:////app/data/memory.db
+      MEMORY_OS_KNOWLEDGE_DIR: /app/knowledge
+      MEMORY_OS_SYNC_ENABLED: "true"
+      MEMORY_OS_SYNC_INTERVAL: "2"
+      MEMORY_OS_DELETION_GRACE: "10"
+      MEMORY_OS_LOG_LEVEL: INFO
+      MEMORY_OS_CONFIGURATION_READ_ONLY: "true"
+      MEMORY_OS_AI_ENABLED: "${MEMORY_OS_AI_ENABLED:-false}"
+      MEMORY_OS_AI_CONFIG_FILE: /app/config/ai-providers.yml
+      MEMORY_OS_AI_DEFAULT_PROFILE: "${MEMORY_OS_AI_DEFAULT_PROFILE:-}"
+      MEMORY_OS_AI_MAX_INPUT_CHARS: "${MEMORY_OS_AI_MAX_INPUT_CHARS:-20000}"
+      MEMORY_OS_AI_KEYS__OPENAI: "${MEMORY_OS_AI_KEYS__OPENAI:-}"
+      MEMORY_OS_AI_KEYS__DEEPSEEK: "${MEMORY_OS_AI_KEYS__DEEPSEEK:-}"
+      MEMORY_OS_AI_KEYS__QWEN: "${MEMORY_OS_AI_KEYS__QWEN:-}"
+      MEMORY_OS_AI_KEYS__SILICONFLOW: "${MEMORY_OS_AI_KEYS__SILICONFLOW:-}"
+      MEMORY_OS_AI_KEYS__DOUBAO: "${MEMORY_OS_AI_KEYS__DOUBAO:-}"
+      MEMORY_OS_AI_KEYS__KIMI: "${MEMORY_OS_AI_KEYS__KIMI:-}"
+      MEMORY_OS_AI_KEYS__GLM: "${MEMORY_OS_AI_KEYS__GLM:-}"
+      MEMORY_OS_AI_KEYS__ANTHROPIC: "${MEMORY_OS_AI_KEYS__ANTHROPIC:-}"
+      MEMORY_OS_AI_KEYS__GEMINI: "${MEMORY_OS_AI_KEYS__GEMINI:-}"
+      MEMORY_OS_RAG_ENABLED: "${MEMORY_OS_RAG_ENABLED:-false}"
+      MEMORY_OS_EMBEDDING_CONFIG_FILE: /app/config/embedding-providers.yml
+      MEMORY_OS_EMBEDDING_DEFAULT_PROFILE: "${MEMORY_OS_EMBEDDING_DEFAULT_PROFILE:-}"
+      MEMORY_OS_AI_KEYS__EMBEDDING: "${MEMORY_OS_AI_KEYS__EMBEDDING:-}"
+      MEMORY_OS_RAG_QDRANT_URL: http://qdrant:6333
+    stop_grace_period: 150s
+    ports:
+      - "127.0.0.1:18000:8000"
+    volumes:
+      - type: bind
+        source: ./data
+        target: /app/data
+      - type: bind
+        source: ./knowledge
+        target: /app/knowledge
+      - type: bind
+        source: ./config
+        target: /app/config
+        read_only: true
+
+  qdrant:
+    image: qdrant/qdrant:v1.19.2
+    profiles: [rag]
+    ports:
+      - "127.0.0.1:6333:6333"
+    volumes:
+      - qdrant-storage:/qdrant/storage
+    stop_grace_period: 150s
+
+volumes:
+  qdrant-storage:

@@ -1,0 +1,92 @@
+# Copy to config/ai-providers.yml and enable only profiles you configure.
+# API prefixes include the vendor's version path; adapters append the endpoint.
+# Model IDs are configurable and depend on your account and region.
+# Credentials belong in MEMORY_OS_AI_KEYS__<REFERENCE>, never in this file.
+schema_version: 1
+default_profile: deepseek
+profiles:
+  deepseek:
+    label: DeepSeek
+    enabled: true
+    protocol: openai_chat
+    base_url: https://api.deepseek.com
+    model: deepseek-flash
+    api_key_ref: deepseek
+    response_format: json_object
+    max_output_tokens: 4096
+    timeout_seconds: 90
+    extra_body:
+      thinking:
+        type: disabled
+  openai-chat:
+    label: OpenAI Chat Completions
+    enabled: false
+    protocol: openai_chat
+    base_url: https://api.openai.com/v1
+    model: replace-with-your-model
+    api_key_ref: openai
+    token_limit_field: max_completion_tokens
+  openai-responses:
+    label: OpenAI Responses
+    enabled: false
+    protocol: openai_responses
+    base_url: https://api.openai.com/v1
+    model: replace-with-your-model
+    api_key_ref: openai
+  claude:
+    label: Anthropic Claude
+    enabled: false
+    protocol: anthropic_messages
+    base_url: https://api.anthropic.com/v1
+    model: replace-with-your-model
+    api_key_ref: anthropic
+    anthropic_version: '2023-06-01'
+  gemini:
+    label: Google Gemini
+    enabled: false
+    protocol: gemini_generate_content
+    base_url: https://generativelanguage.googleapis.com/v1beta
+    model: replace-with-your-model
+    api_key_ref: gemini
+  qwen:
+    label: Qwen / DashScope
+    enabled: false
+    protocol: openai_chat
+    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    model: replace-with-your-model
+    api_key_ref: qwen
+  siliconflow:
+    label: SiliconFlow
+    enabled: false
+    protocol: openai_chat
+    base_url: https://api.siliconflow.cn/v1
+    model: replace-with-your-model
+    api_key_ref: siliconflow
+  doubao:
+    label: Doubao / Volcengine Ark
+    enabled: false
+    protocol: openai_chat
+    base_url: https://ark.cn-beijing.volces.com/api/v3
+    model: replace-with-your-model-or-endpoint-id
+    api_key_ref: doubao
+  kimi:
+    label: Kimi / Moonshot
+    enabled: false
+    protocol: openai_chat
+    base_url: https://api.moonshot.cn/v1
+    model: replace-with-your-model
+    api_key_ref: kimi
+  glm:
+    label: Zhipu GLM
+    enabled: false
+    protocol: openai_chat
+    base_url: https://open.bigmodel.cn/api/paas/v4
+    model: replace-with-your-model
+    api_key_ref: glm
+  local-compatible:
+    label: Local Chat Completions compatible endpoint
+    enabled: false
+    protocol: openai_chat
+    base_url: http://127.0.0.1:11434/v1
+    model: replace-with-your-model
+    auth: none
