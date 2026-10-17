@@ -45,8 +45,23 @@ class SourcePatch(PatchModel):
     content: str | None = Field(default=None, max_length=2_000_000)
 
 
-class KnowledgeCreate(WriteModel):
+class SourceAssociations(WriteModel):
     source_id: Identifier | None = None
+    source_ids: list[Identifier] | None = Field(default=None, max_length=20)
+
+    @model_validator(mode="after")
+    def validate_associations(self):
+        if "source_ids" in self.model_fields_set:
+            if self.source_ids is None or len(set(self.source_ids)) != len(self.source_ids):
+                raise ValueError("source_ids must be a list of unique Sources.")
+            first = self.source_ids[0] if self.source_ids else None
+            if "source_id" in self.model_fields_set and self.source_id != first:
+                raise ValueError("source_id must equal the first source_ids entry.")
+            self.source_id = first
+        return self
+
+
+class KnowledgeCreate(SourceAssociations):
     title: Title
     body: str = Field(default="", max_length=MAX_BODY_LENGTH)
     summary: str = Field(default="", max_length=MAX_SUMMARY_LENGTH)
@@ -55,7 +70,7 @@ class KnowledgeCreate(WriteModel):
     concepts: list[Label] = Field(default_factory=list, max_length=MAX_TERM_COUNT)
 
 
-class KnowledgePatch(PatchModel):
+class KnowledgePatch(PatchModel, SourceAssociations):
     nullable_fields: ClassVar[set[str]] = {"source_id", "category"}
     source_id: Identifier | None = None
     title: Title | None = None
@@ -70,8 +85,8 @@ class RestoreRequest(WriteModel):
     expected_version: Version
 
 
-class KnowledgeRestore(RestoreRequest):
-    source_id: Identifier | None = None
+class KnowledgeRestore(RestoreRequest, SourceAssociations):
+    pass
 
 
 class RecordRead(BaseModel):
@@ -92,6 +107,7 @@ class SourceRead(RecordRead):
 
 class KnowledgeRead(RecordRead):
     source_id: str | None
+    source_ids: list[str] = Field(default_factory=list)
     title: str
     body: str
     summary: str

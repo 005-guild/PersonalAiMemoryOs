@@ -13,6 +13,7 @@ from app.agents.errors import AIError
 class ModelReply:
     text: str
     usage: dict[str, int | None]
+    finish_reason: str | None = None
 
 
 def _merge(target: dict, extension: dict) -> dict:
@@ -119,7 +120,7 @@ def _chat(payload: dict) -> ModelReply:
         content = "".join(text)
     if not isinstance(content, str) or not content.strip():
         _failure()
-    return ModelReply(content, _usage(payload.get("usage"), "prompt_tokens", "completion_tokens", "total_tokens"))
+    return ModelReply(content, _usage(payload.get("usage"), "prompt_tokens", "completion_tokens", "total_tokens"), finish)
 
 
 def _responses(payload: dict) -> ModelReply:
@@ -151,7 +152,7 @@ def _responses(payload: dict) -> ModelReply:
     content = "".join(text)
     if not content.strip():
         _failure()
-    return ModelReply(content, _usage(payload.get("usage"), "input_tokens", "output_tokens", "total_tokens"))
+    return ModelReply(content, _usage(payload.get("usage"), "input_tokens", "output_tokens", "total_tokens"), "completed")
 
 
 def _anthropic(payload: dict) -> ModelReply:
@@ -176,7 +177,7 @@ def _anthropic(payload: dict) -> ModelReply:
     content = "".join(text)
     if not content.strip():
         _failure()
-    return ModelReply(content, _usage(payload.get("usage"), "input_tokens", "output_tokens", "total_tokens"))
+    return ModelReply(content, _usage(payload.get("usage"), "input_tokens", "output_tokens", "total_tokens"), stop)
 
 
 def _gemini(payload: dict) -> ModelReply:
@@ -209,7 +210,7 @@ def _gemini(payload: dict) -> ModelReply:
     result = "".join(text)
     if not result.strip():
         _failure()
-    return ModelReply(result, _usage(payload.get("usageMetadata"), "promptTokenCount", "candidatesTokenCount", "totalTokenCount"))
+    return ModelReply(result, _usage(payload.get("usageMetadata"), "promptTokenCount", "candidatesTokenCount", "totalTokenCount"), finish)
 
 
 def parse_response(protocol: str, payload: Any) -> ModelReply:
@@ -219,6 +220,27 @@ def parse_response(protocol: str, payload: Any) -> ModelReply:
         parser = {"openai_chat": _chat, "openai_responses": _responses,
                   "anthropic_messages": _anthropic, "gemini_generate_content": _gemini}[protocol]
         return parser(payload)
+    except AIError as error:
+        # Preserve only allowlisted counters and bounded, known finish states.
+        raw = None
+        if protocol == "openai_chat":
+            choices = payload.get("choices")
+            if isinstance(choices, list) and choices and isinstance(choices[0], dict):
+                raw = choices[0].get("finish_reason")
+            error.usage = _usage(payload.get("usage"), "prompt_tokens", "completion_tokens", "total_tokens")
+        elif protocol in {"openai_responses", "anthropic_messages"}:
+            raw = payload.get("status" if protocol == "openai_responses" else "stop_reason")
+            error.usage = _usage(payload.get("usage"), "input_tokens", "output_tokens", "total_tokens")
+        elif protocol == "gemini_generate_content":
+            candidates = payload.get("candidates")
+            if isinstance(candidates, list) and candidates and isinstance(candidates[0], dict):
+                raw = candidates[0].get("finishReason")
+            error.usage = _usage(payload.get("usageMetadata"), "promptTokenCount", "candidatesTokenCount", "totalTokenCount")
+        known = {"stop", "length", "content_filter", "completed", "incomplete", "failed", "end_turn",
+                 "stop_sequence", "max_tokens", "refusal", "STOP", "MAX_TOKENS", "SAFETY", "RECITATION",
+                 "BLOCKLIST", "PROHIBITED_CONTENT", "SPII"}
+        error.finish_reason = raw if isinstance(raw, str) and raw in known else None
+        raise
     except (KeyError, TypeError, ValueError, RecursionError):
         # Untrusted wire fields may be arrays/objects where a scalar is expected.
         raise AIError(502, "invalid_model_response") from None

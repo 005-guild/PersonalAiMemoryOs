@@ -23,6 +23,7 @@ class UISourceSummary(RecordRead):
 class UIKnowledgeSummary(RecordRead):
     title: str
     source_id: str | None
+    source_ids: list[str]
     summary: str
     category: str | None
     tags: list[str]

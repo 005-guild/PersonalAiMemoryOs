@@ -6,12 +6,15 @@ from app.models import Source, SyncConflict, SyncState, utcnow
 from app.services.markdown import (
     NoteDocument, content_hash, document_projection, parse_document,
 )
+from app.services.source_associations import association_ids
 
 EDITABLE = ("title", "body", "summary", "category", "tags", "concepts")
 
 
 def document(note) -> NoteDocument:
-    return NoteDocument(id=note.id, source_id=note.source_id,
+    identities = list(note.source_ids)
+    provenance = {"schema_version": 2, "source_ids": identities} if len(identities) > 1 else {}
+    return NoteDocument(id=note.id, source_id=note.source_id, **provenance,
                         **{key: getattr(note, key) for key in EDITABLE})
 
 
@@ -26,13 +29,17 @@ def file_snapshot(doc: NoteDocument) -> dict:
 
 
 def normalize_snapshot(value: dict) -> dict:
-    doc = NoteDocument(source_id=value.get("source_id"),
+    identities = association_ids(value)
+    provenance = {"schema_version": 2, "source_ids": identities} if len(identities) > 1 else {}
+    doc = NoteDocument(source_id=identities[0] if identities else None, **provenance,
                        **{key: value[key] for key in EDITABLE if key in value})
     return {**document_projection(doc),
             "deleted": bool(value.get("deleted", value.get("deleted_at")))}
 
 
 def source_available(session, source_id) -> bool:
+    if isinstance(source_id, (list, tuple)):
+        return all(source_available(session, identity) for identity in source_id)
     if source_id is None:
         return True
     source = session.get(Source, source_id)

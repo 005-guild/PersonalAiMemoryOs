@@ -11,7 +11,7 @@ from app.models.rag import RagIndexGeneration, RagIndexJob, RagNoteIndexState
 from app.models.sync import SyncConflict, SyncState
 from app.vector.chunking import render_note
 
-NOTE_FIELDS = ("id", "version", "source_id", "title", "body", "summary", "category", "tags", "concepts")
+NOTE_FIELDS = ("id", "version", "source_id", "source_ids", "title", "body", "summary", "category", "tags", "concepts")
 
 
 def hash_note(snapshot):
@@ -53,10 +53,13 @@ class RagRepository:
         snapshot = {field: getattr(note, field) for field in NOTE_FIELDS}
         state = self.session.get(SyncState, note.id)
         snapshot["path"] = state.path if state else None
-        source = self.session.get(Source, note.source_id) if note.source_id else None
-        snapshot["source"] = ({field: getattr(source, field) for field in (
-            "id", "title", "author", "url", "source_type", "version", "deleted_at")}
-            if source else None)
+        snapshot["sources"] = []
+        for source_id in note.source_ids:
+            source = self.session.get(Source, source_id)
+            if source is not None:
+                snapshot["sources"].append({field: getattr(source, field) for field in (
+                    "id", "title", "author", "url", "source_type", "version", "deleted_at")})
+        snapshot["source"] = snapshot["sources"][0] if snapshot["sources"] else None
         if note.deleted_at is not None:
             return snapshot, "deleted"
         conflict = self.session.scalars(select(SyncConflict.id).where(
@@ -230,5 +233,6 @@ class RagRepository:
                 valid[chunk["id"]] = {"chunk_id": chunk["id"], "knowledge_id": snapshot["id"],
                     "version": snapshot["version"], "title": snapshot["title"], "path": snapshot["path"],
                     "source_id": snapshot["source_id"], "source": snapshot["source"],
+                    "source_ids": snapshot["source_ids"], "sources": snapshot["sources"],
                     "text": chunk["text"], "content_hash": state.content_hash, "generation_id": generation_id}
         return valid

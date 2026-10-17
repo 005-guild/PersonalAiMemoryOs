@@ -45,6 +45,8 @@ async def generate(payload: ProcessingRequest, request: Request):
     with _errors():
         return await request.app.state.processing.generate(
             payload.source_id, payload.expected_source_version, payload.profile_id,
+            prompt_template_id=payload.prompt_template_id, prompt_template_version=payload.prompt_template_version,
+            generation_settings=payload.generation_settings.model_dump() if payload.generation_settings is not None else None,
         )
 
 

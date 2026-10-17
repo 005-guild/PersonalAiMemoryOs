@@ -5,7 +5,8 @@ from typing import Literal
 from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
-from app.models import Knowledge, ProcessingRun, Source, SyncConflict, SyncState
+from app.models import Knowledge, KnowledgeSource, ProcessingRun, Source, SyncConflict, SyncState
+from app.repositories.content import ContentRepository
 
 RecordState = Literal["active", "deleted", "all"]
 SourceGroupSort = Literal["title", "source_count", "source_type", "updated_at"]
@@ -105,7 +106,7 @@ class UIRepository:
                   source_id: str | None) -> tuple[list[dict], int]:
         predicates = self._filters(Knowledge, q, state)
         if source_id is not None:
-            predicates.append(Knowledge.source_id == source_id)
+            predicates.append(ContentRepository.source_predicate(source_id))
         total = self.session.scalar(select(func.count()).select_from(Knowledge).where(*predicates)) or 0
         rows = self.session.execute(
             select(*self._record_columns(Knowledge), Knowledge.source_id,
@@ -116,4 +117,15 @@ class UIRepository:
             .where(*predicates).order_by(Knowledge.updated_at.desc(), Knowledge.id.desc())
             .offset(offset).limit(limit)
         ).mappings().all()
-        return [dict(row) for row in rows], int(total)
+        items = [dict(row) for row in rows]
+        if items:
+            by_id = {item["id"]: item for item in items}
+            for item in items:
+                item["source_ids"] = []
+            for knowledge_id, source_id in self.session.execute(select(KnowledgeSource.knowledge_id, KnowledgeSource.source_id)
+                    .where(KnowledgeSource.knowledge_id.in_(by_id)).order_by(KnowledgeSource.position)):
+                by_id[knowledge_id]["source_ids"].append(source_id)
+            for item in items:
+                if not item["source_ids"] and item["source_id"]:
+                    item["source_ids"] = [item["source_id"]]
+        return items, int(total)

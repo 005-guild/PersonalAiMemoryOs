@@ -2,11 +2,12 @@
 
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from app.api.schemas import KnowledgeRead, Version
 from app.models.fields import Identifier
 from app.services.processing_output import KnowledgeOutput
+from app.services.processing_v2 import KnowledgeOutputV2
 
 ProfileID = Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_-]{0,63}$")]
 RunStatus = Literal["running", "ready", "failed", "interrupted", "adopted"]
@@ -17,6 +18,15 @@ class ProcessingRequest(BaseModel):
     source_id: Identifier
     expected_source_version: Version
     profile_id: ProfileID | None = None
+    prompt_template_id: Identifier | None = None
+    prompt_template_version: int | None = Field(default=None, strict=True, ge=1)
+    generation_settings: "GenerationSettings | None" = None
+
+
+class GenerationSettings(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    max_output_tokens: int = Field(default=16384, ge=1, le=131072)
+    timeout_seconds: float = Field(default=180.0, ge=0.01, le=600)
 
 
 class AdoptRequest(BaseModel):
@@ -29,6 +39,8 @@ class RunSummary(BaseModel):
     version: int
     source_id: str
     source_version: int
+    source_count: int = 1
+    source_ids: list[str] = Field(default_factory=list)
     profile_id: str
     protocol: str
     model: str
@@ -49,9 +61,14 @@ class RunRead(RunSummary):
     prompt_version: str
     prompt_hash: str
     output_schema_version: int
-    result: KnowledgeOutput | None = None
+    result: KnowledgeOutputV2 | KnowledgeOutput | None = None
     proposal: dict | None = None
     usage: dict[str, int | None] | None = None
+    source_snapshots: list[dict] = Field(default_factory=list)
+    prompt_snapshot: dict | None = None
+    generation_settings: dict | None = None
+    finish_reason: str | None = None
+    failure_stage: str | None = None
 
 
 class RunPage(BaseModel):

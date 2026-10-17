@@ -61,7 +61,7 @@ def render_answer(text: str, contexts: list[dict]) -> dict:
                         "citation_id": labels[key], "chunk_id": reference.chunk_id,
                         "quote": reference.quote,
                         **{field: item.get(field) for field in
-                           ("knowledge_id", "version", "title", "path", "source_id", "source")},
+                           ("knowledge_id", "version", "title", "path", "source_id", "source", "source_ids", "sources")},
                     })
                 if labels[key] not in ids:
                     ids.append(labels[key])

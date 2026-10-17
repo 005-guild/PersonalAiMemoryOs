@@ -5,7 +5,7 @@ import json
 from typing import Any, Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
 from app.models.fields import (
     Identifier, Label, Title, MAX_BODY_LENGTH, MAX_CATEGORY_LENGTH,
@@ -43,9 +43,10 @@ class NoteDocument(BaseModel):
 
     model_config = ConfigDict(extra="forbid", strict=True, hide_input_in_errors=True)
 
-    schema_version: Literal[1] = 1
+    schema_version: Literal[1, 2] = 1
     id: Identifier | None = None
     source_id: Identifier | None = None
+    source_ids: list[Identifier] | None = Field(default=None, max_length=20)
     title: Title
     summary: str = Field(default="", max_length=MAX_SUMMARY_LENGTH)
     category: str | None = Field(default=None, max_length=MAX_CATEGORY_LENGTH)
@@ -56,9 +57,27 @@ class NoteDocument(BaseModel):
     @field_validator("schema_version", mode="before")
     @classmethod
     def validate_schema_version(cls, value: Any) -> Any:
-        if type(value) is not int or value != 1:
-            raise ValueError("Only schema_version 1 is supported.")
+        if type(value) is not int or value not in {1, 2}:
+            raise ValueError("Only schema_version 1 and 2 are supported.")
         return value
+
+    @model_validator(mode="after")
+    def validate_sources(self):
+        if self.schema_version == 1:
+            if "source_ids" in self.model_fields_set:
+                raise ValueError("schema_version 1 uses source_id only.")
+        else:
+            if self.source_ids is None or len(set(self.source_ids)) != len(self.source_ids):
+                raise ValueError("schema_version 2 requires unique source_ids.")
+            first = self.source_ids[0] if self.source_ids else None
+            if "source_id" in self.model_fields_set and self.source_id != first:
+                raise ValueError("source_id must equal the first source_ids entry.")
+            self.source_id = first
+        return self
+
+    @property
+    def association_ids(self):
+        return list(self.source_ids) if self.schema_version == 2 else ([self.source_id] if self.source_id else [])
 
     @field_validator("title")
     @classmethod
@@ -110,14 +129,15 @@ def parse_document(text: str) -> NoteDocument:
 
 def render_document(document: NoteDocument) -> str:
     """Render canonical frontmatter; preserve the body's trailing newlines."""
-    metadata = document.model_dump(exclude={"body"})
+    metadata = document.model_dump(exclude={"body"} | ({"source_ids"} if document.schema_version == 1 else set()))
     frontmatter = yaml.safe_dump(metadata, allow_unicode=True, sort_keys=False)
     return f"---\n{frontmatter}---\n{_lf(document.body)}"
 
 
 def document_projection(document: NoteDocument) -> dict:
     """Return editable content, excluding note identity and format metadata."""
-    return document.model_dump(exclude={"id", "schema_version"})
+    return document.model_dump(exclude={"id", "schema_version"} | (
+        {"source_ids"} if len(document.association_ids) <= 1 else set()))
 
 
 def _normalize_projection(value: Any) -> Any:

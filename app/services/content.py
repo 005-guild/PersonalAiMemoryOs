@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Knowledge, Source, SyncOperation, SyncState, utcnow
 from app.repositories.content import ContentRepository
+from app.services.source_associations import MAX_SOURCES, replace_associations
 
 SOURCE_FIELDS = ("id", "source_type", "title", "author", "url", "content", "version",
                  "created_at", "updated_at", "deleted_at")
@@ -21,6 +22,7 @@ def knowledge_snapshot(note: Knowledge) -> dict:
     snapshot = {field: getattr(note, field) for field in KNOWLEDGE_FIELDS}
     snapshot["tags"] = list(note.tags)
     snapshot["concepts"] = list(note.concepts)
+    snapshot["source_ids"] = list(note.source_ids)
     snapshot["deleted"] = note.deleted_at is not None
     return snapshot
 
@@ -53,6 +55,21 @@ class ContentService:
         source = self.repository.source(source_id)
         if source is None or source.deleted_at is not None:
             raise ContentError(409, "source_id must refer to an existing active Source.")
+
+    def source_values(self, values: dict, current=None) -> list[str]:
+        if "source_ids" in values and values["source_ids"] is not None:
+            identities = list(values["source_ids"])
+            if "source_id" in values and values["source_id"] != (identities[0] if identities else None):
+                raise ContentError(422, "source_id must equal the first source_ids entry.")
+        elif "source_id" in values:
+            identities = [values["source_id"]] if values["source_id"] else []
+        else:
+            identities = list(current.source_ids) if current is not None else []
+        if len(identities) > MAX_SOURCES or len(set(identities)) != len(identities):
+            raise ContentError(422, "source_ids must contain at most 20 unique Sources.")
+        for identity in identities:
+            self.validate_source(identity)
+        return identities
 
     def source_dict(self, record: Source) -> dict:
         return {field: getattr(record, field) for field in SOURCE_FIELDS}
@@ -109,10 +126,12 @@ class ContentService:
         return state
 
     def create_knowledge(self, values: dict) -> dict:
-        self.validate_source(values.get("source_id"))
-        note = Knowledge(**values)
+        identities = self.source_values(values)
+        note = Knowledge(source_id=identities[0] if identities else None,
+                         **{key: value for key, value in values.items() if key not in {"source_id", "source_ids"}})
         self.session.add(note)
         self.session.flush()
+        replace_associations(self.session, note, identities)
         self.mark_pending(note)
         self.session.flush()
         return self.knowledge_dict(note)
@@ -120,12 +139,13 @@ class ContentService:
     def update_knowledge(self, knowledge_id: str, expected_version: int, values: dict) -> dict:
         note = self.knowledge(knowledge_id, include_deleted=True)
         self.require_version(note, expected_version)
-        if note.deleted_at is not None and set(values) != {"source_id"}:
+        if note.deleted_at is not None and (not values or not set(values) <= {"source_id", "source_ids"}):
             raise ContentError(409, "A deleted note may only change source_id; restore it to edit.")
-        if "source_id" in values:
-            self.validate_source(values["source_id"])
+        if set(values) & {"source_id", "source_ids"}:
+            replace_associations(self.session, note, self.source_values(values, note))
         for field, value in values.items():
-            setattr(note, field, value)
+            if field not in {"source_id", "source_ids"}:
+                setattr(note, field, value)
         note.updated_at = utcnow()
         self.session.flush()
         self.mark_pending(note)
@@ -150,9 +170,7 @@ class ContentService:
     def restore_knowledge(self, knowledge_id: str, expected_version: int, values: dict) -> dict:
         note = self.knowledge(knowledge_id, include_deleted=True)
         self.require_version(note, expected_version)
-        source_id = values.get("source_id", note.source_id)
-        self.validate_source(source_id)
-        note.source_id = source_id
+        replace_associations(self.session, note, self.source_values(values, note))
         note.deleted_at = None
         note.updated_at = utcnow()
         self.session.flush()

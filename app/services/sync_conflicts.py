@@ -50,12 +50,12 @@ class ConflictResolver:
                 if doc is None:
                     note.deleted_at = utcnow()
                 else:
-                    if not source_available(session, note.source_id):
+                    if not source_available(session, note.source_ids):
                         raise ContentError(409, "Restore or detach the deleted Source first.")
                     apply_file(note, doc)
                     note.deleted_at = None
                 session.flush()
-            elif note.deleted_at is None and not source_available(session, note.source_id):
+            elif note.deleted_at is None and not source_available(session, note.source_ids):
                 raise ContentError(409, "Restore or detach the deleted Source first.")
             for operation in session.scalars(select(SyncOperation).where(
                 SyncOperation.knowledge_id == note.id,
@@ -65,7 +65,7 @@ class ConflictResolver:
             conflict.status, conflict.resolved_at = "resolved", utcnow()
             path = file.path if file else state.path or f"{note.id}.md"
             if choice == "markdown" and (doc is None or (
-                    doc.id == note.id and doc.source_id == note.source_id)):
+                    doc.id == note.id and doc.association_ids == note.source_ids)):
                 baseline(state, snapshot(note), file.hash if file else None, path)
                 session.commit()
             else:

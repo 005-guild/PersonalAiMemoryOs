@@ -19,6 +19,8 @@ from app.api.imports import router as imports_router
 from app.api.content import router as content_router
 from app.api.sync import router as sync_router
 from app.api.processing import router as processing_router
+from app.api.prompt_templates import router as prompt_templates_router
+from app.api.processing_batches import router as processing_batches_router
 from app.api.rag import router as rag_router
 from app.api.ui import router as ui_router
 from app.api.settings import router as settings_router
@@ -140,6 +142,8 @@ def create_app(settings: Settings | None = None, *, model_client=None,
     app.include_router(sync_router)
     app.include_router(imports_router)
     app.include_router(processing_router)
+    app.include_router(prompt_templates_router)
+    app.include_router(processing_batches_router)
     app.include_router(rag_router)
     app.include_router(ui_router)
     app.include_router(settings_router)

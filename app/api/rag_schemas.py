@@ -35,6 +35,8 @@ class SearchHit(BaseModel):
     path: str | None = None
     source_id: str | None = None
     source: dict | None = None
+    source_ids: list[str] = Field(default_factory=list)
+    sources: list[dict] = Field(default_factory=list)
     text: str
     score: float
     content_hash: str

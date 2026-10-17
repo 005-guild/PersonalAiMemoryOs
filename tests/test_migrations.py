@@ -4,11 +4,12 @@ from pathlib import Path
 
 import pytest
 from alembic import command
-from sqlalchemy import inspect, text
+from alembic.script import ScriptDirectory
+from sqlalchemy import MetaData, Table, inspect, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import StaleDataError
 
-from app.models import Knowledge, ProcessingRun, Source, SourceOrigin, SyncState
+from app.models import Knowledge, ProcessingRun, Source, SourceOrigin, SyncState, new_id, utcnow
 from app.repositories.database import Database
 from app.repositories.migrations import check_schema, migration_config, upgrade_database
 
@@ -163,7 +164,7 @@ def test_upgrade_0001_to_0002_preserves_content_and_sync_baseline(sqlite_url: st
             assert session.get(SyncState, note_id).base == baseline
             assert session.query(SourceOrigin).count() == 0
         with database.engine.connect() as connection:
-            assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0004"
+            assert connection.scalar(text("SELECT version_num FROM alembic_version")) == ScriptDirectory.from_config(migration_config()).get_current_head()
     finally:
         database.dispose()
 
@@ -201,7 +202,7 @@ def test_upgrade_0002_to_head_preserves_sources_origins_and_knowledge(sqlite_url
             assert session.get(SyncState, note_id).base == {"body": "已有笔记正文"}
             assert session.query(ProcessingRun).count() == 0
         with database.engine.connect() as connection:
-            assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0004"
+            assert connection.scalar(text("SELECT version_num FROM alembic_version")) == ScriptDirectory.from_config(migration_config()).get_current_head()
     finally:
         database.dispose()
 
@@ -250,16 +251,18 @@ def test_upgrade_0003_to_0004_preserves_processing_and_content(sqlite_url: str) 
             note = Knowledge(title="保留笔记", body="正文", source_id=source.id)
             session.add(note)
             session.flush()
-            run = ProcessingRun(
+            run_id = new_id()
+            historical = Table("processing_runs", MetaData(), autoload_with=session.connection())
+            session.execute(historical.insert().values(
+                id=run_id, version=1, created_at=utcnow(), updated_at=utcnow(), started_at=utcnow(),
                 source_id=source.id, source_version=1, source_snapshot={"title": source.title},
                 input_hash="a" * 64, profile_id="old-profile", protocol="openai_chat", model="old-model",
                 config_fingerprint="b" * 64, prompt_version="knowledge-v1", prompt_hash="c" * 64,
                 output_schema_version=1, status="adopted", adopted_knowledge_id=note.id,
                 result={"summary": "已有摘要"}, proposal={"body": "正文"},
-            )
-            session.add(run)
+            ))
             session.commit()
-            source_id, note_id, run_id = source.id, note.id, run.id
+            source_id, note_id = source.id, note.id
     finally:
         database.dispose()
     upgrade_database(sqlite_url)

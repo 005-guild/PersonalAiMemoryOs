@@ -64,6 +64,6 @@ class RagSearchService:
                     or any(current[field] != item[field] for field in
                            ("knowledge_id", "version", "content_hash", "text"))):
                 return False
-            for field in ("path", "source_id", "source"):
+            for field in ("path", "source_id", "source", "source_ids", "sources"):
                 item[field] = current[field]
         return True

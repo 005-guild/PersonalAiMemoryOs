@@ -2,6 +2,7 @@
 
 from app.models import utcnow
 from app.services.markdown import content_hash
+from app.services.source_associations import association_ids
 from app.services.sync_state import (
     apply_file, baseline, document, file_snapshot, open_conflict,
     record_conflict, snapshot, source_available,
@@ -21,11 +22,11 @@ class NoteReconciler:
             self._missing(session, note, state, now, deletion_allowed)
             return
         state.missing_since, state.missing_count = None, 0
-        previous_source = state.base.get("source_id") if state.base else note.source_id
-        if doc.source_id not in {previous_source, note.source_id}:
-            self._error(session, state, "source_id_is_managed_by_api")
+        previous_sources = association_ids(state.base) if state.base else note.source_ids
+        if doc.association_ids not in (previous_sources, note.source_ids):
+            self._error(session, state, "source_ids_are_managed_by_api" if doc.schema_version == 2 else "source_id_is_managed_by_api")
             return
-        if not source_available(session, note.source_id):
+        if not source_available(session, note.source_ids):
             self._error(session, state, "source_is_deleted")
             return
         current, incoming = snapshot(note), file_snapshot(doc)
@@ -34,7 +35,7 @@ class NoteReconciler:
                 apply_file(note, doc)
                 note.deleted_at = None
                 session.flush()
-                if note.source_id != doc.source_id:
+                if note.source_ids != doc.association_ids:
                     self._write(session, note, state, file, file.path)
                 else:
                     baseline(state, snapshot(note), file.hash, file.path)
@@ -57,7 +58,7 @@ class NoteReconciler:
             apply_file(note, doc)
             session.flush()
             # Keep a newly changed API association, never import it from Markdown.
-            if note.source_id != doc.source_id:
+            if note.source_ids != doc.association_ids:
                 self._write(session, note, state, file, file.path)
             else:
                 baseline(state, snapshot(note), file.hash, file.path)
@@ -75,7 +76,7 @@ class NoteReconciler:
             session.commit()
             return
         if state.base is None or state.base.get("deleted"):
-            if not source_available(session, note.source_id):
+            if not source_available(session, note.source_ids):
                 self._error(session, state, "source_is_deleted")
                 return
             self._write(session, note, state, None, state.path or f"{note.id}.md")

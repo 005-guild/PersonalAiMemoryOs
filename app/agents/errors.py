@@ -7,4 +7,6 @@ class AIError(Exception):
     def __init__(self, status_code: int, code: str) -> None:
         self.status_code = status_code
         self.code = code
+        self.usage = None
+        self.finish_reason = None
         super().__init__(code)

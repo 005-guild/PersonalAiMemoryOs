@@ -9,6 +9,7 @@ from sqlalchemy import select
 from app.models import Knowledge, SyncOperation, SyncState, SyncVault, new_id, utcnow
 from app.services.files import atomic_write, read_file, scan_files
 from app.services.markdown import parse_document
+from app.services.content import ContentService
 from app.services.sync_operations import OperationJournal
 from app.services.sync_reconcile import NoteReconciler
 from app.services.sync_state import (
@@ -178,13 +179,12 @@ class Synchronizer:
             if pending_identity is not None:
                 self._issue(file.path, "identity_recovery_required")
                 continue
-            if not source_available(session, doc.source_id):
+            if not source_available(session, doc.association_ids):
                 self._issue(file.path, "invalid_source")
                 continue
-            note = Knowledge(id=new_id(), source_id=doc.source_id,
-                             **{key: getattr(doc, key) for key in EDITABLE})
-            session.add(note)
-            session.flush()
+            created = ContentService(session).create_knowledge({"source_ids": doc.association_ids,
+                        **{key: getattr(doc, key) for key in EDITABLE}})
+            note = session.get(Knowledge, created["id"])
             state = state_for(session, note)
             state.path, state.file_hash = file.path, file.hash
             operation = self.journal.queue(session, note, state, file.path, file,

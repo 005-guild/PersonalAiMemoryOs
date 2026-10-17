@@ -40,5 +40,10 @@ class ProcessingRun(Base):
     updated_at: Mapped[str] = mapped_column(String(40), nullable=False, default=utcnow, onupdate=utcnow)
     started_at: Mapped[str] = mapped_column(String(40), nullable=False, default=utcnow)
     finished_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    source_snapshots: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    prompt_snapshot: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    generation_settings: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    finish_reason: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    failure_stage: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     __mapper_args__ = {"version_id_col": version}
