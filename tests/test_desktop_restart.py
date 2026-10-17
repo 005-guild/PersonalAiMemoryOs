@@ -39,6 +39,26 @@ def test_restart_queues_once_and_has_no_store(client):
     client.app.state.desktop_restarter.request.assert_called_once()
 
 
+def test_rag_restart_uses_its_own_revision_and_shared_configuration_guard(client):
+    rag_revision = "b" * 64
+    client.app.state.rag_settings = SimpleNamespace(describe=lambda: {"revision": rag_revision})
+    response = client.post("/api/v1/desktop/restart", json={"expected_revision": rag_revision, "scope": "rag"}, headers=headers())
+    assert response.status_code == 202
+    client.app.state.desktop_restarter.request.assert_called_once()
+
+
+def test_rag_restart_rejects_ai_revision(client):
+    client.app.state.rag_settings = SimpleNamespace(describe=lambda: {"revision": "b" * 64})
+    assert client.post("/api/v1/desktop/restart", json={"expected_revision": REVISION, "scope": "rag"}, headers=headers()).status_code == 409
+    client.app.state.desktop_restarter.request.assert_not_called()
+
+
+@pytest.mark.parametrize("scope", ["other", [], {}, None, 1])
+def test_invalid_restart_scope_cannot_start_an_instance(client, scope):
+    assert client.post("/api/v1/desktop/restart", json={"expected_revision": REVISION, "scope": scope}, headers=headers()).status_code == 422
+    client.app.state.desktop_restarter.request.assert_not_called()
+
+
 @pytest.mark.parametrize("case,status", [("stale", 409), ("web", 409), ("busy", 409), ("origin", 403), ("token", 403)])
 def test_restart_rejects_without_effect(client, case, status):
     payload, values = {"expected_revision": REVISION}, headers()

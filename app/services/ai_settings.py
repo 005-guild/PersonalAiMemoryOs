@@ -49,7 +49,8 @@ class AISettingsService:
         self.root = Path(settings.runtime_root).absolute()
         self.env_file = self.root / ".env"
         self.config_file = Path(settings.ai_config_path).absolute()
-        self.protected_paths = (settings.knowledge_path.resolve(), Path(resolve_database_url(settings.database_url, root=self.root).database))
+        self.protected_paths = (settings.knowledge_path.resolve(), Path(resolve_database_url(settings.database_url, root=self.root).database),
+                                settings.embedding_config_path.resolve())
         self.path_valid = (self.config_file != self.env_file and self.config_file.suffix.lower() in {".yml", ".yaml"}
             and not any(self.config_file == path or self.config_file.is_relative_to(path) for path in self.protected_paths)
             and not self.config_file.is_relative_to(self.root / ".memory-os-config-transactions")

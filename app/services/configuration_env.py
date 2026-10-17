@@ -14,11 +14,15 @@ def bindings(raw: bytes | None):
 
 
 def ai_values(raw: bytes | None) -> dict[str, str]:
-    # Resolve interpolation as python-dotenv does, but expose only AI bindings.
+    return selected_values(raw, (PREFIX,))
+
+
+def selected_values(raw: bytes | None, prefixes: tuple[str, ...]) -> dict[str, str]:
+    """Resolve interpolation while returning only the requested configuration groups."""
     values = resolve_variables(((item.key, item.value) for item in bindings(raw)
                                 if item.key is not None), override=True)
     return {name.upper(): value for name, value in values.items()
-            if name.upper().startswith(PREFIX) and value is not None}
+            if name.upper().startswith(prefixes) and value is not None}
 
 
 def keys_from(values: dict[str, str]) -> dict[str, str]:

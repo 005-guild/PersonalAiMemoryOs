@@ -24,6 +24,7 @@ from app.api.processing_batches import router as processing_batches_router
 from app.api.rag import router as rag_router
 from app.api.ui import router as ui_router
 from app.api.settings import router as settings_router
+from app.api.rag_settings import router as rag_settings_router
 from app.api.settings_security import ConfigurationNoStoreMiddleware, configuration_guard
 from app.config import Settings
 from app.repositories.database import Database
@@ -36,6 +37,7 @@ from app.services.rag_index import RagIndexService
 from app.services.rag_search import RagSearchService
 from app.services.rag_worker import RagWorker
 from app.services.ai_settings import AISettingsService
+from app.services.rag_settings import RAGSettingsService
 from app.services.configuration_files import recover_ai_settings
 from app.vector.configuration import EmbeddingRegistry
 from app.vector.embedding import EmbeddingClient
@@ -70,6 +72,8 @@ def create_app(settings: Settings | None = None, *, model_client=None,
     processing = ProcessingService(database, sync_lock, registry, model_client, generation_gate)
     embedding_registry = EmbeddingRegistry(settings)
     embedding_client = embedding_client if embedding_client is not None else EmbeddingClient()
+    rag_settings = RAGSettingsService(settings, registry=embedding_registry,
+                                    csrf_token=ai_settings.csrf_token, embedding_client=embedding_client)
     qdrant_client = qdrant_client if qdrant_client is not None else QdrantClient(settings.rag_qdrant_url)
     indexer = RagIndexService(database, sync_lock, settings, embedding_registry, embedding_client, qdrant_client)
     rag_worker = RagWorker(indexer, settings.rag_interval)
@@ -116,7 +120,7 @@ def create_app(settings: Settings | None = None, *, model_client=None,
 
     app = FastAPI(
         title="Personal AI Memory OS",
-        version="0.7.0",
+        version="0.8.0",
         lifespan=lifespan,
     )
     app.state.settings = settings
@@ -126,6 +130,7 @@ def create_app(settings: Settings | None = None, *, model_client=None,
     app.state.sync_worker = worker
     app.state.ai_registry = registry
     app.state.ai_settings = ai_settings
+    app.state.rag_settings = rag_settings
     app.state.configuration_guard = configuration_guard
     app.state.model_client = model_client
     app.state.processing = processing
@@ -147,6 +152,7 @@ def create_app(settings: Settings | None = None, *, model_client=None,
     app.include_router(rag_router)
     app.include_router(ui_router)
     app.include_router(settings_router)
+    app.include_router(rag_settings_router)
     app.include_router(desktop_router)
     app.add_middleware(ConfigurationNoStoreMiddleware)
     install_web(app)
