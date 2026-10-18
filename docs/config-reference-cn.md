@@ -1,4 +1,20 @@
-# 配置完整参考（v0.8.0）
+# 配置完整参考（v0.9.0）
+
+## 本地重排配置（0.9.0 新增）
+
+在“设置 → RAG → 本地重排服务”填写。参数保存到当前运行目录 `.env`，环境变量优先；保存不调用模型，重启后生效。旧版设置请求不含重排字段时保留已保存值。修改重排参数不改变 Embedding 指纹，无需重建索引。
+
+| 环境变量 | 默认值 | 用途 |
+| --- | --- | --- |
+| `MEMORY_OS_RAG_RERANK_ENABLED` | `false` | 为新版笔记搜索／问答启用重排 |
+| `MEMORY_OS_RAG_RERANK_URL` | `http://127.0.0.1:18081` | TEI 地址前缀，不含 `/rerank`；不含认证信息 |
+| `MEMORY_OS_RAG_RERANK_MODEL` | `BAAI/bge-reranker-v2-m3` | 部署模型名称，作为配置与诊断元数据 |
+| `MEMORY_OS_RAG_RERANK_REVISION` | 空 | 模型 revision；本机使用 `953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e` |
+| `MEMORY_OS_RAG_RERANK_TIMEOUT_SECONDS` | `60` | 每次请求总时限，允许 1～180 秒 |
+
+连接测试会对两段固定文本主动执行一次重排，不生成答案、不写索引。默认地址为本机；如果自行更改为远程地址，问题与候选片段将发送到该服务。“模型／revision”是声明的部署身份，不能将它当作远程服务已经提供权重证明。
+
+TEI 协议使用 `truncate=false`，验证响应数量、索引唯一性及有限分数。故障会明确报告，不自动降级或重试。新接口 `/api/v1/rag/retrieve` 和 `/api/v1/rag/answer` 按笔记选择 `max_notes`（默认 5，上限 10）；旧 `/search` 和 `/ask` 保持片段合同。
 
 本文说明当前应用实际读取哪些配置、默认值是什么、修改后怎样生效。适用于源码本机服务、Windows 便携 EXE 和项目自带 Docker Compose；数据库结构为 `0006`。模型名称和地址示例来自项目模板，不代表已经逐个完成真实服务验收。
 

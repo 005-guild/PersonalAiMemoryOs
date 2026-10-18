@@ -12,6 +12,7 @@ from app.vector.configuration import EmbeddingProfile, ResolvedEmbeddingProfile
 from app.vector.embedding import EmbeddingClient
 from app.vector.errors import RagError
 from app.vector.qdrant import QdrantClient
+from app.vector.rerank import RerankClient, RerankOptions
 
 
 class RAGSettingsProbes:
@@ -42,6 +43,15 @@ class RAGSettingsProbes:
                 finally:
                     await client.aclose()
                 result = {"target": "qdrant", "status": "ok", "read_only": True}
+            elif payload.target == "reranker":
+                options = RerankOptions.model_validate(snapshot["reranker"])
+                client = RerankClient(options)
+                try:
+                    scores = await client.rank("备份恢复", ["备份后应进行恢复演练。", "今天讨论园艺种植。"])
+                finally:
+                    await client.aclose()
+                result = {"target": "reranker", "status": "ok", "calls": 1,
+                          "model": options.model, "revision": options.revision, "scores": scores}
             else:
                 identifier = payload.profile_id or snapshot["default"]
                 profile = snapshot["profiles"].get(identifier)

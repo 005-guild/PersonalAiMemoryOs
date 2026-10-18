@@ -57,6 +57,34 @@ class SearchRead(BaseModel):
     index_incomplete: bool
 
 
+class RetrieveRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    query: QueryText
+    max_notes: int = Field(default=5, ge=1, le=10)
+
+
+class NoteAskRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    question: QueryText
+    max_notes: int = Field(default=5, ge=1, le=10)
+    profile_id: ProfileID | None = None
+    prompt_template_id: Identifier | None = None
+    prompt_template_version: int | None = Field(default=None, ge=1)
+
+    @model_validator(mode="after")
+    def template_pair(self):
+        if self.prompt_template_version is not None and self.prompt_template_id is None:
+            raise ValueError("Select the prompt ID with its version.")
+        return self
+
+
+class RetrieveRead(BaseModel):
+    notes: list[dict]
+    contexts: list[dict]
+    index_incomplete: bool
+    rerank: dict
+
+
 class AnswerRead(BaseModel):
     insufficient_evidence: bool
     answer: str
@@ -69,3 +97,8 @@ class AnswerRead(BaseModel):
     prompt_version: str
     prompt_hash: str
     prompt_template: dict | None = None
+
+
+class NoteAnswerRead(AnswerRead):
+    notes: list[dict]
+    rerank: dict

@@ -9,9 +9,11 @@ from app.api.rag_settings_schemas import EmbeddingProfileWrite, RAGSettingsTest,
 from app.api.settings import MAX_REQUEST_BYTES, _bounded_structure, _call, _invalid_constant, _pairs, _service
 from app.api.settings_schemas import AIKeyUpdate
 from app.services.rag_settings_state import RAGSettingsError
+from app.vector.rerank import RerankOptions
 
 router = APIRouter(prefix="/api/v1/settings/rag", tags=["settings"])
 SAFE_FIELDS = set(RAGSettingsWrite.model_fields) | set(EmbeddingProfileWrite.model_fields) | set(AIKeyUpdate.model_fields) | set(RAGSettingsTest.model_fields)
+SAFE_FIELDS |= set(RerankOptions.model_fields)
 
 
 async def _rag(request, *, mutation=False):

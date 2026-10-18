@@ -35,7 +35,17 @@ export const formatDate = value => value ? new Date(value).toLocaleString('zh-CN
 export function showError(error, target) {
   if (error?.name === 'AbortError') return;
   const messages = {409: '记录或状态已变化，请查看最新版本后再操作。', 429: '当前有任务正在处理，请稍后手动操作。', 503: '服务或配置暂不可用，请查看系统状态。', 504: '请求超时；请查看处理记录，勿重复提交。'};
-  const node = notice(`${messages[error?.status] || '操作未完成。'} ${error?.message || error}`, 'error');
+  const ragMessages = {
+    rerank_unavailable: '本地重排服务未就绪。请检查 Docker 的 reranker 服务和设置中的地址。没有自动降级或重试。',
+    rerank_upstream_error: '重排服务拒绝请求，请检查服务日志及模型输入限制。没有自动截断或重试。',
+    rerank_response_invalid: '重排响应的数量、索引或分数不符合协议，已停止本次操作。',
+    rerank_timeout: '本地重排超时，请检查 GPU 与服务状态后手动操作。没有自动重试。',
+    rerank_busy: '另一个重排请求正在执行，请稍后手动操作。',
+    rag_rebuild_required: '当前向量模型或分块配置与索引不一致，请在系统页明确重建索引。',
+    rag_index_missing: '还没有知识索引，请检查 RAG 配置及系统页索引状态。',
+    rag_index_not_ready: '笔记尚未完成索引，请到系统页查看待处理项及错误。',
+  };
+  const node = notice(ragMessages[error?.detail?.code] || `${messages[error?.status] || '操作未完成。'} ${error?.message || error}`, 'error');
   if (target) target.replaceChildren(node); else toast(node.textContent, 'error');
   return node;
 }

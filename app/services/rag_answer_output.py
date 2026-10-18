@@ -60,6 +60,8 @@ def render_answer(text: str, contexts: list[dict]) -> dict:
                     citations.append({
                         "citation_id": labels[key], "chunk_id": reference.chunk_id,
                         "quote": reference.quote,
+                        **({"context_id": item["context_id"], "scope": item["scope"], "ranges": item["ranges"]}
+                           if "context_id" in item else {}),
                         **{field: item.get(field) for field in
                            ("knowledge_id", "version", "title", "path", "source_id", "source", "source_ids", "sources")},
                     })

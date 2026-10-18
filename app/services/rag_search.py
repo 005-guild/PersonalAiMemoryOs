@@ -8,10 +8,10 @@ from app.vector.errors import RagError
 
 
 class RagSearchService:
-    def __init__(self, indexer, registry, embedding_client, qdrant_client):
+    def __init__(self, indexer, registry, embedding_client, qdrant_client, *, query_gate=None):
         self.indexer, self.registry = indexer, registry
         self.embedding_client, self.qdrant_client = embedding_client, qdrant_client
-        self._gate = BoundedSemaphore(1)
+        self._gate = query_gate if query_gate is not None else BoundedSemaphore(1)
 
     async def search(self, query: str, top_k: int = 5) -> dict:
         if (not isinstance(query, str) or not query.strip() or len(query) > 2000

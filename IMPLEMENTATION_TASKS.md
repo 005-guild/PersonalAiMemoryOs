@@ -1,5 +1,9 @@
 # IMPLEMENTATION_TASKS.md
 
+## v0.9.0 — note-level retrieval and local reranking (2026-10-19)
+
+Implemented candidate-only reads, optional pinned TEI service, grouped note search, bounded full-note/section reading, new retrieve/answer endpoints and answer-first UI. Existing index/schema/API contracts retained. Local real-BGE/TEI/isolated-Qdrant/Chromium acceptance passed with no paid generation. First full regression: 1180 passed/3 skips and one documentation-field failure, subsequently fixed and covered by focused checks. EXE acceptance, capacity measurements, three-call real-QA review and fixed-directory upgrade remain pending until recorded below.
+
 ## Seven Follow-up Maintenance Delivery (2026-10-18)
 
 Application remains **0.8.0 / 0006** with the installed resource fingerprint unchanged. No new EXE/migration/runtime dependency, paid model call, Windows reboot, production write or remote push. Current execution table: [project audit](docs/project-audit-cn.md#execution); repeatable commands: [maintenance manual](docs/maintenance-cn.md).

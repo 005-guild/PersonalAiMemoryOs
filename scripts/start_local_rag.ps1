@@ -1,5 +1,7 @@
 param(
     [switch]$SkipDocker,
+    [switch]$EnableReranker,
+    [string]$RerankerRevision = '',
     [string]$ProjectRoot = (Join-Path $PSScriptRoot '..')
 )
 
@@ -94,5 +96,26 @@ if (-not $SkipDocker) {
     } while (-not $qdrant -and (Get-Date) -lt $deadline)
     if (-not $qdrant -or $qdrant.version -notmatch '^1\.19\.\d+($|[-+])') { throw 'Qdrant is unavailable or is not the supported 1.19.x version.' }
     Write-Host "Qdrant $($qdrant.version) ready at http://127.0.0.1:6333/."
+    if ($EnableReranker) {
+        $modelManifest = Join-Path $projectRoot '.cache/reranker/model-manifest.json'
+        if (-not (Test-Path -LiteralPath $modelManifest -PathType Leaf)) { throw 'Prepare and verify the pinned reranker model first. Desktop startup never downloads weights.' }
+        $modelRecord = Get-Content -LiteralPath $modelManifest -Raw | ConvertFrom-Json
+        if ($modelRecord.model -ne 'BAAI/bge-reranker-v2-m3' -or
+            ($RerankerRevision -and $modelRecord.revision -ne $RerankerRevision)) { throw 'Reranker model revision does not match the saved application configuration.' }
+        foreach ($modelFile in @('config.json', 'tokenizer.json', 'model.safetensors')) {
+            if (-not (Test-Path -LiteralPath (Join-Path $projectRoot ".cache/reranker/models/bge-reranker-v2-m3/$modelFile") -PathType Leaf)) { throw 'Verified reranker model files are missing.' }
+        }
+        & docker image inspect 'ghcr.io/huggingface/text-embeddings-inference:89-1.9' 2>$null | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw 'Prepare the pinned TEI image first. Desktop startup does not pull it automatically.' }
+        & docker compose --project-directory $projectRoot --file (Join-Path $projectRoot 'docker-compose.yml') --profile rerank up -d --no-deps --pull never reranker
+        if ($LASTEXITCODE -ne 0) { throw 'Reranker could not start. Check Docker GPU support and the local port; no other service was stopped.' }
+        $deadline = (Get-Date).AddSeconds(60)
+        $reranker = $null
+        do {
+            try { $reranker = Get-LocalJson 'http://127.0.0.1:18081/info' } catch { Start-Sleep -Milliseconds 250 }
+        } while (-not $reranker -and (Get-Date) -lt $deadline)
+        if (-not $reranker) { throw 'Reranker is not ready; inspect the reranker container logs.' }
+        Write-Host 'Local reranker ready at http://127.0.0.1:18081/. No inference was requested.'
+    }
 }
 Write-Host 'Open the existing PersonalAiMemoryOs desktop. No model request or application restart was triggered by this script.'

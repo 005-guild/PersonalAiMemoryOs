@@ -16,9 +16,10 @@ QA_CONTRACT = (PROMPT_PATH.parent / "rag_qa_contract_v1.md").read_text(encoding=
 
 
 class RagAnswerService:
-    def __init__(self, search, registry, model_client, generation_gate):
+    def __init__(self, search, registry, model_client, generation_gate, *, reading=False):
         self.search, self.registry, self.model_client = search, registry, model_client
         self.gate = generation_gate
+        self.reading = reading
         self._closing = False
         self._tasks = set()
 
@@ -43,6 +44,8 @@ class RagAnswerService:
         try:
             system = (QA_CONTRACT + "\n\n<answer_style>\n" + prompt["content"] +
                       "\n</answer_style>\n\n" + QA_CONTRACT) if prompt else SYSTEM_PROMPT
+            if self.reading:
+                system += "\n\n" + (PROMPT_PATH.parent / "rag_reading_v1.md").read_text(encoding="utf-8")
             prompt_hash = hashlib.sha256(system.encode("utf-8")).hexdigest()
             result = await self.search.search(question, top_k)
             contexts, length = [], 0
@@ -56,7 +59,7 @@ class RagAnswerService:
                 usage = {}
             else:
                 payload = {"question": question, "contexts": [
-                    {field: item[field] for field in ("chunk_id", "title", "text")} for item in contexts
+                    {field: item[field] for field in ("chunk_id", "title", "text", "scope") if field in item} for item in contexts
                 ]}
                 reply = await self.model_client.generate(
                     resolved, system, json.dumps(payload, ensure_ascii=False, allow_nan=False)
@@ -66,6 +69,7 @@ class RagAnswerService:
                 answer = render_answer(reply.text, contexts)
                 usage = reply.usage
             return {**answer, "index_incomplete": result["index_incomplete"],
+                    **({"notes": result["notes"], "rerank": result["rerank"]} if self.reading else {}),
                     "profile_id": resolved.profile_id, "model": resolved.profile.model,
                     "usage": usage, "prompt_version": str(prompt["version"]) if prompt else PROMPT_VERSION,
                     "prompt_hash": prompt_hash,

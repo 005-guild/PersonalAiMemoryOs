@@ -12,6 +12,7 @@ from app.services import configuration_env as env
 from app.services.ai_settings import AISettingsError, _hash
 from app.services.configuration_files import ConfigurationFileError, digest, read_file
 from app.vector.configuration import _Document, _PROFILE_ID, _UniqueLoader
+from app.vector.rerank import RerankOptions, options_from_environment
 
 PREFIXES = ("MEMORY_OS_RAG_", "MEMORY_OS_EMBEDDING_", "MEMORY_OS_AI_KEYS")
 FIELDS = {"enabled": "MEMORY_OS_RAG_ENABLED", "qdrant_url": "MEMORY_OS_RAG_QDRANT_URL",
@@ -33,6 +34,7 @@ def validate_document(value):
 def signature(snapshot):
     refs = {profile["api_key_ref"].casefold() for profile in snapshot["profiles"].values() if profile["api_key_ref"]}
     return _hash({**{field: snapshot[field] for field in ("enabled", "default", "qdrant_url", "profiles")},
+                  "reranker": snapshot.get("reranker", RerankOptions().model_dump()),
                   "keys": {ref: snapshot["keys"].get(ref) for ref in refs}})
 
 
@@ -86,6 +88,7 @@ class RAGSettingsState:
             _hash({"profiles": profiles, "keys": keys})
             return {"dotenv": dotenv, "yaml": raw_yaml, "profiles": profiles, "enabled": enabled,
                 "default": default, "qdrant_url": qdrant, "keys": keys, "managed": set(env.keys_from(environment)),
+                "reranker": options_from_environment(effective).model_dump(),
                 "environment": environment, "file_values": file_values,
                 "revision": _hash({"env": digest(dotenv), "yaml": digest(raw_yaml), "environment": environment})}
         except (OSError, ValueError, UnicodeError, yaml.YAMLError, ValidationError, RecursionError, ConfigurationFileError):

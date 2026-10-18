@@ -7,7 +7,8 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.agents.errors import AIError
-from app.api.rag_schemas import AnswerRead, AskRequest, IndexRequest, SearchRead, SearchRequest
+from app.api.rag_schemas import (AnswerRead, AskRequest, IndexRequest, SearchRead, SearchRequest,
+                                RetrieveRequest, RetrieveRead, NoteAskRequest, NoteAnswerRead)
 from app.vector.errors import RagError
 from app.services.content import ContentError
 
@@ -74,3 +75,18 @@ async def ask(payload: AskRequest, request: Request):
             payload.prompt_template_id, payload.prompt_template_version, purpose="rag_qa")
         return await request.app.state.rag_answer.ask(payload.question, payload.top_k, payload.profile_id,
                                                     prompt_snapshot=prompt)
+
+
+@router.post("/retrieve", response_model=RetrieveRead)
+async def retrieve(payload: RetrieveRequest, request: Request):
+    with errors():
+        return await request.app.state.rag_retrieval.retrieve(payload.query, payload.max_notes)
+
+
+@router.post("/answer", response_model=NoteAnswerRead)
+async def answer(payload: NoteAskRequest, request: Request):
+    with errors():
+        prompt = await asyncio.to_thread(request.app.state.processing.templates.snapshot,
+            payload.prompt_template_id, payload.prompt_template_version, purpose="rag_qa")
+        return await request.app.state.rag_note_answer.ask(payload.question, payload.max_notes, payload.profile_id,
+                                                         prompt_snapshot=prompt)

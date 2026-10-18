@@ -13,15 +13,15 @@ export async function mount(container, context) {
   const ai = aiResult.status === 'fulfilled' ? aiResult.value : {enabled: false, items: []};
   const keyword = el('textarea', {rows: 3, maxLength: 2000, placeholder: '例如：如何减少并发编辑导致的数据覆盖？', 'data-testid': 'search-query'});
   const question = el('textarea', {rows: 3, maxLength: 2000, placeholder: '向你的知识库提问，回答只依据当前可用笔记。', 'data-testid': 'ask-question'});
-  const topK = select(Array.from({length: 10}, (_, index) => [String(index + 1), `${index + 1} 条片段`]), '5');
+  const topK = select(Array.from({length: 10}, (_, index) => [String(index + 1), `${index + 1} 篇笔记`]), '5');
   topK.setAttribute('data-testid', 'retrieval-limit');
-  const retrievalLimit = field('检索数量', topK);
+  const retrievalLimit = field('最多参考笔记', topK);
   retrievalLimit.classList.add('search-limit-field');
   const model = profilePicker(ai);
   const template = promptPicker({purpose: 'rag_qa', alive, onChange: () => update()});
   template.element.dataset.testid = 'ask-template';
   const searchErrors = el('div'), askErrors = el('div');
-  const searchResult = el('div', {}, empty('找到相关知识片段', '输入自然语言查询，语义检索不会调用生成模型。'));
+  const searchResult = el('div', {}, empty('查找相关知识笔记', '同一笔记合并展示。搜索不调用生成模型。'));
   const answerResult = el('div', {}, empty('带出处的知识库回答', '回答会附上可回溯到笔记的引用；依据不足时会明确说明。'));
   const searchButton = button('搜索知识库', search, {className: 'btn btn-primary', 'data-testid': 'search-submit'});
   const askButton = button('生成引用回答', ask, {className: 'btn btn-primary', 'data-testid': 'ask-submit'});
@@ -38,14 +38,16 @@ export async function mount(container, context) {
     const submittedQuery = keyword.value.trim();
     searching = true; update(); searchErrors.replaceChildren(); searchResult.replaceChildren(notice('正在检索知识片段…'));
     try {
-      const value = await api('/api/v1/rag/search', {method: 'POST', body: {query: submittedQuery, top_k: Number(topK.value)}});
-      if (stopped) return;
+      const value = await api('/api/v1/rag/retrieve', {method: 'POST', body: {query: submittedQuery, max_notes: Number(topK.value)}});
+      if (!alive()) return;
       searchResult.replaceChildren(...[el('p', {className: 'muted'}, `本次检索：${submittedQuery}`), value.index_incomplete && notice('索引尚未完整。以下仅展示当前已发布并核验的片段。', 'warning'),
-        localPagination(value.items, rows => el('div', {className: 'stack'}, ...rows.map(hit => el('article', {className: 'card stack'},
-          el('div', {className: 'detail-header'}, el('h2', {}, el('a', {href: `#/knowledge/${hit.knowledge_id}`}, hit.title)), badge(`相似度 ${Number(hit.score).toFixed(4)}`)),
+        localPagination(value.notes, rows => el('div', {className: 'stack'}, ...rows.map(hit => el('article', {className: 'card stack', 'data-testid': 'retrieved-note'},
+          el('div', {className: 'detail-header'}, el('h2', {}, el('a', {href: `#/knowledge/${hit.knowledge_id}`}, hit.title)), badge(hit.scope === 'full' ? '阅读全文' : '阅读部分章节')),
           el('p', {className: 'muted'}, `v${hit.version} · ${hit.path || '等待 Markdown 路径'}${hit.source?.title ? ` · 来源：${hit.source.title}` : ''}`),
-          el('pre', {className: 'text-excerpt'}, hit.text), details('片段标识', el('code', {}, hit.chunk_id))))), {label: '本次检索片段分页', key: 'search-results'}),
-        !value.items.length && empty('没有可用片段', '知识库依据不足。可以新增笔记，或在系统页面查看索引状态。')].filter(Boolean));
+          el('p', {className: 'muted'}, `正文 ${hit.body_chars} 字符 · 本次读取 ${hit.read_chars} 字符 · 排序分数 ${Number(hit.score).toFixed(4)}（不是可信度）`),
+          details(`命中位置（${hit.matches.length} 处）`, ...hit.matches.map(match => el('pre', {className: 'text-excerpt'}, match.text))),
+          details('本次阅读内容', el('pre', {className: 'text-excerpt'}, value.contexts.find(item => item.context_id === hit.context_id)?.text || ''))))), {label: '本次检索笔记分页', key: 'search-results'}),
+        !value.notes.length && empty('没有可用笔记', '知识库依据不足。可以新增笔记，或在系统页面查看索引状态。')].filter(Boolean));
     } catch (error) {if (!stopped) {searchResult.replaceChildren(); showError(error, searchErrors); searchErrors.append(notice('未自动重试搜索或向量调用。请确认索引和向量服务状态后手动操作。'));}}
     finally {searching = false; if (!stopped) update();}
   }
@@ -55,14 +57,14 @@ export async function mount(container, context) {
     asking = true; update(); askErrors.replaceChildren(notice('正在检索并生成回答，请等待。不会自动重新调用模型。')); answerResult.replaceChildren();
     try {
       const selected = template.value();
-      const payload = {question: submittedQuestion, top_k: Number(topK.value), prompt_template_id: selected.id, prompt_template_version: selected.version}; if (model.value) payload.profile_id = model.value;
-      const value = await api('/api/v1/rag/ask', {method: 'POST', body: payload});
-      if (stopped) return;
+      const payload = {question: submittedQuestion, max_notes: Number(topK.value), prompt_template_id: selected.id, prompt_template_version: selected.version}; if (model.value) payload.profile_id = model.value;
+      const value = await api('/api/v1/rag/answer', {method: 'POST', body: payload});
+      if (!alive()) return;
       askErrors.replaceChildren();
       const citations = value.citations || [];
       const citationList = localPagination(citations, rows => el('div', {className: 'stack'}, ...rows.map(citation => el('article', {className: 'citation', 'data-citation': citation.citation_id},
         el('h4', {}, `[${citation.citation_id}] `, el('a', {href: `#/knowledge/${citation.knowledge_id}`}, citation.title)),
-        el('blockquote', {}, citation.quote), el('p', {className: 'muted'}, `笔记 v${citation.version} · ${citation.path || '等待 Markdown 路径'}`),
+        el('blockquote', {}, citation.quote), el('p', {className: 'muted'}, `笔记 v${citation.version} · ${citation.scope === 'full' ? '阅读全文' : '阅读部分章节'} · ${citation.path || '等待 Markdown 路径'}`),
         ...(citation.sources || (citation.source ? [citation.source] : [])).map(source => el('p', {className: 'muted'}, '关联来源：', el('a', {href: `#/sources/${source.id || citation.source_id}`}, source.title || source.id)))))), {label: '本次回答引用分页', key: 'answer-citations'});
       answerResult.replaceChildren(el('article', {className: 'card stack', 'data-testid': 'ask-answer'},
         el('h2', {}, value.insufficient_evidence ? '知识库依据不足' : '知识库回答'),
@@ -72,7 +74,8 @@ export async function mount(container, context) {
           ...(value.paragraphs || []).map(paragraph => el('p', {}, paragraph.text, ' ', ...(paragraph.citation_ids || []).map(id => el('a', {href: `#citation-${id}`, onClick: event => {event.preventDefault(); citationList.reveal(citations.findIndex(item => String(item.citation_id) === String(id))); answerResult.querySelector(`[data-citation="${CSS.escape(String(id))}"]`)?.scrollIntoView({behavior: 'smooth'});}, 'aria-label': `查看引用 ${id}`}, `[${id}]`))))),
         value.citations?.length > 0 && el('section', {className: 'stack'}, el('h3', {}, '引用与原文依据'),
           citationList),
-        details('模型、模板与用量', jsonView({profile_id: value.profile_id, model: value.model, usage: value.usage, prompt_template: value.prompt_template}))));
+        details('本次阅读范围', ...(value.notes || []).map(note => el('p', {}, el('a', {href: `#/knowledge/${note.knowledge_id}`}, note.title), `：${note.scope === 'full' ? '全文' : '部分章节'}（${note.read_chars}/${note.body_chars} 字符）`))),
+        details('模型、模板与用量', jsonView({profile_id: value.profile_id, model: value.model, usage: value.usage, prompt_template: value.prompt_template, rerank: value.rerank}))));
     } catch (error) {
       if (!stopped) {showError(error, askErrors); askErrors.append(notice(error.status === 409 ? '生成期间引用笔记发生变化，本次回答未发布。请重新查看笔记后决定是否重新提问。' : '未自动重试。本页不保存问答历史；断连后请先检查服务状态，再决定是否发起新调用。'));}
     } finally {asking = false; if (!stopped) update();}
@@ -82,8 +85,8 @@ export async function mount(container, context) {
   const askPanel = el('section', {className: 'stack', role: 'tabpanel', id: 'answer-panel', hidden: true},
     el('div', {className: 'card stack'}, field('向知识库提问', question, '单轮问答，不使用通识补全，也不保存历史。'), field('生成模型', model), field('问答提示词模板', template.element),
       !ai.enabled && notice('AI 当前关闭，语义检索仍可独立使用。'), askButton, askErrors), answerResult);
-  const searchTab = button('语义检索', () => switchTab(false), {role: 'tab', id: 'semantic-tab', tabIndex: 0, 'aria-controls': 'semantic-panel', 'aria-selected': 'true', className: 'btn active'});
-  const askTab = button('引用问答', () => switchTab(true), {role: 'tab', id: 'answer-tab', tabIndex: -1, 'aria-controls': 'answer-panel', 'aria-selected': 'false'});
+  const searchTab = button('笔记搜索', () => switchTab(false), {role: 'tab', id: 'semantic-tab', tabIndex: -1, 'aria-controls': 'semantic-panel', 'aria-selected': 'false'});
+  const askTab = button('知识库问答', () => switchTab(true), {role: 'tab', id: 'answer-tab', tabIndex: 0, 'aria-controls': 'answer-panel', 'aria-selected': 'true', className: 'btn active'});
   searchPanel.setAttribute('aria-labelledby', 'semantic-tab'); askPanel.setAttribute('aria-labelledby', 'answer-tab');
   for (const tab of [searchTab, askTab]) tab.addEventListener('keydown', event => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
@@ -101,6 +104,6 @@ export async function mount(container, context) {
     ragResult.status === 'rejected' && notice(`索引状态读取失败：${ragResult.reason.message}`, 'error'),
     aiResult.status === 'rejected' && notice(`生成配置读取失败：${aiResult.reason.message}`, 'error'),
     el('div', {className: 'toolbar search-toolbar'}, el('div', {className: 'tabs', role: 'tablist', 'aria-label': '搜索方式'}, searchTab, askTab), retrievalLimit), searchPanel, askPanel].filter(Boolean));
-  if (context.params.get('mode') === 'ask') switchTab(true);
+  switchTab(context.params.get('mode') !== 'search');
   await template.ready; update(); return () => {stopped = true; controller.abort(); template.destroy();};
 }

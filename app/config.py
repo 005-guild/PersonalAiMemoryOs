@@ -68,6 +68,11 @@ class Settings(BaseSettings):
     rag_chunk_overlap: int = Field(default=200, ge=0, le=2000)
     rag_max_note_chars: int = Field(default=100_000, ge=1, le=2_200_000)
     rag_max_chunks: int = Field(default=200, ge=1, le=2000)
+    rag_rerank_enabled: bool = False
+    rag_rerank_url: str = "http://127.0.0.1:18081"
+    rag_rerank_model: str = "BAAI/bge-reranker-v2-m3"
+    rag_rerank_revision: str = ""
+    rag_rerank_timeout_seconds: float = Field(default=60, ge=1, le=180)
 
     @property
     def embedding_config_path(self) -> Path:
@@ -86,7 +91,7 @@ class Settings(BaseSettings):
             raise ValueError("EMBEDDING_CONFIG_FILE must be inside the project.")
         return value
 
-    @field_validator("rag_qdrant_url")
+    @field_validator("rag_qdrant_url", "rag_rerank_url")
     @classmethod
     def validate_qdrant_url(cls, value: str) -> str:
         from urllib.parse import urlsplit

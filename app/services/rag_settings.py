@@ -10,6 +10,7 @@ from app.services import configuration_env as env
 from app.services.configuration_files import CONFIGURATION_LOCK, ConfigurationFileError, digest, write_configuration
 from app.services.rag_settings_state import FIELDS, RAGSettingsError, RAGSettingsState, preflight, semantic, signature, validate_document
 from app.vector.configuration import EmbeddingRegistry
+from app.vector.rerank import ENV_FIELDS, options_from_settings
 
 
 class RAGSettingsService(RAGSettingsState):
@@ -18,10 +19,11 @@ class RAGSettingsService(RAGSettingsState):
         self.csrf_token = csrf_token or secrets.token_urlsafe(32)
         self.registry = registry if registry is not None else EmbeddingRegistry(settings)
         active = {"enabled": settings.rag_enabled, "qdrant_url": settings.rag_qdrant_url,
+            "reranker": options_from_settings(settings).model_dump(),
             "default": self.registry.default_profile, "profiles": {key: profile.model_dump() for key, profile in self.registry.profiles.items()},
             "keys": {ref: value.get_secret_value() for ref, value in settings.ai_keys.items()}}
         self._active_signature, self._active_semantic = signature(active), semantic(active)
-        self._active = {"enabled": active["enabled"], "qdrant_url": active["qdrant_url"], "default_profile": active["default"]}
+        self._active = {"enabled": active["enabled"], "qdrant_url": active["qdrant_url"], "default_profile": active["default"], "reranker": active["reranker"]}
         from app.services.rag_settings_probes import RAGSettingsProbes
         self.probes = RAGSettingsProbes(self, embedding_client=embedding_client, qdrant_transport=qdrant_transport)
 
@@ -34,6 +36,7 @@ class RAGSettingsService(RAGSettingsState):
         return {"revision": snapshot["revision"], "editable": reason is None, "read_only_reason": reason,
             "restart_required": self._active_signature != signature(snapshot), "csrf_token": self.csrf_token,
             "enabled": snapshot["enabled"], "qdrant_url": snapshot["qdrant_url"], "default_profile": snapshot["default"],
+            "reranker": snapshot["reranker"],
             "profiles": [{"id": name, **profile} for name, profile in snapshot["profiles"].items()],
             "keys": [{"ref": ref, "configured": bool(snapshot["keys"].get(ref, "").strip()), "environment_managed": ref in snapshot["managed"]} for ref in sorted(refs)],
             "environment_overrides": sorted(snapshot["environment"]), "active": dict(self._active), "preflight": check,
@@ -47,6 +50,11 @@ class RAGSettingsService(RAGSettingsState):
     def _updates(self, payload, snapshot):
         updates = {FIELDS["enabled"]: str(payload.enabled).lower(), FIELDS["qdrant_url"]: payload.qdrant_url,
                    FIELDS["default"]: payload.default_profile or ""}
+        if payload.reranker is not None:
+            for key, value in payload.reranker.model_dump().items():
+                if ENV_FIELDS[key] in snapshot["environment"] and snapshot["reranker"][key] != value:
+                    raise RAGSettingsError(409, "environment_managed_field")
+                updates[ENV_FIELDS[key]] = str(value).lower() if type(value) is bool else str(value)
         for field, current in (("enabled", snapshot["enabled"]), ("qdrant_url", snapshot["qdrant_url"]), ("default", snapshot["default"])):
             incoming = {"enabled": payload.enabled, "qdrant_url": payload.qdrant_url, "default": payload.default_profile}[field]
             if FIELDS[field] in snapshot["environment"] and current != incoming:

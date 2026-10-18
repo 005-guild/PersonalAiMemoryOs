@@ -7,7 +7,7 @@ import {offerRestart} from './settings-restart.js';
 
 export function ragSettings({alive, onDirty, hasDirty}) {
   const element = el('section', {className: 'stack', 'data-testid': 'rag-settings'}), messages = el('div'), body = el('div');
-  let snapshot, profiles = [], busy = false, confirming = false, disposed = false, pagination, fields, form, pendingKeys;
+  let snapshot, profiles = [], busy = false, confirming = false, disposed = false, pagination, fields, form, pendingKeys, rerankInputs;
   const active = () => !disposed && alive();
   async function settle() {while(!disposed&&!alive())await new Promise(resolve=>setTimeout(resolve,25));return active();}
   const clearSecrets = () => {for (const profile of profiles) profile.clearSecret(); if (pendingKeys) for (const key of pendingKeys) key.value = ''; pendingKeys = null;};
@@ -44,6 +44,14 @@ export function ragSettings({alive, onDirty, hasDirty}) {
       }}); profiles.push(editor); defaults();
     }
     for (const profile of value.profiles) add(profile); redraw(); defaults();
+    const rerank = value.reranker || {};
+    rerankInputs = {
+      enabled: el('input', {type: 'checkbox', checked: !!rerank.enabled, 'data-testid': 'rerank-enabled'}),
+      url: el('input', {type: 'url', required: true, value: rerank.url || 'http://127.0.0.1:18081'}),
+      model: el('input', {required: true, maxLength: 200, value: rerank.model || 'BAAI/bge-reranker-v2-m3'}),
+      revision: el('input', {maxLength: 200, value: rerank.revision || ''}),
+      timeout_seconds: el('input', {type: 'number', min: 1, max: 180, required: true, value: rerank.timeout_seconds || 60}),
+    };
     fields = el('fieldset', {className: 'settings-fields'});
     fields.append(el('section', {className: 'card stack'}, el('div', {className: 'detail-header'}, el('h2', {}, '向量检索配置'), badge(value.active?.enabled ? '当前 RAG 已开启' : '当前 RAG 已关闭')),
       value.restart_required && notice('已保存配置与当前运行配置不同，需要重启。', 'warning'),
@@ -57,7 +65,12 @@ export function ragSettings({alive, onDirty, hasDirty}) {
         if (profiles.length >= 100) {errors.replaceChildren(notice('最多保留 100 套配置。', 'warning'));return;}
         let index=profiles.length+1;while(profiles.some(profile=>profile.id()===`embedding_${index}`))index++;
         add({id:`embedding_${index}`,enabled:true,base_url:'',model:'',dimension:'',auth:'bearer',timeout_seconds:60,batch_size:8});redraw();pagination.reveal(profiles.length-1);onDirty(true);
-      }, {'data-testid': 'rag-add-profile'})), profileList), errors, el('div', {className: 'page-actions'}, save));
+      }, {'data-testid': 'rag-add-profile'})), profileList),
+      el('section', {className: 'card stack'}, el('h2', {}, '本地重排服务'),
+        el('label', {className: 'settings-check'}, rerankInputs.enabled, '启用重排（重启后生效）'),
+        notice('重排只对候选笔记排序，不生成回答。服务不可用时明确报错，不自动降级；修改重排配置无需重建向量索引。'),
+        field('TEI 地址', rerankInputs.url), field('模型名称', rerankInputs.model), field('模型 revision', rerankInputs.revision), field('超时（秒）', rerankInputs.timeout_seconds)),
+      errors, el('div', {className: 'page-actions'}, save));
     form = el('form', {className: 'settings-form', autocomplete: 'off'}, fields);
     if (!value.editable) {
       for (const node of form.querySelectorAll('input,select,textarea,button')) if (!node.closest('nav')) node.disabled = true;
@@ -67,7 +80,7 @@ export function ragSettings({alive, onDirty, hasDirty}) {
     form.addEventListener('submit',event=>{event.preventDefault();saveSettings(enabled,url,defaultProfile,errors);});
     body.replaceChildren(form,el('section',{className:'card stack'},el('h2',{},'连接测试（主动操作）'),
       notice('测试使用已保存的配置。未保存输入不参与测试；不会开启索引，不自动重试。'),
-      el('div',{className:'page-actions'},button('检查 Qdrant 连接',()=>probe('qdrant'),{'data-testid':'rag-test-qdrant'}),button('测试默认 Embedding（1 次调用）',()=>probe('embedding'),{'data-testid':'rag-test-embedding'})),
+      el('div',{className:'page-actions'},button('检查 Qdrant 连接',()=>probe('qdrant'),{'data-testid':'rag-test-qdrant'}),button('测试默认 Embedding（1 次调用）',()=>probe('embedding'),{'data-testid':'rag-test-embedding'}),button('测试重排（1 次本地调用）',()=>probe('reranker'),{'data-testid':'rag-test-reranker'})),
       keyValues([['配置文件',value.locations?.embedding_config_file],['密钥配置',value.locations?.env_file]])));
   }
   async function saveSettings(enabled, url, defaultProfile, errors) {
@@ -79,7 +92,8 @@ export function ragSettings({alive, onDirty, hasDirty}) {
     let values;
     try {const rows=profiles.map(item=>item.collect()), refs=new Map();if(new Set(rows.map(item=>item.id)).size!==rows.length)throw Error('向量配置 ID 不能重复。');
       for(const profile of profiles){const key=profile.secret();if(!key.value)continue;if(!key.ref)throw Error('填写密钥时需同时填写引用。');const ref=key.ref.toLowerCase();if(refs.has(ref)&&refs.get(ref).value!==key.value)throw Error('同一引用的新密钥不一致。');refs.set(ref,key);}
-      pendingKeys=[...refs.values()];values={expected_revision:snapshot.revision,enabled:enabled.checked,qdrant_url:url.value,default_profile:defaultProfile.value||null,profiles:rows,key_updates:pendingKeys};
+      const reranker = Object.fromEntries(Object.entries(rerankInputs).map(([key,input])=>[key,key==='enabled'?input.checked:key==='timeout_seconds'?Number(input.value):input.value]));
+      pendingKeys=[...refs.values()];values={expected_revision:snapshot.revision,enabled:enabled.checked,qdrant_url:url.value,default_profile:defaultProfile.value||null,profiles:rows,key_updates:pendingKeys,reranker};
     }catch(error){errors.replaceChildren(notice(error.message,'warning'));return;}
     busy=true;fields.disabled=true;messages.replaceChildren();
     try {const saved=await api('/api/v1/settings/rag',{method:'PUT',headers:{'X-Configuration-Token':snapshot.csrf_token},body:values});clearSecrets();values=null;if(!await settle())return;render(saved);fields.disabled=true;onDirty(false);
@@ -92,7 +106,7 @@ export function ragSettings({alive, onDirty, hasDirty}) {
     if(target==='embedding'){confirming=true;const accepted=await confirmAction('将用已保存的默认向量配置发送一段固定短文本，最多一次 Embedding 调用，可能收费；不写索引。是否测试？',{title:'确认向量测试',confirmLabel:'调用一次'});confirming=false;if(!accepted)return;}
     if(!active())return;busy=true;
     try{const result=await api('/api/v1/settings/rag/test',{method:'POST',headers:{'X-Configuration-Token':snapshot.csrf_token},body:{expected_revision:snapshot.revision,target,confirm_embedding:target==='embedding',...(target==='embedding'&&snapshot.default_profile?{profile_id:snapshot.default_profile}:{})}});
-      if(await settle())messages.replaceChildren(notice(target==='qdrant'?'Qdrant 只读连接检查通过。':`Embedding 测试通过：${result.dimension} 维，调用 ${result.calls} 次。`,'success'));
+      if(await settle())messages.replaceChildren(notice(target==='qdrant'?'Qdrant 只读连接检查通过。':target==='reranker'?`重排测试通过：${result.model}，调用 ${result.calls} 次。`:`Embedding 测试通过：${result.dimension} 维，调用 ${result.calls} 次。`,'success'));
     }catch(error){if(await settle()){showError(error,messages);messages.append(notice('未自动重试测试。'));}}finally{busy=false;}
   }
   reload();return{element,clearSecrets,dispose(){disposed=true;clearSecrets();}};

@@ -1,6 +1,8 @@
 # DATABASE_DESIGN.md
 
-## 当前数据设计（2026-10-18，应用 `0.8.0` / Alembic `0006`）
+## 当前数据设计（2026-10-19，应用 `0.9.0` / Alembic `0006`）
+
+0.9.0 不新增表或迁移：沿用发布清单及 chunks JSON 做候选验证，阅读窗口从当前版本 Knowledge 构建，问答不持久化为笔记。重排设置保存于运行目录 `.env`，模型文件及校验清单位于项目 `.cache/reranker/`；无需重写既有 Markdown 或向量。
 
 本节汇总实际实现。后面的发布记录和概念模型是历史材料，其中单来源、一套 Prompt 默认值、空库及 RAG 关闭等描述只适用于当时版本。实际 ORM 见 [`app/models/`](app/models/)，完整迁移链见 [`migrations/versions/`](migrations/versions/)；不能据原始概念模型创建未实施的表。
 

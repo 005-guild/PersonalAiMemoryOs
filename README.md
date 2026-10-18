@@ -1,8 +1,14 @@
 # Personal AI Memory OS
 
+## 0.9.0: note-level retrieval and cited answers
+
+The workspace now opens cited question answering by default. Explicit submissions retrieve and optionally rerank candidates, read complete short notes or relevant sections within a 12,000-character budget, then generate a cited answer. Note search groups repeated chunks under their original note; existing 1200/200 indexes and schema 0006 remain compatible.
+
+Optional local reranking uses pinned BAAI/bge-reranker-v2-m3 weights and TEI 1.9 on a loopback-only GPU container. Configure it under Settings → RAG; first-time provisioning is separate from ordinary offline desktop startup. The bundled app does not include the model. See the [RAG guide](docs/rag-guide-cn.md) and [configuration reference](docs/config-reference-cn.md). Legacy `/rag/search` and `/rag/ask` remain available; the UI uses `/rag/retrieve` and `/rag/answer`.
+
 [中文使用说明](readme-cn.md)
 
-Maintainer checks, isolated restoration, cold-boot evidence, retention, retrieval baselines and release/advisory commands are documented in the [maintenance manual](docs/maintenance-cn.md). Start with `uv run --locked python scripts/check_project.py`; it never calls a model. This maintenance round keeps the application and installed EXE at 0.8.0 / 0006. Current progress and remaining real-quality/cold-boot gates are in the [follow-up execution table](docs/project-audit-cn.md#execution).
+Maintainer checks, isolated restoration, cold-boot evidence, retention, retrieval baselines and release/advisory commands are documented in the [maintenance manual](docs/maintenance-cn.md). Start with `uv run --locked python scripts/check_project.py`; it never calls a model. The earlier 0.8.0 maintenance results remain dated history. Current progress and remaining real-quality/cold-boot gates are in the [follow-up execution table](docs/project-audit-cn.md#execution).
 
 Canonical repository: [005-guild/PersonalAiMemoryOs](https://github.com/005-guild/PersonalAiMemoryOs). The primary branch is `main`; this workspace uses that repository as `origin`. Source and public documentation are versioned; personal configuration, runtime data, model weights and portable binaries remain excluded. Verified changes are committed locally; remote pushes are performed when requested.
 
@@ -10,7 +16,7 @@ The [complete Chinese manual](readme-cn.md) covers every management page, instal
 
 The [project review and follow-up checklist](docs/project-audit-cn.md) records the current instance matrix, source map, confirmed documentation fixes and prioritized work with evidence and completion criteria. It distinguishes real quality review, restoration/cold-boot exercises and maintenance work from features already implemented. This review changes documentation only; pending items are not implementation or live-call authorization.
 
-## Current release: 0.8.0 (schema 0006)
+## Current source: 0.9.0 (schema 0006)
 
 Local RAG was connected on this Windows machine on **2026-10-18**, keeping application `0.8.0` and schema `0006`. The fixed desktop uses local Ollama **0.40.6**, **BGE-M3 / 1024 dimensions** and Qdrant **1.19.2**; its two Knowledge records are indexed. Opt-in desktop preparation now runs the bundled service-start script invisibly before starting the backend: double-click the existing EXE instead of entering a PowerShell command. Its personal `config/local-rag-startup.json` selects the project location; clean distributions leave this feature off. No model download or text-generation request is triggered by preparation. Ollama lives in `.tools/ollama`, model weights in `.cache/ollama/models`; neither is bundled with the portable ZIP. Loopback `NO_PROXY` exceptions are merged into the application process. See the [complete local setup and verification](docs/rag-guide-cn.md).
 
@@ -18,7 +24,7 @@ Real isolated BGE-M3 retrieval and lifecycle acceptance passed, as did two parap
 
 The automatic-startup patch passed **1,135 tests, 3 Windows symlink skips and one existing warning**, actual frozen desktop regression and a dedicated real-service startup/restart check under the enabled Windows proxy with no input proxy exceptions. The fixed installation was backed up at `backups/upgrade-20261017-162717-811af92d/`, updated in place and configured for direct double-click startup. All business rows, private AI/configuration bytes and vault files were retained; the two-note index is healthy and the upgrade/startup made zero model calls. Current clean ZIP SHA-256: `a20ce7ba7e358807a9ce616f5c8b1997ae6b85fa8d0e18eed0b8cdd7aba9cd23`; EXE: `6ccffca5855bc689c9b121e0b488cd70f7a572df3cd30fa3413cd245b3f59535`. Earlier ZIP hashes below identify historical v0.8 artifacts.
 
-The desktop installation stays at **`dist/PersonalAiMemoryOs-0.6.6/`**. Its historical directory name is retained; the application reports 0.8.0. New clean distributions use `dist/PersonalAiMemoryOs-windows-x64.zip`, built from staging rather than an installation containing user data.
+The desktop installation stays at **`dist/PersonalAiMemoryOs-0.6.6/`**. Its historical directory name is retained; 0.9.0 is installed only after EXE acceptance and verified backup. New clean distributions use `dist/PersonalAiMemoryOs-windows-x64.zip`, built from staging rather than an installation containing user data.
 
 The AI page now supports searchable, paged source checkboxes (up to 20), lazy source preview, sequential individual drafts and one-call merged analysis. SQLite-backed tasks keep progress after navigation; cancellation drains the current call, and restart pauses remaining work. Continue pending items and retry failed calls are separate explicit actions. There are no automatic paid retries.
 

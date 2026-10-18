@@ -1,5 +1,12 @@
 # MEMORY.md
 
+## 0.9.0 implementation and local acceptance (2026-10-19)
+
+- User approved AI-answer-first UX, short-note full reading/long-note sections, local reranking and at most three real DeepSeek QA calls (4096 output tokens/180s each, failures count, no retries). This is separate from earlier provider budgets. Windows must not reboot. Keep the same fixed portable installation and do not redeploy the old Docker API.
+- Implemented note-level candidate retrieval, literal-title recall, strict TEI adapter, 12000-character reading budget, cited-answer context validation and opt-in local service preparation. The existing 1200/200 index and schema 0006 remain unchanged. New defaults are off for reranking; existing settings clients preserve saved reranker fields when omitted.
+- Pinned model revision 953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e; TEI Ada 1.9 image digest sha256:1a284d9ca1adcc20b78c261d4d052c06057f0a3cb49a15c5d2c00930f710fce2. Local Docker GPU and simultaneous Ollama operation verified. Weights verified in .cache/reranker/models, not bundled or tracked.
+- Source/browser acceptance passed using real BGE/TEI and isolated Qdrant, one mock generation and no paid calls: .cache/v09-acceptance/3d8816b1002d41acafa4c4209849dbf7/report.json. Full first run had 1180 passing/3 existing skips and one missing-field documentation failure; that document check and 103 focused checks subsequently passed. Packaged EXE, capacity, real QA and formal upgrade are still pending at this entry.
+
 ## Seven Follow-up Execution and Measured Limits (2026-10-18)
 
 - The user authorized work while away and explicitly forbade restarting Windows. Chose zero paid generation for this round and left the project license unchanged. Do not infer that the prepared quality cases consume or expand historical provider budgets. No formal database/configuration/vault, installed EXE or independent API deployment was changed; application resources still match the delivered 0.8.0/0006 build fingerprint. These are maintainer tools, not a new application release. Local commits only, no remote push.

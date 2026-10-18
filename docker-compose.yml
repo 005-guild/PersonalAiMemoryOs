@@ -52,5 +52,21 @@ services:
       - qdrant-storage:/qdrant/storage
     stop_grace_period: 150s
 
+  reranker:
+    image: ghcr.io/huggingface/text-embeddings-inference:89-1.9@sha256:1a284d9ca1adcc20b78c261d4d052c06057f0a3cb49a15c5d2c00930f710fce2
+    profiles: [rerank]
+    gpus: all
+    command: ["--model-id", "/data/bge-reranker-v2-m3", "--dtype", "float16", "--max-client-batch-size", "80", "--max-batch-tokens", "8192"]
+    environment:
+      HF_HUB_OFFLINE: "1"
+    ports:
+      - "127.0.0.1:18081:80"
+    volumes:
+      - type: bind
+        source: ./.cache/reranker/models
+        target: /data
+        read_only: true
+    stop_grace_period: 150s
+
 volumes:
   qdrant-storage:

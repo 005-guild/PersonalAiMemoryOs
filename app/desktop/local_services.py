@@ -114,6 +114,14 @@ def start_local_services(root: Path, settings: Settings) -> None:
             raise LocalServicesError("程序缺少本地 RAG 启动资源，请完整更新便携程序。")
         command = [str(powershell_path()), "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
                    "-File", str(script), "-ProjectRoot", str(project)]
+        if settings.rag_rerank_enabled:
+            if not _loopback_endpoint(settings.rag_rerank_url, 18081, "") or settings.rag_rerank_model != "BAAI/bge-reranker-v2-m3":
+                raise LocalServicesError("自动准备仅支持本机 18081 端口的 BGE 重排服务；其他服务请独立启动。")
+            command += ["-EnableReranker"]
+            if settings.rag_rerank_revision:
+                if len(settings.rag_rerank_revision) != 40 or any(c not in "0123456789abcdef" for c in settings.rag_rerank_revision):
+                    raise LocalServicesError("本地重排 revision 必须是已准备模型的完整提交标识。")
+                command += ["-RerankerRevision", settings.rag_rerank_revision]
         log_path = portable_path(root, root / "logs/local-rag-startup.log")
         log_path.parent.mkdir(parents=True, exist_ok=True)
         merge_local_proxy_bypass()

@@ -4,7 +4,7 @@ import asyncio
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from threading import RLock
+from threading import RLock, BoundedSemaphore
 
 from fastapi import FastAPI
 from app.web.routes import install_web
@@ -35,6 +35,8 @@ from app.services.processing import ProcessingService
 from app.services.rag_answer import RagAnswerService
 from app.services.rag_index import RagIndexService
 from app.services.rag_search import RagSearchService
+from app.services.rag_retrieval import RagRetrievalService
+from app.vector.rerank import RerankClient, options_from_settings
 from app.services.rag_worker import RagWorker
 from app.services.ai_settings import AISettingsService
 from app.services.rag_settings import RAGSettingsService
@@ -47,7 +49,7 @@ logger = logging.getLogger(__name__)
 
 
 def create_app(settings: Settings | None = None, *, model_client=None,
-               embedding_client=None, qdrant_client=None) -> FastAPI:
+               embedding_client=None, qdrant_client=None, rerank_client=None) -> FastAPI:
     """Create an isolated application; initialize resources only on startup."""
     if settings is None:
         recover_ai_settings(configuration.PROJECT_ROOT)
@@ -77,8 +79,12 @@ def create_app(settings: Settings | None = None, *, model_client=None,
     qdrant_client = qdrant_client if qdrant_client is not None else QdrantClient(settings.rag_qdrant_url)
     indexer = RagIndexService(database, sync_lock, settings, embedding_registry, embedding_client, qdrant_client)
     rag_worker = RagWorker(indexer, settings.rag_interval)
-    rag_search = RagSearchService(indexer, embedding_registry, embedding_client, qdrant_client)
+    query_gate = BoundedSemaphore(1)
+    rag_search = RagSearchService(indexer, embedding_registry, embedding_client, qdrant_client, query_gate=query_gate)
     rag_answer = RagAnswerService(rag_search, registry, model_client, generation_gate)
+    rerank_client = rerank_client if rerank_client is not None else RerankClient(options_from_settings(settings))
+    rag_retrieval = RagRetrievalService(indexer, embedding_client, qdrant_client, rerank_client, query_gate=query_gate)
+    rag_note_answer = RagAnswerService(rag_retrieval, registry, model_client, generation_gate, reading=True)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -101,7 +107,7 @@ def create_app(settings: Settings | None = None, *, model_client=None,
             yield
         finally:
             try:
-                await asyncio.gather(processing.close(), rag_answer.close(), rag_worker.stop())
+                await asyncio.gather(processing.close(), rag_answer.close(), rag_note_answer.close(), rag_worker.stop())
             finally:
                 try:
                     await indexer.close()
@@ -111,7 +117,7 @@ def create_app(settings: Settings | None = None, *, model_client=None,
                     finally:
                         try:
                             await asyncio.gather(*(
-                                client.aclose() for client in (model_client, embedding_client, qdrant_client)
+                                client.aclose() for client in (model_client, embedding_client, qdrant_client, rerank_client)
                                 if hasattr(client, "aclose")
                             ))
                         finally:
@@ -120,7 +126,7 @@ def create_app(settings: Settings | None = None, *, model_client=None,
 
     app = FastAPI(
         title="Personal AI Memory OS",
-        version="0.8.0",
+        version="0.9.0",
         lifespan=lifespan,
     )
     app.state.settings = settings
@@ -142,6 +148,8 @@ def create_app(settings: Settings | None = None, *, model_client=None,
     app.state.rag_worker = rag_worker
     app.state.rag_search = rag_search
     app.state.rag_answer = rag_answer
+    app.state.rag_retrieval = rag_retrieval
+    app.state.rag_note_answer = rag_note_answer
     app.include_router(health_router)
     app.include_router(content_router)
     app.include_router(sync_router)
