@@ -1,5 +1,24 @@
 # 维护、恢复与验收手册
 
+## 0.9.0 检索与本地重排验收（2026-10-19）
+
+应用为 0.9.0、数据库为 0006，既有向量无需重建。以下命令是维护验收入口，日常仍双击固定目录 EXE。缓存中的模型权重和校验清单属于运行依赖，不随旧构建一起清理。
+
+```powershell
+uv run --locked python scripts/verify_v09.py --mode local
+uv run --locked python scripts/verify_v09.py --mode desktop --bundle .cache/desktop-build/d839abe7d35c40c381fcea05125d09f2/dist/PersonalAiMemoryOs
+uv run --locked python scripts/verify_desktop_local_startup.py --rerank --bundle .cache/desktop-build/d839abe7d35c40c381fcea05125d09f2/dist/PersonalAiMemoryOs
+uv run --locked python scripts/benchmark_retrieval.py --baseline .cache/capacity-baseline/466c80ace32e4ea68c244f95ea97fcfd
+```
+
+构建目录和基线参数应使用本次实际产物。浏览器验收使用真实本地 BGE-M3／TEI 与隔离 Qdrant、模拟生成服务；自动服务验收不调用模型。容量工具复制已停止的合成基线库，只比较旧／新检索，不重新衡量首次索引吞吐，也不将合成向量计时说成 BGE/重排耗时。新路径的向量缓存列读取次数必须为零。
+
+已测：100 篇旧检索中位 708ms，新检索 104ms；1,000 篇分别为 6,520ms 和 237ms。开发机器观测，样本数旧 3／新 5，不是生产性能承诺，首次索引性能问题仍待后续处理。报告：`.cache/retrieval-capacity/ef8d2391b35a4e2f9803f0248f6cb90e/report.json`。
+
+本轮真实问答预算已用完：DeepSeek `deepseek-flash` 共 3 次、输入 10,212／输出 456 tokens，三份自编短笔记的主题概览、依据不足和资料内指令测试均通过逐字引用与语义审阅。报告：`.cache/v09-real-qa/543a28e68a5d435c890f61f82d490d7a/report.json`。调用前记录意图，失败也占预算；持久账本 `.cache/v09-real-qa-budget.json` 会阻止再次自动执行。不得删除账本以重发，也不得把这三个样例当作全部主题、长文、多来源或八阶段草稿质量已验收。
+
+真实调用命令 `scripts/verify_v09_real_qa.py --approved-three-calls` 仅是本轮已授权验收的可审阅入口，不进入默认检查或 CI。当前账本非空时拒绝继续。后续真实模型验收需另定预算，不沿用剩余次数。
+
 本手册对应 `docs/project-audit-cn.md` 的 NEXT-01～07。维护脚本在项目根目录执行，报告进入 `.cache`；不会作为普通启动前提。
 
 ## 日常检查

@@ -16,6 +16,8 @@
 
 TEI 协议使用 `truncate=false`，验证响应数量、索引唯一性及有限分数。故障会明确报告，不自动降级或重试。新接口 `/api/v1/rag/retrieve` 和 `/api/v1/rag/answer` 按笔记选择 `max_notes`（默认 5，上限 10）；旧 `/search` 和 `/ask` 保持片段合同。
 
+Compose 的 API 容器默认使用内部地址 `http://reranker:80`，因为容器内的 `127.0.0.1` 不是 Windows 宿主机。需要其他地址时设置 Compose 专用变量 `MEMORY_OS_DOCKER_RERANK_URL`。本机 EXE 仍使用上表的回环地址。设置向 API 容器显式传入，但不会自动部署或修改已经运行的旧 API。
+
 本文说明当前应用实际读取哪些配置、默认值是什么、修改后怎样生效。适用于源码本机服务、Windows 便携 EXE 和项目自带 Docker Compose；数据库结构为 `0006`。模型名称和地址示例来自项目模板，不代表已经逐个完成真实服务验收。
 
 日常操作见 [中文使用说明](../readme-cn.md)，向量索引、搜索和引用问答的完整步骤见 [RAG 使用指南](rag-guide-cn.md)。本文的配置依据是 [Settings](../app/config.py)、[文本配置与适配器](../app/agents/configuration.py)、[Embedding 配置](../app/vector/configuration.py) 和 [Compose](../docker-compose.yml)。

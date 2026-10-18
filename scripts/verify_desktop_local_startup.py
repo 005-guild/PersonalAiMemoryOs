@@ -55,7 +55,7 @@ def own_cleanup(database):
         deleted.append(name)
     return deleted
 
-def run(bundle):
+def run(bundle, rerank=False):
     global REVISION
     models=http('GET','http://127.0.0.1:11434/api/tags')[1]['models']
     REVISION=next(item['digest'] for item in models if item['name']=='bge-m3:latest')
@@ -65,6 +65,9 @@ def run(bundle):
     (config/'local-rag-startup.json').write_text(json.dumps({'schema_version':1,'enabled':True,'project_root':str(ROOT)},ensure_ascii=False),encoding='utf-8')
     (config/'embedding-providers.yml').write_text(yaml.safe_dump({'schema_version':1,'default_profile':'local','profiles':{'local':{'label':'本地 BGE-M3','enabled':True,'protocol':'openai_embeddings','base_url':'http://127.0.0.1:11434/v1','model':'bge-m3','model_revision':REVISION,'dimension':1024,'auth':'none','batch_size':8,'timeout_seconds':60}}},allow_unicode=True),encoding='utf-8')
     (portable/'.env').write_text('MEMORY_OS_AI_ENABLED=false\nMEMORY_OS_RAG_ENABLED=true\nMEMORY_OS_EMBEDDING_CONFIG_FILE=config/embedding-providers.yml\nMEMORY_OS_RAG_QDRANT_URL=http://127.0.0.1:6333\n',encoding='utf-8')
+    if rerank:
+        with (portable/'.env').open('a',encoding='utf-8') as stream:
+            stream.write('MEMORY_OS_RAG_RERANK_ENABLED=true\nMEMORY_OS_RAG_RERANK_REVISION=953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e\n')
     files=[portable/'.env',config/'embedding-providers.yml',config/'local-rag-startup.json']
     configuration_hashes={str(path.relative_to(portable)):hashlib.sha256(path.read_bytes()).hexdigest() for path in files}
     docker=shutil.which('docker.exe');assert docker
@@ -78,7 +81,7 @@ def run(bundle):
     app=FrozenDesktop(portable,evidence)
     app.environment={key:value for key,value in app.environment.items() if key.upper() not in {'HTTP_PROXY','HTTPS_PROXY','ALL_PROXY','NO_PROXY'}}
     app.environment['PATH']=str(Path(os.environ['SystemRoot'])/'System32')+os.pathsep+str(Path(docker).parent)
-    report={'mode':'actual isolated frozen EXE, real existing Ollama/Qdrant, Windows proxy enabled; zero model calls','bundle':str(bundle),'system_proxy_enabled':proxy_enabled,'input_proxy_environment_removed':True,'input_path':app.environment['PATH']}
+    report={'mode':'actual isolated frozen EXE, real existing Ollama/Qdrant, Windows proxy enabled; zero model calls','reranker_enabled':rerank,'bundle':str(bundle),'system_proxy_enabled':proxy_enabled,'input_proxy_environment_removed':True,'input_path':app.environment['PATH']}
     browser=None;page=None;errors=[]
     try:
         app.start();old_pid=app.process.pid;old_url=app.url;old_process=app.process
@@ -89,6 +92,9 @@ def run(bundle):
         assert app.request('GET','/api/v1/ui/knowledge?state=all')['total']==0
         assert app.request('GET','/api/v1/ai/profiles')['enabled'] is False
         settings=app.request('GET','/api/v1/settings/rag');assert settings['active']['enabled'] and settings['enabled']
+        if rerank:
+            assert settings['active']['reranker']['enabled'] and settings['reranker']['enabled']
+            assert http('GET','http://127.0.0.1:18081/info')[0]==200
         headers={'Origin':app.url,'X-Configuration-Token':settings['csrf_token']}
         code,probe=http('POST',app.url+'/api/v1/settings/rag/test',{'expected_revision':settings['revision'],'target':'qdrant'},headers)
         assert code==200 and probe=={'target':'qdrant','status':'ok','read_only':True},(code,probe)
@@ -142,7 +148,7 @@ def run(bundle):
 
 if __name__=='__main__':
     if sys.platform != 'win32': raise SystemExit('Windows, WebView2, clean bundle and running local services are required.')
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--bundle',type=Path,required=True);args=parser.parse_args();
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--bundle',type=Path,required=True);parser.add_argument('--rerank',action='store_true');args=parser.parse_args();
     from build_desktop import inspect_bundle
     inspect_bundle(args.bundle.resolve())
-    raise SystemExit(run(args.bundle.resolve()))
+    raise SystemExit(run(args.bundle.resolve(),args.rerank))

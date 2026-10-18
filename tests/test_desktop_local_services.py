@@ -14,6 +14,21 @@ from app.desktop import local_service_process as host
 from app.desktop import local_services as services
 
 
+def test_opted_in_reranker_passes_pinned_identity_to_bundled_helper(setup_local_startup):
+    value=setup_local_startup
+    settings=value.settings.model_copy(update={"rag_rerank_enabled":True,"rag_rerank_revision":"a"*40})
+    services.start_local_services(value.root,settings)
+    command=value.calls[0][0]
+    assert command[-3:]==["-EnableReranker","-RerankerRevision","a"*40]
+
+
+def test_custom_rerank_endpoint_does_not_start_an_unrelated_local_service(setup_local_startup):
+    value=setup_local_startup
+    settings=value.settings.model_copy(update={"rag_rerank_enabled":True,"rag_rerank_url":"http://127.0.0.1:19000"})
+    with pytest.raises(services.LocalServicesError):services.start_local_services(value.root,settings)
+    assert not value.calls
+
+
 @pytest.fixture
 def setup_local_startup(tmp_path, monkeypatch):
     root = tmp_path / "中文 便携目录"
