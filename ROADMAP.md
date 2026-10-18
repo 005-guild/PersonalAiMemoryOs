@@ -2,23 +2,23 @@
 
 # MVP Roadmap
 
-## Current Summary and Follow-up Review (2026-10-18)
+## Current Summary and Follow-up Review (2026-10-19)
 
-Current source and fixed desktop: **0.8.0 / 0006**; the historical name `PersonalAiMemoryOs-0.6.6` is retained. The original EXE now prepares opted-in local Ollama/Qdrant services; current local RAG is configured, while clean distributions default off. The separate Docker API's last recorded deployment remains **0.6.0 / 0004**, AI/RAG off. Sharing its Qdrant service does not upgrade or enable that API. See the [instance matrix](docs/project-audit-cn.md#current); this maintenance round did not change those deployments.
+Current source and fixed desktop: **0.9.0 / 0006**; the historical name `PersonalAiMemoryOs-0.6.6` is retained. Answer-first UI, grouped retrieval, full short-note/section reading and pinned local TEI reranking passed browser/EXE acceptance and were delivered after verified backup. Existing AI/RAG/key settings and 571 Sources/two notes retained; reranking enabled. Clean distributions default off. The independent old Docker API was not redeployed. See the [instance matrix](docs/project-audit-cn.md#current).
 
 Current follow-up execution is recorded in [项目审阅与后续补充清单](docs/project-audit-cn.md#execution) and the [maintenance manual](docs/maintenance-cn.md):
 
 | ID | Priority / state | Next result required |
 | --- | --- | --- |
-| NEXT-01 | P1 / prepared, real quality pending | Fixed review packet, no paid calls; real generation and cited-answer review remain separate |
+| NEXT-01 | P1 / three real QA cases passed, broader quality pending | v0.9 budget exhausted at exactly three DeepSeek calls; eight-stage drafts, broader long/multi-note quality still separate |
 | NEXT-02 | P1 / passed | Full isolated SQLite/vault/configuration restore and cache-backed Qdrant recovery; no production restore |
 | NEXT-03 | P1 / tools passed, physical checks pending | User forbids Windows reboot; path relocation contract tested, actual whole-stack move not claimed |
 | NEXT-04 | P1 / local checks passed | Tracked tools, unified checks and pinned read-only CI; remote CI has not run |
 | NEXT-05 | P2 / first retention tooling implemented | Protected inventory, documented retention, explicit stopped-log rotation; live log cap remains a limitation |
-| NEXT-06 | P2 / baselines measured, optimization identified | Six-note/ten-query local baseline and 100/1000-note capacity measured; 1000-note indexing/search needs profiling and optimization |
+| NEXT-06 | P2 / retrieval optimized, first-index cost pending | Candidate-only retrieval median 104/237ms at 100/1000 synthetic notes, no vector-cache SELECTs; first indexing and legacy search remain unchanged |
 | NEXT-07 | P2 / engineering checks implemented | Version/vendor integrity and explicit OSV audit; project license unchanged, no automatic upgrades |
 
-The follow-up work adds maintainer scripts and documentation without changing application resources, schema or installed EXE. Unified checks passed 1,163 tests/3 Windows skips/one existing warning plus 42 ESM modules; later focused tool checks also passed. Current product features remain summarized in [SPEC.md](SPEC.md). TASK-004 and complete TASK-005 quality gates remain pending. Dated entries below preserve historical results; their old "current status", missing-key or Qdrant-off statements must not override this summary.
+Final v0.9 regression passed 1,186 tests/3 existing Windows skips/one warning; 42 ESM modules passed. Real BGE/TEI/isolated-Qdrant browser and EXE, service reuse/protected restart, and three DeepSeek authored-case reviews passed. Schema and existing vectors unchanged; no Windows reboot or remote push. Current product features remain summarized in [SPEC.md](SPEC.md). TASK-004 and broader TASK-005 quality gates remain pending. Dated entries below preserve historical results; old current-status statements must not override this summary.
 
 The 1000-note synthetic-vector run measured first indexing at 972.7s and median search at 6.55s. Profile repeated SQLite snapshots/publication validation before scaling to 10,000; preserve stale/deleted/conflicted-content filtering. These are development-host observations, not a throughput commitment or BGE-M3 timing. Detailed measurements and storage-size semantics are in the maintenance manual.
 

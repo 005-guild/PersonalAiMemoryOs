@@ -2,7 +2,11 @@
 
 ## v0.9.0 — note-level retrieval and local reranking (2026-10-19)
 
-Implemented candidate-only reads, optional pinned TEI service, grouped note search, bounded full-note/section reading, new retrieve/answer endpoints and answer-first UI. Existing index/schema/API contracts retained. Local real-BGE/TEI/isolated-Qdrant/Chromium acceptance passed with no paid generation. First full regression: 1180 passed/3 skips and one documentation-field failure, subsequently fixed and covered by focused checks. EXE acceptance, capacity measurements, three-call real-QA review and fixed-directory upgrade remain pending until recorded below.
+Delivery and acceptance completed: full final 1186 passed/3 existing skips/one warning; 42 ESM modules; source browser, actual EXE flow/reopen, desktop CRUD/lifecycle regression and opt-in service reuse/protected restart passed. User query 回避型 reads the correct 5704-character note in full. Real DeepSeek: exactly three budgeted calls, fixed-case semantic review passed (10212 input/456 output tokens); no retries and no additional budget remains. Report paths and limitations are in MEMORY.md and docs/maintenance-cn.md. Eight-stage draft quality and broader multi-note/long-note real quality remain separate.
+
+Fixed directory upgraded after verified SQLite/vault/config/resource backup at backups/upgrade-20261018-165107-b2ac3dcd. Preserved all legacy rows and original AI/RAG/key settings, explicitly enabled local rerank, retained embedding fingerprint. Formal health/version/retrieval passed, 571 Sources and 2 Knowledge remain. Pristine ZIP and SHA-256 generated; no Windows restart or Docker API redeployment. New candidate-only search median 104/237ms for synthetic 100/1000-note fixtures versus legacy 708/6520ms; no inference included, no first-index improvement claimed.
+
+Implemented candidate-only reads, optional pinned TEI service, grouped note search, bounded full-note/section reading, new retrieve/answer endpoints and answer-first UI. Existing index/schema/API contracts retained. Local real-BGE/TEI/isolated-Qdrant/Chromium acceptance used mock generation. First regression's missing-field documentation failure was fixed before the final full run.
 
 ## Seven Follow-up Maintenance Delivery (2026-10-18)
 

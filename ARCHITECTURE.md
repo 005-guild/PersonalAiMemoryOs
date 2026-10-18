@@ -23,7 +23,9 @@ flowchart LR
     Query[问题] --> Embedding[独立 Embedding 服务]
     Embedding --> Qdrant
     Qdrant --> Check[SQLite 版本与有效状态复核]
-    Check --> Answer[可选生成模型 / 引用校验]
+    Check --> Rerank[可选本地 TEI 重排]
+    Rerank --> Reading[按笔记聚合 / 全文或章节阅读]
+    Reading --> Answer[可选生成模型 / 引用校验]
 ```
 
 ### 实际分层与入口
