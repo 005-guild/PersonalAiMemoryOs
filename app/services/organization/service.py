@@ -126,6 +126,7 @@ class OrganizationService:
             if not config['taxonomy']:
                 config['taxonomy'] = await taxonomy(self.calls, self.store, identifier, entries)
             failures = False
+            upstream_failures = 0
             for item_id in selection:
                 with self.store.transaction() as session:
                     job = session.get(OrganizationJob, identifier)
@@ -154,6 +155,7 @@ class OrganizationService:
                             return
                     if not sample:
                         await asyncio.to_thread(self.publication.publish, item_id, config)
+                    upstream_failures = 0
                 except OrganizationError as error:
                     if error.code in {'organization_paused','organization_budget_exhausted','organization_profile_changed'}:
                         raise
@@ -161,8 +163,12 @@ class OrganizationService:
                     with self.store.transaction() as session:
                         item = session.get(OrganizationItem, item_id)
                         item.status = 'failed'; item.error = error.code
+                    upstream_failures = upstream_failures+1 if error.code in {'ai_upstream_error','ai_timeout'} else 0
+                    if upstream_failures >= 3:
+                        raise OrganizationError('organization_upstream_unavailable')
                 except Exception:
                     failures = True
+                    upstream_failures = 0
                     with self.store.transaction() as session:
                         item = session.get(OrganizationItem, item_id)
                         item.status = 'failed'; item.error = 'organization_failed'
@@ -181,7 +187,7 @@ class OrganizationService:
             with self.store.transaction() as session:
                 job = session.get(OrganizationJob, identifier)
                 if job.status == 'running':
-                    job.status = 'paused' if code in {'organization_paused','organization_budget_exhausted'} else 'failed'
+                    job.status = 'paused' if code in {'organization_paused','organization_budget_exhausted','organization_upstream_unavailable'} else 'failed'
                     job.error = code
                     control = self.store.control(session)
                     control['paused'] = True

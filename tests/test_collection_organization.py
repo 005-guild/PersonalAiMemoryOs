@@ -1,5 +1,6 @@
 """Collection state machine, paid-call recovery, export integrity and search."""
 import asyncio
+import base64
 import hashlib
 import json
 from pathlib import Path
@@ -22,7 +23,7 @@ from app.services.organization.search import keyword_search, semantic_search
 from app.services.organization.publication import component
 
 CATEGORIES = ['技术/人工智能','生活/经验','学习/方法','工作/职业','健康/常识','历史/文化','经济/观察','待分类/待确认']
-PNG = b'\x89PNG\r\n\x1a\n' + b'synthetic image'
+PNG = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=')
 
 
 def article(root, number, body=None):
@@ -442,3 +443,32 @@ def test_long_quote_is_only_shortened_after_full_source_match():
     assert grounded_quotes([body],body)==['证据完整。']
     with pytest.raises(ValueError):grounded_quotes([body+'编造结论。'],body)
     with pytest.raises(ValueError):grounded_quotes(['字'*201],'字'*201)
+
+
+def test_three_consecutive_provider_errors_pause_before_more_paid_requests(organization):
+    from app.agents.errors import AIError
+    service,model,source,_=organization
+    approved(service,source)
+    for n in range(2,7):article(source,n)
+    service.store.scan()
+    async def unavailable(*args,**kwargs):raise AIError(502,'ai_upstream_error')
+    model.generate=unavailable
+    job=run(service,'all')
+    assert job['status']=='paused' and job['error']=='organization_upstream_unavailable'
+    assert service.store.read()['paused']
+    assert service.store.read()['counts']=={'published':1,'failed':3,'discovered':2}
+    with service.store.transaction() as session:
+        assert session.scalar(select(func.count()).select_from(OrganizationCall).where(OrganizationCall.status=='uncertain'))==3
+
+
+def test_bounded_extra_points_preserve_saved_summary(organization):
+    service,model,source,_=organization
+    article(source,1);service.store.scan()
+    original=model.generate
+    async def verbose(*args,**kwargs):
+        reply=await original(*args,**kwargs)
+        value=json.loads(reply.text)
+        if 'points' in value:value['points']=[f'核心要点 {n}' for n in range(11)]
+        return ModelReply(json.dumps(value,ensure_ascii=False),reply.usage)
+    model.generate=verbose
+    assert run(service,'sample')['status']=='completed'

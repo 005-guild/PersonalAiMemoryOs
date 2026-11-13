@@ -8,8 +8,10 @@ const errors={sample_approval_required:'请先查看并确认样本。',sample_n
   organization_busy:'已有任务执行中。',paused_job_exists:'请先继续已暂停的任务。',configuration_changed:'配置已变化，请刷新后重试。',
   configuration_incomplete:'请先保存输入和输出目录。',organization_paths_locked:'已有整理记录，不能直接更换目录。',
   organization_budget_exhausted:'本期预算不足，已暂停。可调高预算后继续；跨月任务继续时按当月预算检查。',
+  organization_upstream_unavailable:'上游连续 3 次请求失败，任务已暂停。检查网络和模型服务后继续；失败请求不会自动重试。',
   explicit_retry_required:'上次模型请求结果不确定或校验失败，未自动重试。',organization_output_invalid:'模型结果未通过格式或原文依据校验。',
   image_needs_review:'图片内容不够清晰，需要人工检查。',source_changed:'原文或图片已变化，已停止该条整理。',
+  image_invalid:'图片文件无法解码，请检查原图。',image_too_large:'图片超出本地安全处理上限，请检查原图。',
   export_conflict:'整理文件被外部修改，已保留修改；请核对后恢复原导出文件，再手动重试。',
   organization_profile_unsupported:'请选择官方 DeepSeek 的 deepseek-flash / openai_chat 配置。',
   organization_configuration_invalid:'请检查 AI 配置、模型、密钥和目录。',configuration_read_only:'当前实例为只读模式。'};

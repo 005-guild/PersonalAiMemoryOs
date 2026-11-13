@@ -10,7 +10,7 @@ from app.services.import_types import ParsedZhihuItem
 from app.services.content import ContentService
 from app.services.files import atomic_write,read_file,remove_file,FileChangedError
 from app.services.organization.contracts import OrganizationError
-from app.services.organization.generation import mime
+from app.services.organization.images import mime,input_label
 from app.services.organization.inventory import IMAGE
 from app.services.zhihu_sync.storage import safe_path
 from app.services.zhihu_sync.export import publish_file
@@ -29,7 +29,7 @@ def body(snapshot,result,original):
     if result['quotes']:
         lines+=['','## 原文依据',*['> '+x.replace('\n','\n> ') for x in result['quotes']]]
     if result.get('image_observations'):
-        lines+=['','## 图片读取记录（AI 识读）',*['- '+x['image']+'：'+x['text'] for x in result['image_observations']]]
+        lines+=['','## 图片读取记录（AI 识读）',*['- '+input_label({**x,'reference':x['image']})+'：'+x['text'] for x in result['image_observations']]]
     lines+=['','## 原文',f"原题：{snapshot['values']['title']}",f"来源：{snapshot['values']['url']}",'',original]
     return '\n'.join(lines)
 

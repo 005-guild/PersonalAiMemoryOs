@@ -1,14 +1,11 @@
 """Grounded summaries, cached long-document steps, and bounded image inputs."""
-import base64
-import hashlib
 import json
-from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field
 from app.paths import resource_root
 from app.services.organization.contracts import OrganizationError,OrganizationSettings
 from app.services.organization.inventory import chunks, IMAGE
 from app.services.organization.evidence import visible_map,source_quote
-from app.services.zhihu_sync.storage import safe_path
+from app.services.organization.images import image_inputs,input_label,mime
 
 
 class Summary(BaseModel):
@@ -17,39 +14,13 @@ class Summary(BaseModel):
     summary: str=Field(min_length=1,max_length=600)
     category: str=Field(min_length=1,max_length=80)
     tags: list[str]=Field(min_length=3,max_length=6)
-    points: list[str]=Field(min_length=1,max_length=8)
+    points: list[str]=Field(min_length=1,max_length=12)
     conditions: str=Field(max_length=600)
     quotes: list[str]=Field(max_length=3)
 
 
 def prompt(name):
     return (resource_root()/f'app/prompts/collection_{name}_v1.md').read_text(encoding='utf-8')
-
-
-def mime(data):
-    if data.startswith(b'\x89PNG\r\n\x1a\n'): return 'image/png','.png'
-    if data.startswith(b'\xff\xd8\xff'): return 'image/jpeg','.jpg'
-    if data.startswith((b'GIF87a',b'GIF89a')): return 'image/gif','.gif'
-    if data.startswith(b'RIFF') and data[8:12]==b'WEBP': return 'image/webp','.webp'
-    raise OrganizationError('image_format_unsupported')
-
-
-def image_inputs(snapshot,directory):
-    root=safe_path(Path(directory))
-    batch=[]; size=0
-    for entry in snapshot['images']:
-        if entry.get('error'): raise OrganizationError(entry['error'])
-        path=safe_path(root/entry['relative_path'])
-        if not path.is_relative_to(root) or path.stat().st_size>20*1024*1024:
-            raise OrganizationError('image_too_large')
-        data=path.read_bytes(); kind,_=mime(data)
-        if hashlib.sha256(data).hexdigest()!=entry.get('hash'):
-            raise OrganizationError('source_changed')
-        encoded='data:'+kind+';base64,'+base64.b64encode(data).decode('ascii')
-        if batch and (len(batch)==2 or size+len(encoded)>30*1024*1024):
-            yield batch;batch=[];size=0
-        batch.append({'reference':entry['reference'],'data':encoded,'hash':hashlib.sha256(data).hexdigest()});size+=len(encoded)
-    if batch: yield batch
 
 
 def validate_quotes(values,body,required=True):
@@ -114,10 +85,11 @@ async def summarize(calls,job_id,item_id,snapshot,config):
                     if set(row)!={'image','text','uncertain'} or row['image']!=number or type(row['uncertain']) is not bool or not isinstance(row['text'],str) or not row['text'].strip() or len(row['text'])>1500: raise ValueError()
                 return rows
             values=await calls.generate(job_id,item_id,f'vision-{index}',prompt('vision'),
-                json.dumps({'title':snapshot['values']['title'],'images':[x['reference'] for x in batch]},ensure_ascii=False),
+                json.dumps({'title':snapshot['values']['title'],'images':[input_label(x) for x in batch]},ensure_ascii=False),
                 validate,images=[x['data'] for x in batch])
             if any(x['uncertain'] for x in values): raise OrganizationError('image_needs_review')
-            observations += [{'image':batch[x['image']-1]['reference'],'text':x['text']} for x in values]
+            observations += [{'image':batch[x['image']-1]['reference'],'text':x['text'],
+                **({'region':batch[x['image']-1]['region']} if 'region' in batch[x['image']-1] else {})} for x in values]
     parts=[]
     if len(body)>20000:
         for index,part in enumerate(chunks(body)):
