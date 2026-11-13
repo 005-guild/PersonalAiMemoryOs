@@ -57,8 +57,22 @@ def validate_quotes(values,body,required=True):
         if not isinstance(quote,str) or not quote.strip() or len(quote)>200 or quote not in body: raise ValueError()
 
 
+def grounded_quotes(values,body,required=True):
+    """Discard unsupported/excess quotations, never rewrite or invent evidence."""
+    if not isinstance(values,list) or len(values)>12 or any(not isinstance(x,str) for x in values):
+        raise ValueError()
+    kept=[]
+    for quote in values:
+        if quote.strip() and len(quote)<=200 and quote in body and quote not in kept:
+            kept.append(quote)
+    kept=kept[:3]
+    validate_quotes(kept,body,required)
+    return kept
+
+
 def summary_validator(snapshot,categories,visual=False):
     def validate(value):
+        value={**value,'quotes':grounded_quotes(value['quotes'],snapshot['values']['content'],not visual)}
         result=Summary.model_validate(value).model_dump()
         if result['category'] not in categories: raise ValueError()
         for field in ('tags','points'):
@@ -105,9 +119,8 @@ async def summarize(calls,job_id,item_id,snapshot,config):
     if len(body)>20000:
         for index,part in enumerate(chunks(body)):
             def validate(value):
-                if set(value)!={'summary','quotes'} or not isinstance(value['summary'],str) or not 1<=len(value['summary'])<=800: raise ValueError()
-                validate_quotes(value['quotes'],part['content'])
-                return value
+                if set(value)!={'summary','quotes'} or not isinstance(value['summary'],str) or not 1<=len(value['summary'])<=1200: raise ValueError()
+                return {**value,'quotes':grounded_quotes(value['quotes'],part['content'])}
             extracted=await calls.generate(job_id,item_id,f'chunk-{index}',prompt('chunk'),
                 json.dumps({'title':snapshot['values']['title'],**part},ensure_ascii=False),validate)
             parts.append({**extracted,'start':part['start'],'end':part['end']})

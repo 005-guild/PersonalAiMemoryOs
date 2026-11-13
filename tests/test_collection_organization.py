@@ -371,3 +371,46 @@ def test_inline_images_use_chat_blocks_without_changing_text_requests():
     asyncio.run(client.generate(resolved,'system','user'))
     assert bodies[0]['messages'][1]['content'][1]['image_url']['detail']=='original'
     assert bodies[1]['messages'][1]['content']=='user'
+
+
+def test_only_literal_grounded_quotes_survive_normalization():
+    from app.services.organization.generation import grounded_quotes,summary_validator
+    assert grounded_quotes(['甲','编造','乙','丙','丁','甲'],'甲乙丙丁')==['甲','乙','丙']
+    assert grounded_quotes(['图片OCR文字'],'![图](p.png)',required=False)==[]
+    with pytest.raises(ValueError):grounded_quotes(['编造'],'原文')
+
+
+def test_revalidate_saved_invalid_response_without_repeat_paid_request(organization):
+    service,model,source,_=organization
+    article(source,1);service.store.scan()
+    job=run(service,'sample')
+    with service.store.transaction() as session:
+        item=session.scalar(select(OrganizationItem));item.result=None;item.status='failed';item.error='organization_output_invalid'
+        call=session.scalar(select(OrganizationCall).where(OrganizationCall.stage=='summary'))
+        value=json.loads(call.response);value['quotes'] += ['不在原文中的内容'];call.response=json.dumps(value);call.status='invalid'
+        session.get(OrganizationJob,job['id']).status='completed_with_errors'
+    service.store.retry_sample(job['id'],False);service._next();asyncio.run(service.run_job(job['id']))
+    assert service.store.items()['items'][0]['status']=='ready' and len(model.calls)==2
+    assert len(service.store.items()['items'][0]['result']['quotes'])==1
+
+
+def test_invalid_cache_continuation_never_repeats_failed_http(organization):
+    service,model,source,_=organization
+    article(source,1);service.store.scan();model.fail=True
+    job=run(service,'sample')
+    service.store.retry_sample(job['id'],False);service._next();asyncio.run(service.run_job(job['id']))
+    assert len(model.calls)==1
+    assert service.store.read()['jobs'][0]['error']=='explicit_retry_required'
+
+
+def test_bounded_verbose_chunk_keeps_full_summary_and_three_literal_quotes(organization):
+    service,model,source,_=organization
+    article(source,1,'甲乙丙丁戊'*5000);service.store.scan();base=model.generate
+    async def verbose(*args,**kwargs):
+        reply=await base(*args,**kwargs)
+        if 'start' in json.loads(args[2]):
+            return ModelReply(json.dumps({'summary':'有依据的段落概括。'*100,'quotes':list('甲乙丙丁戊')}),reply.usage)
+        return reply
+    model.generate=verbose
+    assert run(service,'sample')['status']=='completed'
+    assert all(len(x['quotes'])==3 for data,_ in model.calls if 'parts' in data for x in data['parts'])

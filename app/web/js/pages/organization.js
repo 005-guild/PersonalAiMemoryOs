@@ -73,7 +73,7 @@ export async function mount(container,context) {
       const body=action==='save'?{input_dir:input.value.trim(),output_dir:output.value.trim(),profile_id:profile.value.trim(),
         initial_budget_yuan:Number(initial.value),monthly_budget_yuan:Number(monthly.value),enabled:enabled.checked,
         taxonomy:taxonomy.value.split('\n').map(x=>x.trim()).filter(Boolean),expected_revision:state.revision}:
-        (['resume','cancel','approve','retry-sample'].includes(action)?{job_id}:{});
+        (['resume','cancel','approve','retry-sample','continue-sample'].includes(action)?{job_id}:{});
       const result=await api(endpoint+(action==='save'?'':'/'+action),{method:action==='save'?'PUT':'POST',body,
         headers:{'X-Configuration-Token':state.csrf_token}});
       if(!alive)return;
@@ -94,7 +94,7 @@ export async function mount(container,context) {
       el('div',{className:'page-actions'},control('save','保存设置'),control('scan','扫描原文'),control('sample','生成 10 篇样本'))),
     el('section',{className:'card stack'},el('h2',{},'任务与预算'),status,
       el('div',{className:'page-actions'},approve,all,control('pause','暂停'),resume,control('cancel','结束暂停任务'),
-        control('retry-sample','手动重试失败样本'),control('retry','手动重试失败条目')),
+        control('continue-sample','复用响应继续样本'),control('retry-sample','手动重试失败样本'),control('retry','手动重试失败条目')),
       notice('失败或超时的模型请求不会自动重试。手动重试可能产生新的费用；已成功的阶段会复用。'),
       button('查看全部处理记录',async()=>{try{const data=await api(endpoint+'/items?limit=100');if(alive)failures.replaceChildren(
         el('p',{},`显示前 ${data.items.length} / ${data.total} 篇`),...data.items.map(x=>el('p',{},`${x.title} · ${labels[x.status]}${x.error?' · '+explain(x.error):''}`)));}catch(e){error(e);}}),failures),

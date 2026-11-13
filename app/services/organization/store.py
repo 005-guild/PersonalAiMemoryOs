@@ -148,7 +148,7 @@ class Store:
             self.set_control(session,control)
             return job_view(job)
 
-    def retry_sample(self,job_id):
+    def retry_sample(self,job_id,paid_retry=True):
         with self.transaction() as session:
             self.require_idle(session)
             control=self.control(session)
@@ -157,7 +157,7 @@ class Store:
                 raise OrganizationError('sample_not_failed')
             if policy({k:job.settings[k] for k in OrganizationSettings.model_fields})!=policy(control['config']):
                 raise OrganizationError('configuration_changed')
-            job.settings={**job.settings,'retry':True}
+            job.settings={**job.settings,'retry':paid_retry}
             job.status='pending';job.error=None;job.finished_at=None
             control['paused']=False;self.set_control(session,control)
             for identifier in job.selection:

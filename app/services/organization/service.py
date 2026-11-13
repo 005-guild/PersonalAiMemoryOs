@@ -67,6 +67,8 @@ class OrganizationService:
             result = await asyncio.to_thread(self.store.cancel, job_id)
         elif action == 'retry-sample':
             result = await asyncio.to_thread(self.store.retry_sample, job_id)
+        elif action == 'continue-sample':
+            result = await asyncio.to_thread(self.store.retry_sample, job_id, False)
         else:
             raise OrganizationError('unknown_action')
         self.wake.set()

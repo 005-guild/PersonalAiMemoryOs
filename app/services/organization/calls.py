@@ -38,14 +38,18 @@ class Calls:
                 raise OrganizationError('organization_profile_changed')
             job.settings={**job.settings,'profile_fingerprint':resolved.fingerprint}
             previous=session.scalar(select(OrganizationCall).where(OrganizationCall.fingerprint==identity).order_by(OrganizationCall.attempt.desc()).limit(1))
-            if previous and previous.status in {'received','succeeded'}:
-                cached=(previous.id,previous.response)
+            if previous and previous.status in {'received','succeeded','invalid'} and previous.response is not None:
+                cached=(previous.id,previous.response,previous.status)
             else:
                 cached=None
                 if previous and not config.get('retry'):
                     raise OrganizationError('explicit_retry_required')
         if cached:
-            return self._validate(*cached,validate)
+            try:
+                return self._validate(cached[0],cached[1],validate)
+            except OrganizationError:
+                if cached[2]!='invalid' or not config.get('retry'):
+                    raise
         # One shared generation slot also protects ordinary drafts and Q&A.
         while not self.gate.acquire(blocking=False):
             await asyncio.sleep(.1)
