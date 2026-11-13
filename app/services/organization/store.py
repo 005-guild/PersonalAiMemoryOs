@@ -132,12 +132,12 @@ class Store:
                 candidates=[{**x.snapshot,'item_id':x.id} for x in rows if x.status!='published' and not x.error]
                 selected=[x['item_id'] for x in sample_items(candidates)]
             else:
-                selected=[x.id for x in rows if x.status in (['failed'] if mode=='retry' else ['discovered','ready'])
-                          and (not x.error or mode=='retry') and x.error!='source_changed']
+                selected=[x.id for x in rows if x.status in (['failed'] if mode in {'retry','continue'} else ['discovered','ready'])
+                          and (not x.error or mode in {'retry','continue'}) and x.error!='source_changed']
             if not selected:
                 raise OrganizationError('no_pending_articles')
             for item in rows:
-                if mode=='retry' and item.id in selected:
+                if mode in {'retry','continue'} and item.id in selected:
                     item.status='discovered';item.error=None
             settings={**config,'retry':mode=='retry','initial_period':not control['initial_complete']}
             job=OrganizationJob(mode=mode,selection=selected,settings=settings)

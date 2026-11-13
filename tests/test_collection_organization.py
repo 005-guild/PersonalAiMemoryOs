@@ -414,3 +414,31 @@ def test_bounded_verbose_chunk_keeps_full_summary_and_three_literal_quotes(organ
     model.generate=verbose
     assert run(service,'sample')['status']=='completed'
     assert all(len(x['quotes'])==3 for data,_ in model.calls if 'parts' in data for x in data['parts'])
+
+
+def test_formatting_only_quote_resolution_returns_exact_original_slice():
+    from app.services.organization.generation import grounded_quotes
+    body='第一段。\n\n只看**作者观点**，需要\n\n证据支持。请读[原文](https://example.test)再判断。'
+    quotes=grounded_quotes(['只看作者观点，需要证据支持。','请读原文再判断。'],body)
+    assert quotes==['只看**作者观点**，需要\n\n证据支持。','请读[原文](https://example.test)再判断。']
+    assert all(q in body for q in quotes)
+    with pytest.raises(ValueError):grounded_quotes(['只看权威事实，需要证据支持。'],body)
+    with pytest.raises(ValueError):grounded_quotes(['不爱'], '不，爱')
+
+
+def test_cached_failed_items_can_continue_without_new_request(organization):
+    service,model,source,_=organization
+    approved(service,source)
+    with service.store.transaction() as session:
+        item=session.scalar(select(OrganizationItem));item.status='failed';item.result=None;item.error='organization_output_invalid'
+        call=session.scalar(select(OrganizationCall).where(OrganizationCall.stage=='summary'));call.status='invalid'
+    assert run(service,'continue')['status']=='completed'
+    assert len(model.calls)==2
+
+
+def test_long_quote_is_only_shortened_after_full_source_match():
+    from app.services.organization.generation import grounded_quotes
+    body='证据完整。'+'条件需要保留'*40+'。'
+    assert grounded_quotes([body],body)==['证据完整。']
+    with pytest.raises(ValueError):grounded_quotes([body+'编造结论。'],body)
+    with pytest.raises(ValueError):grounded_quotes(['字'*201],'字'*201)

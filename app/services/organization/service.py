@@ -51,7 +51,7 @@ class OrganizationService:
         self.writable()
         if action == 'scan':
             result = await asyncio.to_thread(self.store.scan)
-        elif action in {'sample', 'all', 'retry'}:
+        elif action in {'sample', 'all', 'retry','continue'}:
             if action in {'sample', 'all'}:
                 await asyncio.to_thread(self.store.scan)
             # Reject invalid models/configuration before adding a durable task.
@@ -132,6 +132,8 @@ class OrganizationService:
                     if self.stopping.is_set() or job.status != 'running':
                         return
                     item = session.get(OrganizationItem, item_id)
+                    if item.status=='published' and not item.error:
+                        continue
                     if item.error == 'source_changed':
                         failures = True
                         continue
@@ -169,7 +171,7 @@ class OrganizationService:
                 if job.status == 'running':
                     job.status = 'completed_with_errors' if failures else 'completed'
                     job.finished_at = utcnow()
-                    if job.mode in {'all','auto','retry'} and not failures:
+                    if job.mode in {'all','auto','retry','continue'} and not failures:
                         control = self.store.control(session)
                         if not session.scalar(select(OrganizationItem.id).where(OrganizationItem.status!='published').limit(1)):
                             control['initial_complete'] = True

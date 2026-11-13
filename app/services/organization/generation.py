@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.paths import resource_root
 from app.services.organization.contracts import OrganizationError,OrganizationSettings
 from app.services.organization.inventory import chunks, IMAGE
+from app.services.organization.evidence import visible_map,source_quote
 from app.services.zhihu_sync.storage import safe_path
 
 
@@ -62,9 +63,11 @@ def grounded_quotes(values,body,required=True):
     if not isinstance(values,list) or len(values)>12 or any(not isinstance(x,str) for x in values):
         raise ValueError()
     kept=[]
+    mapped=visible_map(body)
     for quote in values:
-        if quote.strip() and len(quote)<=200 and quote in body and quote not in kept:
-            kept.append(quote)
+        literal=source_quote(quote,body,mapped)
+        if literal and literal not in kept:
+            kept.append(literal)
     kept=kept[:3]
     validate_quotes(kept,body,required)
     return kept
