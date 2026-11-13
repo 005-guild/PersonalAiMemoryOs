@@ -147,10 +147,15 @@ class QdrantClient:
             return
         await self._request("PUT", path + "/points?wait=true", {"points": points})
 
-    async def query(self, name: str, vector: list[float], limit: int) -> list[dict]:
+    async def query(self, name: str, vector: list[float], limit: int, *, knowledge_ids=None) -> list[dict]:
         path = self._verified_path(name)
+        body = {"query": vector, "limit": limit, "with_payload": True}
+        if knowledge_ids is not None:
+            if not knowledge_ids:
+                return []
+            body['filter'] = {'must': [{'key':'knowledge_id','match':{'any':sorted(knowledge_ids)}}]}
         info = await self._request("POST", path + "/points/query",
-                                   {"query": vector, "limit": limit, "with_payload": True})
+                                   body)
         result = info.get("result")
         points = result.get("points") if isinstance(result, dict) else None
         if not isinstance(points, list):

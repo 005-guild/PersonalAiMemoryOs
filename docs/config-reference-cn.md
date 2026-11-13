@@ -1,4 +1,24 @@
-# 配置完整参考（v0.9.0）
+# 配置完整参考（v0.10.0）
+
+## 收藏整理
+
+通过侧栏“收藏整理”管理。配置与任务、阶段响应、费用预留保存在当前实例 SQLite 的 `organization_*` 表；不另存密钥，复用 AI 配置中的 `profile_id`。接口为 `GET/PUT /api/v1/collection-organization`，PUT 需 `expected_revision`，所有写操作需要同源回环地址、JSON 和配置令牌。只读模式不启动后台整理。
+
+| 字段 | 默认值 | 含义 |
+| --- | --- | --- |
+| `input_dir` | 空 | 原始 articles 绝对路径，只读 |
+| `output_dir` | 空 | 独立整理库绝对路径，不得与输入或应用数据目录重叠 |
+| `profile_id` | `deepseek` | 官方 DeepSeek `deepseek-flash` / `openai_chat` 配置名称 |
+| `enabled` | `false` | 样本确认后允许每 60 秒自动发现、整理新增内容 |
+| `initial_budget_yuan` | `20` | 首次全量完成前的累计预算，整数 1–10000 元 |
+| `monthly_budget_yuan` | `10` | 首次完成后的上海时区自然月预算，整数 1–10000 元 |
+| `taxonomy` | `[]` | 固定两级分类，每项为“一级/二级”；初始由模型提出 8–12 个一级主题 |
+
+生成调用单独使用非思考 JSON 模式、4096 最大输出 tokens 和 180 秒超时，不修改原 AI profile。费用按输入 2 元／百万 tokens、输出 8 元／百万 tokens 保守记账，不扣除缓存与低峰折扣；没有用量或调用中断时保留全部预留。图片每张按最多 1024 输入 tokens 预留。这个预算仅覆盖收藏整理，不统计原有草稿及问答请求。价格和图片协议于 2026-11-14 按 [DeepSeek 价格说明](https://api-docs.deepseek.com/zh-cn/quick_start/pricing/)及[图像理解说明](https://api-docs.deepseek.com/zh-cn/guides/vision/)核对；后续价格变化需更新记账系数。
+
+`POST` 子路径 `/scan`、`/sample`、`/approve`、`/all`、`/pause`、`/resume`、`/retry-sample`、`/retry` 分别扫描、生成样本、确认样本、全量整理、暂停、继续、显式重试失败样本及失败条目。确认、继续及样本重试需 JSON `job_id`，其他操作可用空对象。`/cancel` 带 `job_id` 可结束暂停任务，保留已生成结果并维持自动整理暂停，以便更换策略后重新提交样本。超时和未通过校验的响应不自动重试；手动重试也计入预算。已成功阶段复用。修改分类、模型配置名称等整理策略会使样本确认失效；调整预算不影响确认。已有条目后锁定目录，避免重复入库或散落导出。
+
+`GET /items` 支持 `offset`、`limit`、`job_id`；`GET /search` 支持 `q`、`mode=keyword|semantic`、`category`、`tag`，关键词模式另有 `offset/limit`。语义搜索最多返回 10 篇。默认没有任务；程序重启仅恢复之前明确提交且未暂停的任务，在途不确定请求保留费用记录并要求手动重试。暂停和预算不足不会被自动扫描解除。
 
 ## 知乎收藏同步
 

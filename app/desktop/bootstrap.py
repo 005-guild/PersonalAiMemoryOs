@@ -55,6 +55,10 @@ def _required_tables(revision: str) -> set[str]:
     if int(revision) >= 5:
         tables.update({"knowledge_sources", "prompt_templates", "prompt_revisions",
                        "processing_batches", "processing_batch_items"})
+    if int(revision) >= 7:
+        tables.update({'organization_control','organization_items','organization_jobs','organization_calls',
+                       'organization_fts','organization_fts_data','organization_fts_idx',
+                       'organization_fts_content','organization_fts_docsize','organization_fts_config'})
     return tables
 
 
@@ -78,6 +82,14 @@ def _inspect_database(path: Path, known_revisions: set[str]) -> tuple[str | None
         if tables != required | {"alembic_version"}:
             raise DesktopStorageError("数据库结构不完整或未知，未执行升级。")
         for name in required:
+            if name.startswith('organization_fts_'):
+                # FTS5 owns these shadow tables; SQLite integrity_check covers them.
+                continue
+            if name == 'organization_fts':
+                actual = {row[1] for row in connection.execute('PRAGMA table_info("organization_fts")')}
+                if actual != {'item_id','title','summary','original','tags'}:
+                    raise DesktopStorageError("收藏全文索引结构不完整，未执行升级。")
+                continue
             expected = {column.name for column in Base.metadata.tables[name].columns}
             if name == "processing_runs" and int(revision) < 5:
                 expected -= {"source_snapshots", "prompt_snapshot", "generation_settings", "finish_reason", "failure_stage"}

@@ -86,4 +86,6 @@ class DesktopServer:
             self.app.state.processing.request_stop()
         if hasattr(self.app.state, "zhihu_sync"):
             self.app.state.zhihu_sync.request_stop()
+        if hasattr(self.app.state, "organization"):
+            self.app.state.organization.request_stop()
         self.server.should_exit = True

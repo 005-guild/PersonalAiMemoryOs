@@ -21,7 +21,7 @@ def backup(tmp_path):
     (root / "config").mkdir()
     (root / "config/ai-providers.yml").write_text("schema_version: 1\nprofiles: {}", encoding="utf-8")
     (root / ".env").write_text("MEMORY_OS_AI_ENABLED=false\n", encoding="utf-8")
-    saved = backup_storage(root, database, root / "knowledge", "0006")
+    saved = backup_storage(root, database, root / "knowledge", "0007")
     backup_configuration(root, saved)
     return root, saved
 
@@ -102,7 +102,7 @@ def test_restored_prompt_draft_and_paused_task_never_resume_model_calls(backup, 
             session.commit()
             run_id, batch_id = run.id, batch.id
     before = _legacy_snapshot(database)
-    saved = backup_storage(root, database, root / "knowledge", "0006")
+    saved = backup_storage(root, database, root / "knowledge", "0007")
     backup_configuration(root, saved)
     target = tmp_path / "task-restored"
     restore_new(saved, target)

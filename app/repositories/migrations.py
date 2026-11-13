@@ -45,6 +45,7 @@ def check_schema(engine: Engine) -> None:
             )
             for table in Base.metadata.sorted_tables
         )
+        complete = complete and 'organization_fts' in actual_tables
     if current_heads != expected_heads or not complete:
         raise RuntimeError("Database schema is not current; run the explicit database upgrade.")
 

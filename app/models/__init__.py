@@ -8,10 +8,12 @@ from app.models.prompts import PromptRevision, PromptTemplate
 from app.models.batches import ProcessingBatch, ProcessingBatchItem
 from app.models.rag import RagIndexGeneration, RagIndexJob, RagNoteIndexState
 from app.models.sync import SyncConflict, SyncOperation, SyncState, SyncVault
+from app.models.organization import OrganizationControl, OrganizationItem, OrganizationJob, OrganizationCall
 
 __all__ = [
     "Base", "Knowledge", "KnowledgeSource", "Source", "SyncConflict", "SyncOperation", "SyncState",
     "SyncVault", "SourceOrigin", "ProcessingRun", "RagIndexGeneration", "RagIndexJob",
     "RagNoteIndexState", "new_id", "utcnow", "PromptTemplate", "PromptRevision",
     "ProcessingBatch", "ProcessingBatchItem",
+    "OrganizationControl", "OrganizationItem", "OrganizationJob", "OrganizationCall",
 ]

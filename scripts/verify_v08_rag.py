@@ -21,7 +21,7 @@ def main():
     evidence = PROJECT_ROOT / ".cache/v08-rag" / uuid4().hex
     evidence.mkdir(parents=True)
     before = storage_fingerprint()
-    report = {"version": PROJECT_VERSION, "schema": "0006", "qdrant_image": QDRANT_IMAGE,
+    report = {"version": PROJECT_VERSION, "schema": "0007", "qdrant_image": QDRANT_IMAGE,
         "real_model_calls": 0, "real_quality": "pending", "modes": {}, "formal_before": before}
     print(f"Evidence: {evidence}", flush=True)
     try:
@@ -35,7 +35,7 @@ def main():
                 check_restart(app, state, runtime.workspace)
                 with closing(sqlite3.connect(runtime.database)) as database:
                     assert database.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
-                    assert database.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0006"
+                    assert database.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0007"
                     assert database.execute("SELECT count(*) FROM sources").fetchone()[0] == 1
                     assert database.execute("SELECT count(*) FROM knowledge").fetchone()[0] == 1
                     assert database.execute("SELECT count(*) FROM processing_runs").fetchone()[0] == 0

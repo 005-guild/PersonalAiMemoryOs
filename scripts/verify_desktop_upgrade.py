@@ -222,7 +222,7 @@ def run_upgrade(bundle: Path, archive: Path, evidence: Path, report: dict):
                        for path in (root / "knowledge").rglob("*") if path.is_file()}
         with isolated_settings_environment():
             result = upgrade_portable(bundle, root, archive)
-        assert result["status"] == "upgraded" and result["schema"] == "0006"
+        assert result["status"] == "upgraded" and result["schema"] == "0007"
         assert digest(root / "PersonalAiMemoryOs.exe") == digest(bundle / "PersonalAiMemoryOs.exe")
         assert database_snapshot(root / "data/memory.db", columns)[1] == old_rows
         verify_backup(Path(result["backup"]), root, columns, old_rows, configs, vault_files, old_schema)
@@ -259,7 +259,7 @@ def run_upgrade(bundle: Path, archive: Path, evidence: Path, report: dict):
         with sqlite3.connect((root / "data/memory.db").as_uri() + "?mode=ro", uri=True) as connection:
             assert connection.execute("PRAGMA integrity_check").fetchall() == [("ok",)]
             assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
-            assert connection.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0006"
+            assert connection.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0007"
             assert connection.execute("SELECT knowledge_id, source_id, position FROM knowledge_sources").fetchall() == [(note["id"], sources[0]["id"], 0)]
             assert all(connection.execute("SELECT count(*) FROM " + table).fetchone()[0] == 0 for table in (
                 "processing_runs", "processing_batches", "processing_batch_items", "rag_index_generations",
@@ -274,7 +274,7 @@ def run_upgrade(bundle: Path, archive: Path, evidence: Path, report: dict):
                 assert after_rows[table] == rows
         report.update(backup=result["backup"], old_columns_and_rows_sha256=digest_json(old_rows),
             markdown_sha256=hashlib.sha256(markdown_bytes).hexdigest(), configuration_files=len(configs),
-            old_version=old_version, old_schema=old_schema, new_schema="0006", source_count=2, knowledge_count=1,
+            old_version=old_version, old_schema=old_schema, new_schema="0007", source_count=2, knowledge_count=1,
             prompt_template_count=knowledge_template_count + 1, checks=["safe_previous_zip_extraction", "old_real_exe_empty_start",
             "source_and_linked_note_creation", "v1_markdown_synced", "running_upgrade_refused_without_writes",
             "old_exe_graceful_close_and_port_release", "verified_backup", "all_legacy_columns_and_rows_preserved",
@@ -299,7 +299,7 @@ def main() -> int:
     if any((bundle / name).exists() for name in (".env", "data", "knowledge", "config/ai-providers.yml")):
         parser.error("The new bundle must be pristine and contain no private/runtime data.")
     manifest = read_manifest(bundle)
-    if manifest["version"] != PROJECT_VERSION or manifest["schema"] != "0006":
+    if manifest["version"] != PROJECT_VERSION or manifest["schema"] != "0007":
         parser.error("The bundle version/schema does not match this upgrade verifier.")
     cache = (PROJECT_ROOT / ".cache/desktop-upgrade-validation").resolve()
     if not cache.is_relative_to(PROJECT_ROOT.resolve()):

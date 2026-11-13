@@ -34,8 +34,17 @@ class ModelClient:
     async def aclose(self) -> None:
         """Each generate call owns and closes its HTTP client and response stream."""
 
-    async def generate(self, resolved: ResolvedProfile, system_prompt: str, user_prompt: str) -> ModelReply:
+    async def generate(self, resolved: ResolvedProfile, system_prompt: str, user_prompt: str, *, images=None) -> ModelReply:
         url, headers, body = build_request(resolved, system_prompt, user_prompt)
+        if images:
+            if resolved.profile.protocol != 'openai_chat' or len(images)>4:
+                raise AIError(422, 'unsupported_image_request')
+            if any(not isinstance(value,str) or not value.startswith(('data:image/jpeg;base64,','data:image/png;base64,','data:image/gif;base64,','data:image/webp;base64,')) for value in images):
+                raise AIError(422, 'invalid_image_request')
+            body['messages'][-1]['content']=[{'type':'text','text':user_prompt}, *[
+                {'type':'image_url','image_url':{'url':value,'detail':'original'}} for value in images]]
+            if len(json.dumps(body).encode())>32*1024*1024:
+                raise AIError(422, 'image_request_too_large')
         timeout = resolved.profile.timeout_seconds
         try:
             async with asyncio.timeout(timeout):

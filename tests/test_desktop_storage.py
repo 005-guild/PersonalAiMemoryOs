@@ -53,7 +53,7 @@ def test_first_start_uses_selected_root_independent_of_cwd(isolated_project, mon
     settings = prepare_desktop(root, lambda _: pytest.fail("Fresh DB must not ask upgrade permission"))
     database = Path(resolve_database_url(settings.database_url).database)
     assert database == root / "data" / "memory.db"
-    assert revision(database) == "0006"
+    assert revision(database) == "0007"
     assert settings.knowledge_path == root / "knowledge"
     assert settings.ai_config_path == root / "config" / "ai-providers.yml"
     assert not settings.ai_enabled and not settings.rag_enabled
@@ -97,7 +97,7 @@ def test_old_revision_confirmed_upgrade_has_verified_full_backup(isolated_projec
     messages = []
     prepare_desktop(isolated_project, lambda message: messages.append(message) or True)
     assert messages and old_revision in messages[0]
-    assert revision(database) == "0006"
+    assert revision(database) == "0007"
     backup = next((isolated_project / "backups").iterdir())
     manifest = json.loads((backup / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["schema_revision"] == old_revision

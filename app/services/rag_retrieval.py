@@ -29,7 +29,7 @@ class RagRetrievalService:
             return generation, resolved, status(self.indexer, repo), operation(repo, generation) if operation else None
         return self.indexer.transaction(read)
 
-    async def retrieve(self, query, max_notes=5):
+    async def retrieve(self, query, max_notes=5, *, knowledge_ids=None):
         if not query.strip() or len(query) > 2000 or type(max_notes) is not int or not 1 <= max_notes <= 10:
             raise RagError(422, "rag_query_invalid")
         if not self._gate.acquire(blocking=False):
@@ -44,10 +44,14 @@ class RagRetrievalService:
                 return {"notes": [], "contexts": [], "index_incomplete": summary["index_incomplete"],
                         "rerank": {"enabled": self.reranker.options.enabled}}
             reply = await self.embedding.embed(resolved, [query])
-            points = await self.qdrant.query(generation["collection"], reply.vectors[0], 50)
+            points = await self.qdrant.query(generation["collection"], reply.vectors[0], 50,
+                                              **({'knowledge_ids':knowledge_ids} if knowledge_ids is not None else {}))
             def load(repo, current):
                 selected = publications(repo, current["id"], {p["payload"].get("knowledge_id") for p in points})
                 titles = title_candidates(repo, current["id"], query)
+                if knowledge_ids is not None:
+                    selected = {k:v for k,v in selected.items() if k in knowledge_ids}
+                    titles = {k:v for k,v in titles.items() if k in knowledge_ids}
                 return selected, titles
             current, _, summary, (selected, titles) = await asyncio.to_thread(self.snapshot, load)
             if current["id"] != generation["id"]:

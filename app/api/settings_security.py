@@ -56,7 +56,7 @@ class ConfigurationNoStoreMiddleware:
     async def __call__(self, scope, receive, send):
         path = scope.get("path", "")
         if scope.get("type") != "http" or not any(path == prefix or path.startswith(prefix + "/")
-                                                for prefix in ("/api/v1/settings", "/api/v1/desktop")):
+                                                for prefix in ("/api/v1/settings", "/api/v1/desktop", "/api/v1/collection-organization")):
             return await self.app(scope, receive, send)
 
         async def no_store(message):

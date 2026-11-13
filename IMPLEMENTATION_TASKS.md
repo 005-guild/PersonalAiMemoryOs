@@ -1,5 +1,13 @@
 # IMPLEMENTATION_TASKS.md
 
+## Collection organization — implementation and acceptance (2026-11-14)
+
+Source targets 0.10.0 / schema 0007. Added a separate durable collection pipeline, cached taxonomy/chunk/vision/summary calls, conservative paid-call reservations, sample approval gate, idempotent Source/Knowledge publication, conflict-checked categorized Markdown mirrors, SQLite trigram/short-Chinese search and prefiltered semantic retrieval. Prompts remain separate files; no new runtime dependency. Existing article files remain read-only. Default automatic processing is off; 10 samples must be reviewed before publishing or processing all articles.
+
+Engineering verification passed: **1273 tests, 3 existing Windows skips, one upstream warning**, 45 ESM modules, documentation and release checks. Synthetic browser workflow covers sample approval, full publication without repeat model calls, long inputs, images and short-Chinese search (`.cache/collection-browser/150ba9336f3a4e74bb9547eec335c244/report.json`). Frozen settings/scan/approval-gate/reopen acceptance passed (`.cache/collection-desktop/df4a8c70e11343249b123fcfe52cef21/report.json`). Build: `.cache/desktop-build/4ecf6976873e46639c841fe7ef7a627b/report.json`, source fingerprint `6817380a2e6c443519848a15c1aa16a5f69a6fd36d107d9b0b348fb38bd58f20`. No additional runtime dependencies.
+
+The real read-only preflight found 578 articles, 6 long articles and 18 image-centric articles. Existing Source matches: 571 reusable, 7 new, zero content conflicts. Original-file hashes were saved under `.cache/collection-acceptance/`. Full desktop regression and the authorized real 10-sample preview are in progress. Full collection publication and automatic processing remain pending the user's sample checkpoint. No new paid model usage or formal upgrade is claimed by this interim record. Older quality gates and previous release records below remain historical.
+
 ## Authenticated Zhihu sync — delivered in place (2026-11-14)
 
 Real login exposed the current `CollectionDetailPageItem` markup and asynchronous placeholder cards; both are now covered. A 30-page authenticated preview reports 581 declared entries, 571 existing files, 7 new answers, and 3 entries not returned by the site. Pages 2, 14 and 28 each return 19 entries for their 20-position range. Missing entries are reported only after verifying the complete server pagination chain and every supported content ID; they never enter the completion ledger.
