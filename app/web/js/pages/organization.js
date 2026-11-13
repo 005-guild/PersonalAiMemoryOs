@@ -18,6 +18,8 @@ const explain=code=>errors[code]||code;
 export async function mount(container,context) {
   let alive=true,dirty=false,busy=false,state,timer,sampleSignature='';
   const messages=el('div'),status=el('div'),samples=el('div',{className:'stack'}),failures=el('div');
+  const sampleReview=el('details',{className:'card stack'},el('summary',{},'样本审核'),samples);
+  const searchPanel=collectionSearch(()=>alive);
   const changed=()=>{dirty=true;context.setDirty(true);};
   const input=el('input',{onInput:changed,placeholder:'articles 文件夹绝对路径'});
   const output=el('input',{onInput:changed,placeholder:'整理库文件夹绝对路径'});
@@ -30,6 +32,7 @@ export async function mount(container,context) {
   function error(error){messages.replaceChildren(notice(explain(error.detail?.code||error.message),'error'));}
   async function read(fill=false){
     const value=await api(endpoint);if(!alive)return;
+    if(fill||state?.approved!==value.approved)sampleReview.open=!value.approved;
     state=value;
     if(fill){const c=value.config;input.value=c.input_dir;output.value=c.output_dir;profile.value=c.profile_id;
       initial.value=c.initial_budget_yuan;monthly.value=c.monthly_budget_yuan;enabled.checked=c.enabled;taxonomy.value=c.taxonomy.join('\n');
@@ -50,7 +53,7 @@ export async function mount(container,context) {
     const signature=sample?.id+':'+sample?.status+':'+(value.counts.ready||0)+':'+(value.counts.failed||0);
     if(sample&&signature!==sampleSignature){
       const data=await api(endpoint+'/items?limit=100&job_id='+sample.id);if(!alive)return;sampleSignature=signature;
-      samples.replaceChildren(el('h2',{},'样本审核'),el('p',{className:'muted'},'检查标题、分类、摘要和依据。确认后才能开始全量整理。'),
+      samples.replaceChildren(el('p',{className:'muted'},'检查标题、分类、摘要和依据。确认后才能开始全量整理。'),
         ...data.items.map(item=>el('article',{className:'card stack'},el('h3',{},item.result?.title||item.title),
           el('p',{className:'muted'},`${labels[item.status]||item.status} · 原文 ${item.body_chars} 字符 · ${item.image_count} 张图${item.image_required?' · 需图片识读':''}`),
           item.error&&notice(explain(item.error),'warning'),item.result&&el('div',{},
@@ -84,7 +87,8 @@ export async function mount(container,context) {
   }
   const control=(action,label)=>{const b=button(label,()=>perform(action));controls.push(b);return b;};
   const approve=control('approve','确认这批样本'),all=control('all','开始全量整理'),resume=control('resume','继续暂停任务');
-  container.append(pageHeading('收藏整理','逐篇摘要、自动分类与新标题，保留完整原文和来源。'),messages,
+  container.append(pageHeading('收藏整理','逐篇摘要、自动分类与新标题，保留完整原文和来源。'),
+    button('跳到快速检索',()=>{searchPanel.scrollIntoView({block:'start'});searchPanel.querySelector('input')?.focus({preventScroll:true});}),messages,
     el('section',{className:'card stack'},el('h2',{},'整理设置'),
       notice('首次先生成最多 10 篇样本，覆盖普通文章、长文和图片为主的内容。原始 articles 不会被修改。'),
       field('原文目录',input),field('整理库目录',output),field('AI 配置名称',profile),
@@ -99,7 +103,7 @@ export async function mount(container,context) {
       notice('失败或超时的模型请求不会自动重试。手动重试可能产生新的费用；已成功的阶段会复用。'),
       button('查看全部处理记录',async()=>{try{const data=await api(endpoint+'/items?limit=100');if(alive)failures.replaceChildren(
         el('p',{},`显示前 ${data.items.length} / ${data.total} 篇`),...data.items.map(x=>el('p',{},`${x.title} · ${labels[x.status]}${x.error?' · '+explain(x.error):''}`)));}catch(e){error(e);}}),failures),
-    samples,collectionSearch(()=>alive));
+    searchPanel,sampleReview);
   await read(true);
   async function poll(){if(!alive)return;if(!busy)await read().catch(error);if(alive)timer=setTimeout(poll,2000);}
   timer=setTimeout(poll,2000);
