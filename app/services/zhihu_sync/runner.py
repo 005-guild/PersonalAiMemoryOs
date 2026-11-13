@@ -9,7 +9,7 @@ from app.services.zhihu_sync.storage import Ledger, SyncError, identity_key, wri
 
 def run_collection(config, browser, cancelled, publish, *, preview=False):
     ledger = Ledger(Path(config.target_dir), config.collection_id)
-    report = {'total':0, 'created':0, 'skipped':0, 'would_create':0, 'failed':0, 'unsupported':0, 'errors':[]}
+    report = {'total':0, 'created':0, 'skipped':0, 'would_create':0, 'failed':0, 'unsupported':0, 'unlisted':0, 'errors':[]}
 
     def run():
         ledger.load()
@@ -17,7 +17,8 @@ def run_collection(config, browser, cancelled, publish, *, preview=False):
         identities = browser.collection(config.collection_url)
         unique = {identity_key(item):item for item in identities}
         report['unsupported'] = getattr(browser, 'unsupported_count', 0)
-        report['total'] = len(unique) + report['unsupported']
+        report['unlisted'] = getattr(browser, 'unlisted_count', 0)
+        report['total'] = len(unique) + report['unsupported'] + report['unlisted']
         if not preview:
             ledger.save()
         exporter = Exporter(ledger)

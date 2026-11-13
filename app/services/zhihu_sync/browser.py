@@ -10,14 +10,21 @@ from bs4 import BeautifulSoup
 from app.paths import resource_root
 from app.services.zhihu_parser import normalize_zhihu_url
 from app.services.zhihu_sync.export import image_url
+from app.services.zhihu_sync.collection_pages import CollectionPages
+from app.services.zhihu_sync.collection_content import collection_body
 from app.services.zhihu_sync.storage import SyncError, safe_path
 
 
 class ZhihuBrowser:
+    collection_rows = ('.CollectionsDetailPage-list .CollectionDetailPageItem:not(.PlaceHolder), '
+                       '.CollectionsDetailPage-list .List-item:not(.PlaceHolder)')
+
     def __init__(self, root, *, visible=False, cancelled=lambda:False):
         self.root, self.visible, self.cancelled = Path(root), visible, cancelled
         self.manager = self.context = None
         self.unsupported_count = 0
+        self.unlisted_count = 0
+        self.collection_contents = {}
 
     def __enter__(self):
         try:
@@ -88,7 +95,7 @@ class ZhihuBrowser:
                 raise SyncError('cancelled')
             try:
                 self._access()
-                if self.page.locator('.CollectionsDetailPage-list .List-item').count():
+                if self.page.locator(self.collection_rows).count():
                     return
                 data = self._initial_state()
                 if data.get('currentUser') and self._count(data, collection_url) == 0:
@@ -117,6 +124,14 @@ class ZhihuBrowser:
             raise SyncError('page_structure_changed') from None
 
     def collection(self, url):
+        pages = CollectionPages(url.rstrip('/').rsplit('/', 1)[-1])
+        self.page.on('response', pages.observe)
+        try:
+            return self._collection(url, pages)
+        finally:
+            self.page.remove_listener('response', pages.observe)
+
+    def _collection(self, url, pages):
         self._goto(url)
         self._access()
         expected = self._count(self._initial_state(), url)
@@ -126,14 +141,14 @@ class ZhihuBrowser:
             self._access()
             if expected:
                 try:
-                    self.page.locator('.CollectionsDetailPage-list .List-item').first.wait_for()
+                    self.page.locator(self.collection_rows).first.wait_for()
                 except Exception:
                     self._access()
                     raise SyncError('page_structure_changed') from None
             html = self.page.locator('.CollectionsDetailPage-list').inner_html()
             soup = BeautifulSoup(html, 'html.parser')
             page_keys = []
-            for row in soup.select('.List-item'):
+            for row in soup.select('.CollectionDetailPageItem:not(.PlaceHolder), .List-item:not(.PlaceHolder)'):
                 identity = None
                 for link in row.select('a[href]'):
                     try:
@@ -161,12 +176,19 @@ class ZhihuBrowser:
             self.check_cancelled()
             following.click()
             self.page.wait_for_timeout(2500)
+        self.unlisted_count = 0
         if len(seen) + len(unsupported) != expected:
-            raise SyncError('collection_changed_or_incomplete')
+            self.unlisted_count = pages.unlisted(expected, seen, len(unsupported))
         self.unsupported_count = len(unsupported)
+        self.collection_contents = pages.contents
         return list(seen.values())
 
     def article(self, identity):
+        cached = self.collection_contents.get((identity.resource_type, identity.external_id))
+        if cached is not None:
+            body = collection_body(cached, identity)
+            if body is not None:
+                return body
         self.page.wait_for_timeout(2000)
         self._goto(identity.canonical_url)
         self._access()

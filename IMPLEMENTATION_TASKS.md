@@ -1,5 +1,13 @@
 # IMPLEMENTATION_TASKS.md
 
+## Authenticated Zhihu compatibility — delivery acceptance in progress (2026-11-14)
+
+Real login exposed the current `CollectionDetailPageItem` markup and asynchronous placeholder cards; both are now covered. A 30-page authenticated preview reports 581 declared entries, 571 existing files, 7 new answers, and 3 entries not returned by the site. Pages 2, 14 and 28 each return 19 entries for their 20-position range. Missing entries are reported only after verifying the complete server pagination chain and every supported content ID; they never enter the completion ledger.
+
+Direct answer-detail navigation was restricted by Zhihu. The collection page already supplies accessible full answer/article bodies for its “read more” action, so these are reused without extra detail requests. One real expanded answer matched all 3466 characters of the received body. The 7 new answers contain no images; this is not evidence of live new-image export. Restricted, incomplete or mismatched bodies are rejected.
+
+Engineering verification: **1242 tests passed, 3 existing Windows permission skips, one upstream warning**; 43 browser modules, documentation and release consistency passed. Build evidence: `.cache/desktop-build/99f108a27cba49a689006f410218fa36/report.json`; actual EXE lifecycle/storage acceptance: `.cache/desktop-validation/b54f169e17d04559910fe801daa6fda3/report.json`. Authenticated incremental export, repeat-run deduplication and fixed-installation delivery are being checked separately. The reproducible `scripts/verify_zhihu_sync_authenticated.py` defaults to preview; its explicit `--sync` option writes new files and verifies a repeated run.
+
 ## Zhihu incremental export — implementation, authenticated acceptance pending (2026-11-14)
 
 Implemented a separate append-only collection exporter: typed string IDs, adoption of existing Markdown, durable completion history, per-target writer exclusion, staged Markdown/images, interruption recovery and immutable completed files. Added protected settings/task APIs, a settings panel, one browser-owning worker, interactive login, preview, hourly scheduling and graceful shutdown. Playwright/Chromium are included in the candidate desktop bundle; authentication and private exports remain excluded. Existing imports and RAG remain separate, with no model calls.

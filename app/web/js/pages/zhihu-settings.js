@@ -47,7 +47,8 @@ export function zhihuSettings({alive, onDirty}) {
     }
     const s = value.status, r = s.report;
     status.replaceChildren(el('p', {}, `状态：${({idle:'待运行',queued:'等待执行',running:'正在运行',finished:'已完成',failed:'未完成',cancelled:'已停止'})[s.state] || s.state}${value.paused ? ' · 自动同步已暂停' : ''}；最近结束：${formatDate(s.last_finished)}`));
-    if (r) status.append(el('p', {}, `发现 ${r.total}；新增 ${r.created}；跳过 ${r.skipped}；预计新增 ${r.would_create}；失败 ${r.failed}；不支持 ${r.unsupported || 0}`));
+    if (r) status.append(el('p', {}, `收藏夹总数 ${r.total}；新增 ${r.created}；跳过 ${r.skipped}；预计新增 ${r.would_create}；失败 ${r.failed}；不支持 ${r.unsupported || 0}；站点未返回 ${r.unlisted || 0}`));
+    if (r?.unlisted) status.append(notice('已核对完整分页，但知乎未返回部分条目。这些条目未记为已同步，下次仍会检查。', 'warning'));
     if (s.last_error) status.append(notice(errors[s.last_error] || `任务未完成：${s.last_error}`, 'warning'));
     if (r?.errors?.length) status.append(el('details', {}, el('summary', {}, '查看未完成条目'),
       ...r.errors.map(item => el('p', {}, `${item.key}：${errors[item.code] || item.code}`))));
