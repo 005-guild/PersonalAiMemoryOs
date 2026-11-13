@@ -4,6 +4,7 @@ import {keyValues} from './workflow-utils.js';
 import {settingsEditor} from './settings-editor.js';
 import {ragSettings} from './rag-settings.js';
 import {offerRestart} from './settings-restart.js';
+import {zhihuSettings} from './zhihu-settings.js';
 
 export function mount(container, context) {
   const mountedHash = location.hash, controller = new AbortController();
@@ -20,7 +21,9 @@ export function mount(container, context) {
   }
   const messages = el('div', {className: 'stack'}), status = el('div'), body = el('div', {}, el('div', {className: 'loading'}, '正在读取本机设置…'));
   const rag = ragSettings({alive, onDirty: value => dirty('rag', value), hasDirty: () => dirtySections.size > 0});
+  const zhihu = zhihuSettings({alive, onDirty: value => dirty('zhihu', value)});
   container.append(pageHeading('设置', '管理文本生成、Embedding 与 Qdrant 配置；提示词在独立中心管理。', el('a', {className: 'btn', href: '#/prompts'}, '打开提示词中心')), messages, status, body, rag.element);
+  container.append(zhihu.element);
   function errorMessage(error) {
     if (error.status === 409) return '配置已在其他位置修改。你的输入仍保留，请确认后重新读取配置。';
     if (error.status === 403) return '本次保存验证已失效或当前访问方式不允许修改，请重新读取设置后再操作。';
@@ -77,5 +80,5 @@ export function mount(container, context) {
     } finally {saving = false; if (alive()) editor.busy(false); clearPendingKeys(); values = null;}
   }
   reload();
-  return () => {disposed = true; controller.abort(); rag.dispose(); editor?.clearSecrets(); clearPendingKeys();};
+  return () => {disposed = true; controller.abort(); rag.dispose(); zhihu.dispose(); editor?.clearSecrets(); clearPendingKeys();};
 }

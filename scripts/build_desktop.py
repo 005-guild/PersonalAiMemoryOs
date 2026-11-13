@@ -85,7 +85,7 @@ def inspect_bundle(bundle: Path) -> dict:
                     for path in folder.glob("*") if path.is_file() and path.suffix in {".py", ".md"})
     for file in bundle.rglob("*"):
         lowered = {part.lower() for part in file.relative_to(bundle).parts}
-        if (lowered & {"playwright", "pytest", ".env", "memory.db", "ai-providers.yml",
+        if (lowered & {"pytest", ".env", "memory.db", "ai-providers.yml", "zhihu-sync.yml", "browser-profile", ".sync",
                        "embedding-providers.yml", "local-rag-startup.json", ".memory-os-config-transactions"}
                 or any(part.startswith(".memory-os-ai-") and part.endswith(".tmp") for part in lowered)):
             raise RuntimeError(f"Private or development-only resource in distribution: {file}")
@@ -157,6 +157,8 @@ def main() -> int:
         raise RuntimeError("The isolated build environment is missing; rerun without --skip-sync.")
     if not (ROOT / "app" / "desktop" / "launcher.py").is_file():
         raise RuntimeError("Desktop launcher is not present.")
+    environment["PLAYWRIGHT_BROWSERS_PATH"] = str(ROOT / ".cache" / "playwright")
+    run([str(python), "-m", "playwright", "install", "chromium", "--no-shell"], environment)
     input_fingerprint = source_fingerprint()
     run([str(python), str(ROOT / "packaging" / "desktop_assets.py"),
          "--output", str(workspace / "assets"), "--version", version], environment)

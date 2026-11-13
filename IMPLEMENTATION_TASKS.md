@@ -1,5 +1,17 @@
 # IMPLEMENTATION_TASKS.md
 
+## Zhihu incremental export — implementation, authenticated acceptance pending (2026-11-14)
+
+Implemented a separate append-only collection exporter: typed string IDs, adoption of existing Markdown, durable completion history, per-target writer exclusion, staged Markdown/images, interruption recovery and immutable completed files. Added protected settings/task APIs, a settings panel, one browser-owning worker, interactive login, preview, hourly scheduling and graceful shutdown. Playwright/Chromium are included in the candidate desktop bundle; authentication and private exports remain excluded. Existing imports and RAG remain separate, with no model calls.
+
+Final engineering verification: **1217 tests passed, 3 existing Windows permission skips, one upstream warning**; this includes 4 real-Chromium synthetic-page checks. 43 ESM modules, documentation and release-consistency checks passed. Final candidate: `.cache/desktop-build/2aa6520163344b11b21dd20acf7b5803/report.json`. Actual EXE CRUD/import/reopen/move/in-flight-close checks passed at `.cache/desktop-validation/a27ed8e32ac64fe39403293cac8caeb6/report.json`. Packaged settings save and the anonymous login-wall check passed at `.cache/zhihu-desktop-validation/e50a40bce6b94a5c8a6b694a54827e8f/report.json`; this does **not** prove authenticated export.
+
+An earlier EXE lifecycle restart failed because Windows assigned blocked port 6668. The server now reserves exclusive random ports in 49152–65535, with collision-retry coverage; the final complete EXE run passed. Publication also uses a separate staged copy so subsequent staging writes cannot modify an already published file through a hard-link alias. Regression checks cover local edits/removal, missing/corrupt state, image continuation and crash recovery.
+
+The public collection was reachable, but its contents require login. The interactive verification window closed without establishing an authenticated session. The original 571 Markdown files and 1325 images have not been exported again, no formal synchronization has been enabled, and the fixed desktop installation has not been upgraded. Remaining release gates: user login, real pagination and full new-item body/image extraction, repeated-run deduplication against the existing folder, and verified-backup in-place upgrade. Do not mark these gates complete based on synthetic pages or the anonymous login-wall check. Use `scripts/verify_zhihu_sync_desktop.py --bundle <candidate>` for isolated settings acceptance; its explicit `--check-login-wall --collection <URL>` option contacts Zhihu anonymously.
+
+The candidate still reports 0.9.0 and is not a promoted release; the build fingerprint distinguishes it from the installed 0.9.0 desktop. All source work stays in the existing checkout and local commits only.
+
 ## v0.9.0 — note-level retrieval and local reranking (2026-10-19)
 
 Delivery and acceptance completed: full final 1186 passed/3 existing skips/one warning; 42 ESM modules; source browser, actual EXE flow/reopen, desktop CRUD/lifecycle regression and opt-in service reuse/protected restart passed. User query 回避型 reads the correct 5704-character note in full. Real DeepSeek: exactly three budgeted calls, fixed-case semantic review passed (10212 input/456 output tokens); no retries and no additional budget remains. Report paths and limitations are in MEMORY.md and docs/maintenance-cn.md. Eight-stage draft quality and broader multi-note/long-note real quality remain separate.

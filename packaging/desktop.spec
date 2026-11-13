@@ -2,6 +2,7 @@
 """Windows x64 one-folder build. Execute through scripts/build_desktop.py."""
 
 import os
+import json
 from pathlib import Path
 
 from PyInstaller.utils.hooks import collect_data_files, copy_metadata
@@ -25,6 +26,14 @@ for relative in ("alembic.ini", ".env.example", "config/ai-providers.example.yml
 datas += [(str(assets / "licenses"), "licenses"), (str(assets / "desktop.ico"), ".")]
 datas += collect_data_files("webview", includes=["js/**", "lib/**"])
 datas += collect_data_files("pythonnet")
+import playwright
+browser_manifest = Path(playwright.__file__).parent / "driver/package/browsers.json"
+chromium_revision = next(item["revision"] for item in json.loads(browser_manifest.read_text())["browsers"]
+                         if item["name"] == "chromium")
+chromium_root = Path(os.environ["PLAYWRIGHT_BROWSERS_PATH"]) / f"chromium-{chromium_revision}"
+if not (chromium_root / "chrome-win64/chrome.exe").is_file():
+    raise RuntimeError("The matching Chromium runtime is missing.")
+datas.append((str(chromium_root), f"browsers/chromium-{chromium_revision}"))
 for distribution in ("pywebview", "pythonnet", "clr_loader", "uvicorn"):
     datas += copy_metadata(distribution)
 
@@ -40,7 +49,7 @@ analysis = Analysis(
         "uvicorn.protocols.websockets.auto", "uvicorn.lifespan.on",
     ],
     excludes=[
-        "playwright", "pytest", "PyQt5", "PyQt6", "PySide2", "PySide6", "qtpy",
+        "pytest", "PyQt5", "PyQt6", "PySide2", "PySide6", "qtpy",
         "gi", "cefpython3", "kivy", "webview.platforms.qt", "webview.platforms.gtk",
         "webview.platforms.cef", "webview.platforms.cocoa", "webview.platforms.android",
         "uvloop", "tkinter",

@@ -56,6 +56,8 @@ RAG 把知识笔记转换成向量，找出与问题有关的片段，再让生�
 
 **只有已保存的“知识笔记”进入索引。** 资料库中的 Source 原文、导入的知乎资料和未采纳 AI 草稿不会直接被索引。先手动建立笔记，或生成草稿并采纳，再使用 RAG。
 
+“设置 → 知乎收藏同步”保存的是原始 Markdown 和图片，默认关闭。其工作流程为：知乎收藏 → 本地 `articles` → 手动资料导入 → 整理／采纳知识笔记 → RAG。同步本身不调用生成模型、Embedding 或 Qdrant，也不把文件复制进知识目录。登录状态及增量同步账本与 RAG 索引独立；删除本地收藏文件不会触发重新下载。使用方法见 [中文说明](../readme-cn.md#6-知乎离线批量导入)，开发版在线验收与发布状态见 [任务记录](../IMPLEMENTATION_TASKS.md)。
+
 本机采用 **Ollama＋BGE-M3＋Qdrant** 作为本地向量检索方案：Ollama 负责将笔记和问题编码，Qdrant 保存向量，引用问答继续使用现有 DeepSeek 生成配置。BGE-M3 支持多语言，官方规格为 **1024 维、最长 8192 tokens**，查询无需额外添加指令前缀；当前程序只使用它的稠密向量能力。[BGE-M3 开源说明](https://github.com/FlagOpen/FlagEmbedding/blob/master/research/BGE_M3/README.md)
 
 向量化和语义检索可在本机完成。选择 DeepSeek 进行引用问答时，问题和命中的笔记片段仍会发送到 DeepSeek；本地 Embedding 不代表整个问答流程离线。首次下载 Ollama 和模型需要联网，模型下载完成后的本地编码不需要调用付费接口。

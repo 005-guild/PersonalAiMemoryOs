@@ -21,6 +21,24 @@ from app.desktop.logging import SecretFilter, configure_logging
 from app.desktop.server import DesktopServer
 
 
+def test_desktop_ports_remain_in_dynamic_high_range_and_retry_collision(monkeypatch):
+    from app.desktop.server import loopback_socket
+    from app.desktop import server as module
+    original = module.secrets.randbelow
+    with loopback_socket() as reserved:
+        port = reserved.getsockname()[1]
+        assert 49152 <= port <= 65535
+        attempts = []
+        def choose(limit):
+            attempts.append(1)
+            return port - 49152 if len(attempts) == 1 else original(limit)
+        monkeypatch.setattr(module.secrets, 'randbelow', choose)
+        with loopback_socket() as following:
+            assert len(attempts) >= 2
+            assert following.getsockname()[0] == '127.0.0.1'
+            assert following.getsockname()[1] != port
+
+
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows named kernel objects")
 def test_real_named_objects_activate_owner_and_release_without_pid_files(isolated_project):
     from app.desktop.instance import SingleInstance

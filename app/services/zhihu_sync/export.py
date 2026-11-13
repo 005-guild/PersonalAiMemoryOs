@@ -4,6 +4,7 @@ import hashlib
 import os
 from pathlib import Path
 import re
+from uuid import uuid4
 from urllib.parse import urlsplit, urljoin
 
 from bs4 import BeautifulSoup
@@ -66,14 +67,22 @@ def render(identity, title: str, author: str | None, html: str, downloaded: str)
 
 
 def publish_file(source: Path, target: Path):
-    """Hard link is atomic and refuses an existing destination on Windows and POSIX."""
+    """Atomically publish a separate copy; never retain a writable alias to the final file."""
     source, target = safe_path(source), safe_path(target)
     target.parent.mkdir(parents=True, exist_ok=True)
+    temporary = safe_path(target.with_name('.zhihu-' + uuid4().hex + '.tmp'))
     try:
-        os.link(source, target)
-    except FileExistsError:
-        if source.read_bytes() != target.read_bytes():
-            raise SyncError('output_conflict') from None
+        with temporary.open('xb') as handle:
+            handle.write(source.read_bytes())
+            handle.flush()
+            os.fsync(handle.fileno())
+        try:
+            os.link(temporary, target)
+        except FileExistsError:
+            if source.read_bytes() != target.read_bytes():
+                raise SyncError('output_conflict') from None
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 class Exporter:
@@ -124,3 +133,9 @@ class Exporter:
             os.fsync(handle.fileno())
         publish_file(markdown, self.ledger.target / payload['filename'])
         self.ledger.complete(identity, payload['filename'])
+        # Completion is durable before cleaning only this export's known staging files.
+        for name in ['article.md', 'document.json', *[Path(item['path']).name for item in payload['assets']]]:
+            try:
+                safe_path(directory / name).unlink(missing_ok=True)
+            except OSError:
+                pass

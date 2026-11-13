@@ -4,6 +4,7 @@ import json
 import logging
 from pathlib import Path
 import socket
+import secrets
 from threading import Thread
 import time
 from urllib.request import ProxyHandler, build_opener
@@ -13,14 +14,28 @@ import uvicorn
 logger = logging.getLogger(__name__)
 
 
+def loopback_socket():
+    """Reserve a dynamic high port, avoiding Chromium's blocked service ports.
+
+    https://raw.githubusercontent.com/chromium/chromium/main/net/base/port_util.cc
+    Windows may assign 6668 to bind(0); never relax browser port restrictions.
+    """
+    for _ in range(64):
+        listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+                listener.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+            listener.bind(("127.0.0.1", 49152 + secrets.randbelow(16384)))
+            return listener
+        except OSError:
+            listener.close()
+    raise RuntimeError("无法预留本机桌面端口，请关闭多余实例后重试。")
+
+
 class DesktopServer:
     def __init__(self, settings):
         from app.main import create_app
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # No SO_REUSEADDR: an unrelated local process must never share our bind.
-        if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
-            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
-        self.socket.bind(("127.0.0.1", 0))
+        self.socket = loopback_socket()
         self.url = "http://127.0.0.1:" + str(self.socket.getsockname()[1])
         try:
             app = create_app(settings)
@@ -69,4 +84,6 @@ class DesktopServer:
             self.app.state.rag_index.request_stop()
         if hasattr(self.app.state, "processing"):
             self.app.state.processing.request_stop()
+        if hasattr(self.app.state, "zhihu_sync"):
+            self.app.state.zhihu_sync.request_stop()
         self.server.should_exit = True

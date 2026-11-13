@@ -6,7 +6,7 @@ import pytest
 
 from app.services.zhihu_parser import normalize_zhihu_url
 from app.services.zhihu_sync.storage import Ledger, SyncError, writer_lock
-from app.services.zhihu_sync.export import Exporter, render, image_url
+from app.services.zhihu_sync.export import Exporter, render, image_url, publish_file
 
 
 URL = 'https://www.zhihu.com/question/1/answer/2000991203269820437'
@@ -36,6 +36,27 @@ def test_preview_does_not_write(tmp_path):
     target, _, _ = setup(tmp_path)
     Ledger(target, '123').load()
     assert not (target.parent / '.sync').exists()
+
+
+def test_publication_does_not_alias_staging_and_final_files(tmp_path):
+    source, target = tmp_path/'stage', tmp_path/'final'
+    source.write_bytes(b'original')
+    publish_file(source,target)
+    source.write_bytes(b'retry must not overwrite final')
+    assert target.read_bytes() == b'original'
+    with pytest.raises(SyncError,match='output_conflict'):
+        publish_file(source,target)
+
+
+def test_registered_local_edits_are_not_reparsed_or_overwritten(tmp_path):
+    target, _, payload = setup(tmp_path)
+    path=target/'local.md'
+    path.write_text(payload['content'],encoding='utf-8')
+    ledger=Ledger(target,'123').load()
+    ledger.save()
+    path.write_text('用户重新编辑，甚至移除了文件头',encoding='utf-8')
+    assert len(Ledger(target,'123').load().records) == 1
+    assert path.read_text(encoding='utf-8') == '用户重新编辑，甚至移除了文件头'
 
 
 @pytest.mark.parametrize('damage', ['corrupt', 'missing'])

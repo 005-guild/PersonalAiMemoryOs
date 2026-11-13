@@ -25,6 +25,8 @@ from app.api.rag import router as rag_router
 from app.api.ui import router as ui_router
 from app.api.settings import router as settings_router
 from app.api.rag_settings import router as rag_settings_router
+from app.api.zhihu_sync import router as zhihu_sync_router
+from app.services.zhihu_sync.service import ZhihuSyncService
 from app.api.settings_security import ConfigurationNoStoreMiddleware, configuration_guard
 from app.config import Settings
 from app.repositories.database import Database
@@ -69,6 +71,7 @@ def create_app(settings: Settings | None = None, *, model_client=None,
     worker = SyncWorker(synchronizer, settings.sync_interval)
     registry = AIRegistry(settings)
     ai_settings = AISettingsService(settings, registry=registry)
+    zhihu_sync = ZhihuSyncService(settings, ai_settings.csrf_token)
     model_client = model_client if model_client is not None else ModelClient()
     generation_gate = GenerationGate()
     processing = ProcessingService(database, sync_lock, registry, model_client, generation_gate)
@@ -103,11 +106,12 @@ def create_app(settings: Settings | None = None, *, model_client=None,
                 worker.start()
             if settings.rag_enabled:
                 rag_worker.start()
+            zhihu_sync.start()
             logger.info("Personal AI Memory OS started.")
             yield
         finally:
             try:
-                await asyncio.gather(processing.close(), rag_answer.close(), rag_note_answer.close(), rag_worker.stop())
+                await asyncio.gather(processing.close(), rag_answer.close(), rag_note_answer.close(), rag_worker.stop(), zhihu_sync.close())
             finally:
                 try:
                     await indexer.close()
@@ -136,6 +140,7 @@ def create_app(settings: Settings | None = None, *, model_client=None,
     app.state.sync_worker = worker
     app.state.ai_registry = registry
     app.state.ai_settings = ai_settings
+    app.state.zhihu_sync = zhihu_sync
     app.state.rag_settings = rag_settings
     app.state.configuration_guard = configuration_guard
     app.state.model_client = model_client
@@ -161,6 +166,7 @@ def create_app(settings: Settings | None = None, *, model_client=None,
     app.include_router(ui_router)
     app.include_router(settings_router)
     app.include_router(rag_settings_router)
+    app.include_router(zhihu_sync_router)
     app.include_router(desktop_router)
     app.add_middleware(ConfigurationNoStoreMiddleware)
     install_web(app)
