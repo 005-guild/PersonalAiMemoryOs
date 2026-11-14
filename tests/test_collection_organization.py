@@ -113,6 +113,26 @@ def test_full_workflow_preserves_originals_and_skips_model_on_publish(organizati
     assert keyword_search(service.store,'',category='无/结果')['total']==0
 
 
+def test_short_keyword_query_scans_fts_before_item_lookups(organization):
+    from sqlalchemy import event
+    service,model,source,_=organization
+    approved(service,source);run(service,'all')
+    queries=[]
+    def record(connection,cursor,statement,parameters,context,many):
+        if statement.startswith('SELECT count(*) FROM organization_fts'):
+            queries.append((statement,parameters))
+    event.listen(service.store.database.engine,'before_cursor_execute',record)
+    try:
+        assert keyword_search(service.store,'人工')['total']==1
+    finally:event.remove(service.store.database.engine,'before_cursor_execute',record)
+    with service.store.database.engine.connect() as connection:
+        plan=connection.exec_driver_sql('EXPLAIN QUERY PLAN '+queries[0][0],queries[0][1]).all()
+    details=[row[3] for row in plan]
+    scan=next(i for i,value in enumerate(details) if 'SCAN organization_fts' in value)
+    lookup=next(i for i,value in enumerate(details) if 'SEARCH o USING' in value)
+    assert scan<lookup,'FTS must not be rescanned for every collection item'
+
+
 def test_unchanged_refresh_avoids_index_writes_and_recovers_missing_entry(organization):
     from sqlalchemy import event,text
     service,model,source,_=organization
