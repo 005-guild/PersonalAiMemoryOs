@@ -91,7 +91,7 @@ def test_current_portable_reopens_without_backup_or_migration(isolated_project, 
     assert not (isolated_project / "backups").exists()
 
 
-@pytest.mark.parametrize("old_revision", ["0001", "0002", "0003", "0004", "0005"])
+@pytest.mark.parametrize("old_revision", ["0001", "0002", "0003", "0004", "0005", "0006", "0007"])
 def test_old_revision_confirmed_upgrade_has_verified_full_backup(isolated_project, old_revision):
     database = make_old_database(isolated_project, old_revision)
     messages = []
@@ -116,6 +116,14 @@ def test_declining_upgrade_preserves_exact_database(isolated_project):
         prepare_desktop(isolated_project, lambda _: False)
     assert database.read_bytes() == before
     assert not (isolated_project / "backups").exists()
+
+
+def test_schema_seven_inspection_still_rejects_missing_legacy_columns(isolated_project):
+    database=make_old_database(isolated_project,'0007')
+    with sqlite3.connect(database) as connection:
+        connection.execute('ALTER TABLE organization_calls DROP COLUMN usage')
+    with pytest.raises(DesktopStorageError,match='表结构不完整'):
+        bootstrap._inspect_database(database,{'0007','0008'})
 
 
 def test_failed_backup_never_runs_migration(isolated_project, monkeypatch):

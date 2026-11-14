@@ -95,6 +95,8 @@ def _inspect_database(path: Path, known_revisions: set[str]) -> tuple[str | None
                 expected -= {"source_snapshots", "prompt_snapshot", "generation_settings", "finish_reason", "failure_stage"}
             if name in {"prompt_templates", "prompt_revisions"} and int(revision) < 6:
                 expected -= {"purpose"}
+            if name == 'organization_calls' and int(revision) < 8:
+                expected -= {'price_snapshot'}
             actual = {row[1] for row in connection.execute(f'PRAGMA table_info("{name}")')}
             if not expected.issubset(actual):
                 raise DesktopStorageError("数据库表结构不完整，未执行升级。")
