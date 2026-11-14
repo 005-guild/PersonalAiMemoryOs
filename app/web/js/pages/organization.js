@@ -1,6 +1,7 @@
 import {api} from '../api.js';
 import {el,button,field,notice,renderMarkdown,pageHeading,formatDate} from '../ui.js';
 import {collectionSearch} from './organization-search.js';
+import {partialImageReview} from './organization-review.js';
 
 const endpoint='/api/v1/collection-organization';
 const labels={discovered:'待整理',ready:'摘要已生成',published:'已入库',failed:'失败',pending:'等待执行',running:'执行中',paused:'已暂停',completed:'完成',completed_with_errors:'部分失败'};
@@ -12,6 +13,7 @@ const errors={sample_approval_required:'请先查看并确认样本。',sample_n
   explicit_retry_required:'上次模型请求结果不确定或校验失败，未自动重试。',organization_output_invalid:'模型结果未通过格式或原文依据校验。',
   image_needs_review:'图片内容不够清晰，需要人工检查。',source_changed:'原文或图片已变化，已停止该条整理。',
   image_invalid:'图片文件无法解码，请检查原图。',image_too_large:'图片超出本地安全处理上限，请检查原图。',
+  image_review_changed:'文章或审核状态已变化，请重新查看后再确认。',
   export_conflict:'整理文件被外部修改，已保留修改；请核对后恢复原导出文件，再手动重试。',
   organization_profile_unsupported:'请选择官方 DeepSeek 的 deepseek-flash / openai_chat 配置。',
   organization_configuration_invalid:'请检查 AI 配置、模型、密钥和目录。',configuration_read_only:'当前实例为只读模式。'};
@@ -22,6 +24,14 @@ export async function mount(container,context) {
   const messages=el('div'),status=el('div'),samples=el('div',{className:'stack'}),failures=el('div');
   const sampleReview=el('details',{className:'card stack'},el('summary',{},'样本审核'),samples);
   const searchPanel=collectionSearch(()=>alive);
+  const imageReview=partialImageReview(async item=>{
+    if(busy)return;busy=true;
+    try {
+      await api(`${endpoint}/items/${item.id}/approve-partial-image`,{method:'POST',body:{input_hash:item.input_hash},
+        headers:{'X-Configuration-Token':state.csrf_token}});
+      if(alive)messages.replaceChildren(notice('已允许此篇仅按清晰内容总结。自动整理开启时会继续处理，也可开始全量整理。'));
+    }catch(e){if(alive)error(e);}finally{busy=false;if(alive)await read().catch(error);}
+  });
   const changed=()=>{dirty=true;context.setDirty(true);};
   const input=el('input',{onInput:changed,placeholder:'articles 文件夹绝对路径'});
   const output=el('input',{onInput:changed,placeholder:'整理库文件夹绝对路径'});
@@ -46,6 +56,9 @@ export async function mount(container,context) {
       ...value.budgets.map(b=>el('p',{className:'muted'},`${b.period==='initial'?'首次整理':b.period}：已记账 / 预留 ¥${b.accounted_yuan.toFixed(4)} · ${b.calls} 次请求`)));
     if(running)status.append(notice(`${labels[running.status]}：${running.selection.length} 篇${running.error?' · '+explain(running.error):''}`));
     if(value.last_error)status.append(notice(explain(value.last_error),'warning'));
+    const review=value.counts.failed?await api(endpoint+'/items?limit=100&error=image_needs_review'):{items:[]};
+    if(!alive)return;
+    imageReview.render(review.items,busy||value.read_only||!value.approved||value.jobs.some(j=>['running','pending'].includes(j.status)));
     for(const f of fields)f.disabled=busy||value.read_only;
     for(const c of controls)c.disabled=busy||value.read_only;
     approve.disabled=busy||value.read_only||value.approved||!value.jobs.some(j=>j.id===value.sample_job_id&&j.status==='completed');
@@ -105,7 +118,7 @@ export async function mount(container,context) {
       notice('失败或超时的模型请求不会自动重试。手动重试可能产生新的费用；已成功的阶段会复用。'),
       button('查看全部处理记录',async()=>{try{const data=await api(endpoint+'/items?limit=100');if(alive)failures.replaceChildren(
         el('p',{},`显示前 ${data.items.length} / ${data.total} 篇`),...data.items.map(x=>el('p',{},`${x.title} · ${labels[x.status]}${x.error?' · '+explain(x.error):''}`)));}catch(e){error(e);}}),failures),
-    searchPanel,sampleReview);
+    imageReview.element,searchPanel,sampleReview);
   await read(true);
   async function poll(){if(!alive)return;if(!busy)await read().catch(error);if(alive)timer=setTimeout(poll,2000);}
   timer=setTimeout(poll,2000);

@@ -76,19 +76,25 @@ async def taxonomy(calls,store,job_id,entries):
 async def summarize(calls,job_id,item_id,snapshot,config):
     original=snapshot['values']['content'];body=original
     observations=[]
+    approval=snapshot.get('partial_image_approval',{})
+    allow_partial=bool(approval) and approval.get('input_hash')==snapshot.get('input_hash')
     if snapshot['text_chars']<200 and snapshot['images']:
         for index,batch in enumerate(image_inputs(snapshot,config['input_dir'])):
             def validate(value):
                 rows=value['observations']
+                if type(value.get('uncertain')) is bool:
+                    rows=[{'uncertain':value['uncertain'],**row} for row in rows]
+                    if value['uncertain'] and not any(row.get('uncertain') for row in rows):raise ValueError()
                 if len(rows)!=len(batch): raise ValueError()
                 for number,row in enumerate(rows,1):
                     if set(row)!={'image','text','uncertain'} or row['image']!=number or type(row['uncertain']) is not bool or not isinstance(row['text'],str) or not row['text'].strip() or len(row['text'])>1500: raise ValueError()
                 return rows
             values=await calls.generate(job_id,item_id,f'vision-{index}',prompt('vision'),
                 json.dumps({'title':snapshot['values']['title'],'images':[input_label(x) for x in batch]},ensure_ascii=False),
-                validate,images=[x['data'] for x in batch])
-            if any(x['uncertain'] for x in values): raise OrganizationError('image_needs_review')
+                validate,images=[x['data'] for x in batch],repair_system=prompt('vision_repair'))
+            if any(x['uncertain'] for x in values) and not allow_partial: raise OrganizationError('image_needs_review')
             observations += [{'image':batch[x['image']-1]['reference'],'text':x['text'],
+                **({'uncertain':True} if x['uncertain'] else {}),
                 **({'region':batch[x['image']-1]['region']} if 'region' in batch[x['image']-1] else {})} for x in values]
     parts=[]
     if len(body)>20000:
@@ -100,9 +106,17 @@ async def summarize(calls,job_id,item_id,snapshot,config):
                 json.dumps({'title':snapshot['values']['title'],**part},ensure_ascii=False),validate)
             parts.append({**extracted,'start':part['start'],'end':part['end']})
         body=''
+    clear=[x for x in observations if not x.get('uncertain')]
+    partial=len(clear)!=len(observations)
+    if partial and not clear: raise OrganizationError('image_needs_review')
     value={'title':snapshot['values']['title'],'author':snapshot['values'].get('author'),'content':body,
-           'parts':parts,'image_observations':observations,'categories':config['taxonomy']}
-    result=await calls.generate(job_id,item_id,'summary',prompt('summary'),json.dumps(value,ensure_ascii=False),
+           'parts':parts,'image_observations':clear,'categories':config['taxonomy']}
+    system=prompt('summary')
+    if partial:
+        value['partial_image_input']=True
+        system+='\n\n'+prompt('partial_image')
+    result=await calls.generate(job_id,item_id,'summary',system,json.dumps(value,ensure_ascii=False),
         summary_validator(snapshot,config['taxonomy'],bool(observations)))
     result['image_observations']=observations
+    if partial:result['partial_image_summary']=True
     return result

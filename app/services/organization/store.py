@@ -104,9 +104,11 @@ class Store:
         return {'total':total,'long_articles':sum(x['body_chars']>20000 for x in entries),
                 'image_articles':sum(x['text_chars']<200 and bool(x['images']) for x in entries)}
 
-    def items(self,offset=0,limit=20,job_id=None):
+    def items(self,offset=0,limit=20,job_id=None,error=None):
         with self.transaction() as session:
             query=select(OrganizationItem)
+            if error is not None:
+                query=query.where(OrganizationItem.error==error)
             if job_id:
                 job=session.get(OrganizationJob,job_id)
                 if not job:
@@ -115,6 +117,19 @@ class Store:
             total=session.scalar(select(func.count()).select_from(query.subquery()))
             rows=session.scalars(query.order_by(OrganizationItem.created_at,OrganizationItem.identity).offset(offset).limit(limit))
             return {'items':[item_view(x,True) for x in rows],'total':total,'offset':offset,'limit':limit}
+
+    def approve_partial_image(self, identifier, input_hash):
+        with self.transaction() as session:
+            self.require_idle(session)
+            control=self.control(session)
+            if control['approved_policy']!=policy(control['config']):
+                raise OrganizationError('sample_approval_required')
+            item=session.get(OrganizationItem,identifier)
+            if not item or item.error!='image_needs_review' or item.input_hash!=input_hash:
+                raise OrganizationError('image_review_changed')
+            item.snapshot={**item.snapshot,'partial_image_approval':{'input_hash':input_hash,'approved_at':utcnow()}}
+            item.status='discovered';item.error=None;item.result=None
+            return item_view(item,True)
 
     def start(self,mode):
         with self.transaction() as session:

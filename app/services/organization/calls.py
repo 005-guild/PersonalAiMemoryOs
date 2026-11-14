@@ -25,7 +25,7 @@ class Calls:
                                                  'response_format':'json_object','extra_body':body})
         return ResolvedProfile(active.profile_id,profile,active.api_key,fingerprint(profile.model_dump()))
 
-    async def generate(self,job_id,item_id,stage,system,user,validate,images=None):
+    async def generate(self,job_id,item_id,stage,system,user,validate,images=None,repair_system=None):
         with self.store.transaction() as session:
             job=session.get(OrganizationJob,job_id);config=dict(job.settings)
         resolved=self.resolve(config)
@@ -48,6 +48,15 @@ class Calls:
             try:
                 return self._validate(cached[0],cached[1],validate)
             except OrganizationError:
+                if repair_system:
+                    repaired=system+'\n\n'+repair_system
+                    repair_identity=fingerprint({'system':repaired,'user':user,'profile':resolved.fingerprint,'images':images or [],'stage':stage})
+                    with self.store.transaction() as session:
+                        saved=session.scalar(select(OrganizationCall.id).where(OrganizationCall.fingerprint==repair_identity).limit(1))
+                    # Existing repair responses remain reusable even on unpaid continuation.
+                    # Only an explicit retry can create a fresh corrected request.
+                    if saved or config.get('retry'):
+                        return await self.generate(job_id,item_id,stage,repaired,user,validate,images)
                 if cached[2]!='invalid' or not config.get('retry'):
                     raise
         # One shared generation slot also protects ordinary drafts and Q&A.

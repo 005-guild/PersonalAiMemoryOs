@@ -26,10 +26,13 @@ def component(value):
 def body(snapshot,result,original):
     lines=['## 总结',result['summary'],'','## 核心要点',*['- '+x for x in result['points']],
            '','## 适用条件与局限',result['conditions'] or '原文未明确说明。']
+    if result.get('partial_image_summary'):
+        lines=['> 部分图片文字无法辨认。本摘要经逐篇确认，仅依据清晰可辨内容，不代表截图全文。','',*lines]
     if result['quotes']:
         lines+=['','## 原文依据',*['> '+x.replace('\n','\n> ') for x in result['quotes']]]
     if result.get('image_observations'):
-        lines+=['','## 图片读取记录（AI 识读）',*['- '+input_label({**x,'reference':x['image']})+'：'+x['text'] for x in result['image_observations']]]
+        lines+=['','## 图片读取记录（AI 识读）',*['- '+input_label({**x,'reference':x['image']})+
+            ('：部分文字无法辨认，未用于摘要。' if x.get('uncertain') else '：'+x['text']) for x in result['image_observations']]]
     lines+=['','## 原文',f"原题：{snapshot['values']['title']}",f"来源：{snapshot['values']['url']}",'',original]
     return '\n'.join(lines)
 
@@ -74,8 +77,9 @@ class Publication:
             with self.store.transaction() as session:
                 item=session.get(OrganizationItem,identifier)
                 if not item.knowledge_id:
+                    summary=('【部分图片文字无法辨认，仅总结清晰内容】\n' if result.get('partial_image_summary') else '')+result['summary']
                     note=ContentService(session).create_knowledge({'source_ids':[imported.source_id],
-                        'title':result['title'],'summary':result['summary'],'category':result['category'],
+                        'title':result['title'],'summary':summary,'category':result['category'],
                         'tags':result['tags'],'concepts':[],'body':body(snapshot,result,original)})
                     item.source_id=imported.source_id;item.knowledge_id=note['id']
         self.export(identifier,config)
@@ -93,6 +97,9 @@ class Publication:
             metadata={'knowledge_id':note.id,'title':note.title,'original_title':snapshot['values']['title'],
                 'author':snapshot['values'].get('author'),'source':snapshot['values']['url'],
                 'zhihu_id':snapshot['external_id'],'type':snapshot['resource_type'],'category':category,'tags':note.tags}
+            if item.result.get('partial_image_summary'):
+                metadata['partial_image_summary']=True
+                metadata['image_review']=snapshot.get('partial_image_approval')
             content='---\n'+yaml.safe_dump(metadata,allow_unicode=True,sort_keys=False)+'---\n'+note.body.replace(ASSET_PREFIX,'../../assets/')
             wanted=hashlib.sha256(content.encode()).hexdigest()
             try:

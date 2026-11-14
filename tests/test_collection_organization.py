@@ -268,6 +268,8 @@ def test_api_guards_and_disabled_startup_make_no_paid_calls(settings,tmp_path):
         assert client.put(endpoint,json=config,headers=headers).status_code==200
         assert client.put(endpoint,json=config,headers=headers).status_code==409
         assert client.post(endpoint+'/sample',json={}).status_code==403
+        assert client.post(endpoint+'/items/unknown/approve-partial-image',json={'input_hash':'0'*64}).status_code==403
+        assert client.post(endpoint+'/items/unknown/approve-partial-image',json={'input_hash':'invalid'},headers=headers).status_code==422
         assert client.get(endpoint,headers={'Origin':'https://evil.invalid'}).status_code==403
         assert client.get(endpoint+'/search?q=人工').json()['total']==0
         assert client.get(endpoint+'/assets/not-safe.png').status_code==404

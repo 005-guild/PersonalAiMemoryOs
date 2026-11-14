@@ -69,9 +69,22 @@ async def configure(request: Request):
 
 
 @router.get('/items')
-async def items(request: Request, offset: int = Query(0, ge=0), limit: int = Query(20, ge=1, le=100), job_id: str | None = None):
+async def items(request: Request, offset: int = Query(0, ge=0), limit: int = Query(20, ge=1, le=100), job_id: str | None = None,
+                error: str | None = Query(None,max_length=100)):
     target = await service(request)
-    return await call(target.store.items, offset, limit, job_id)
+    return await call(target.store.items, offset, limit, job_id,error)
+
+
+@router.post('/items/{item_id}/approve-partial-image',status_code=202)
+async def approve_partial_image(item_id: str,request: Request):
+    target=await service(request,True)
+    value=await body(request)
+    if set(value)!={'input_hash'} or not isinstance(value['input_hash'],str) or not re.fullmatch('[a-f0-9]{64}',value['input_hash']):
+        raise HTTPException(422,detail={'code':'configuration_invalid'})
+    await call(target.store.scan)
+    result=await call(target.store.approve_partial_image,item_id,value['input_hash'])
+    target.wake.set()
+    return result
 
 
 @router.get('/search')
