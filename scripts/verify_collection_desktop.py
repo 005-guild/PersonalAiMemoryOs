@@ -44,7 +44,7 @@ def main():
             assert not errors,errors
             app.request_close();app.wait_closed()
         with sqlite3.connect(root/'data/memory.db') as db:
-            assert db.execute('SELECT version_num FROM alembic_version').fetchone()[0]=='0007'
+            assert db.execute('SELECT version_num FROM alembic_version').fetchone()[0]=='0008'
             assert db.execute('SELECT count(*) FROM organization_calls').fetchone()[0]==0
             assert db.execute('SELECT count(*) FROM organization_items').fetchone()[0]==3
             assert db.execute('PRAGMA integrity_check').fetchone()[0]=='ok'

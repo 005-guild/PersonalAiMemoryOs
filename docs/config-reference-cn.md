@@ -1,6 +1,18 @@
-# 配置完整参考（v0.10.0）
+# 配置完整参考（v0.11.0）
 
 ## 收藏整理
+
+0.11.0 增加官方 OpenAI Responses / `gpt-6.1-sol` 支持，继续支持原 DeepSeek 配置。OpenAI 使用 JSON Object、低推理强度、Standard 等级、8192 最大输出 tokens 和 180 秒超时；DeepSeek 的 4096 上限及原请求指纹保持兼容。Responses 图片使用内联 `input_image` 和原始清晰度，完整保留既有分片及模糊内容审核规则。
+
+`GET /api/v1/collection-organization` 增加 `available_profiles`：只列已经启用、配好密钥且受支持的配置，包含非敏感模型指纹和价格快照。新增 `POST /api/v1/collection-organization/switch-profile`，JSON 为 `profile_id`、`expected_revision`、`expected_profile_fingerprint`。需原样式确认有效、无执行或暂停任务，且只修改模型；沿用样式确认并记录切换历史，保留所有已发布结果、历史费用及首次完成状态。未发布结果失效后使用新模型生成。目标或配置指纹变化返回 409。普通设置修改仍不能绕过样本审核。模型内部参数变化也会使自动任务的确认失效。
+
+OpenAI 每个新生成请求先使用相同模型、instructions、input（含图片）调用 `/responses/input_tokens`，成功计数后加 256 tokens 余量及最大输出预留；计数失败不发起生成。按美元标准价格及 1 美元折 8 元的固定保守系数记人民币：所有输入按每百万 2.5 美元、输出按 10 美元，包含潜在缓存写入并忽略折扣；输入超过 272000 tokens 时输入乘 2、输出乘 1.5。模型官方基础输入价为 2 美元，保守账本可能高于实际费用。来源：[模型及价格](https://developers.openai.com/api/docs/models/gpt-6.1-sol)、[计数接口](https://developers.openai.com/api/docs/guides/token-counting)，核对日期 2026-11-14。
+
+0008 仅为 `organization_calls` 增加可空 `price_snapshot`，旧调用保持原金额与空快照，不按新价格重算。任务冻结模型和价格，每条新调用保存价格、汇率、模型指纹及输入估算。超时或中断保留全部预留，不隐式重试。收藏预算在同一期内跨提供商累计；问答和草稿不计入收藏月预算。
+
+收藏 OpenAI 配置的扩展参数仅接受 `reasoning`、`text`、`service_tier`；推理强度和服务等级由整理策略固定。自定义长缓存等未纳入价格快照的选项会在请求前被拒绝，避免低估预算。JSON 模式把原系统合同作为输入中的 developer 消息，计数与生成使用完全一致的输入。
+
+Windows 文本模型请求在没有显式 `HTTP_PROXY`／`HTTPS_PROXY`／`ALL_PROXY` 时复用系统已启用的 HTTP 代理，即使进程只设置了 `NO_PROXY`。显式环境代理及绕过规则优先，本地回环地址仍按绕过规则直连；不更改系统代理，不自动重试失败连接。
 
 本机固定安装的实际状态（2026-11-14）：样本已确认，`enabled=true`、`initial_complete=true`、未暂停；578 篇全量整理完成。首次预算 20 元、后续月预算 10 元，首次账本为 7.587728 元（包含无明确用量回执的保守预留），实际账单以提供商为准。这是本机经用户授权的配置，发行包默认值仍为关闭。
 
@@ -10,7 +22,7 @@
 | --- | --- | --- |
 | `input_dir` | 空 | 原始 articles 绝对路径，只读 |
 | `output_dir` | 空 | 独立整理库绝对路径，不得与输入或应用数据目录重叠 |
-| `profile_id` | `deepseek` | 官方 DeepSeek `deepseek-flash` / `openai_chat` 配置名称 |
+| `profile_id` | `deepseek` | 官方 DeepSeek Chat / `deepseek-flash` 或 OpenAI Responses / `gpt-6.1-sol` 配置名称 |
 | `enabled` | `false` | 样本确认后允许每 60 秒自动发现、整理新增内容 |
 | `initial_budget_yuan` | `20` | 首次全量完成前的累计预算，整数 1–10000 元 |
 | `monthly_budget_yuan` | `10` | 首次完成后的上海时区自然月预算，整数 1–10000 元 |
@@ -213,7 +225,7 @@ profiles:
 | `model` | 必填 | 1–200 字符的模型 ID；非纯空白且无控制字符。按自己的服务、账户和区域填写 |
 | `api_key_ref` | `null` | 引用本机密钥表中的名称，匹配 `[a-zA-Z][a-zA-Z0-9_-]{0,63}`；比较时不区分大小写 |
 | `auth` | `auto` | `auto` / `bearer` / `x_api_key` / `x_goog_api_key` / `none`，映射见下节 |
-| `response_format` | `prompt` | `prompt` 表示通过提示词约束业务 JSON；仅 Chat 可以选 `json_object` 并发送对应请求参数。其余协议必须是 `prompt` |
+| `response_format` | `prompt` | `prompt` 表示通过提示词约束业务 JSON；Chat 和 Responses 可选 `json_object`，分别发送 `response_format` 和 `text.format`；其余协议使用 `prompt` |
 | `max_output_tokens` | `4096` | 整数 `1–131072`；由适配器映射为各协议的输出限额字段。是否被供应商接受由实际模型决定 |
 | `timeout_seconds` | `90.0` | `0.01–600` 秒；整个单次调用时限，而非自动重试次数 |
 | `token_limit_field` | `max_tokens` | Chat 可选 `max_tokens` / `max_completion_tokens`；其他协议须保留 `max_tokens`，实际输出字段由适配器自行映射 |

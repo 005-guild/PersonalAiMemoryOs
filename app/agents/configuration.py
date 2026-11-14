@@ -166,8 +166,8 @@ class AIRegistry:
             if any(not PROFILE_ID.fullmatch(key) for key in document.profiles):
                 raise ValueError("Invalid AI profile identifier.")
             for profile in document.profiles.values():
-                if profile.response_format != "prompt" and profile.protocol != "openai_chat":
-                    raise ValueError("JSON object mode is supported only by Chat profiles.")
+                if profile.response_format != "prompt" and profile.protocol not in {"openai_chat", "openai_responses"}:
+                    raise ValueError("JSON object mode requires an OpenAI-compatible protocol.")
                 if profile.protocol != "openai_chat" and profile.token_limit_field != "max_tokens":
                     raise ValueError("Chat token field does not apply to this protocol.")
             default = settings.ai_default_profile or document.default_profile

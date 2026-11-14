@@ -18,6 +18,7 @@ class OrganizationService:
         self.store = Store(database, lock, settings.runtime_root)
         self.stopping = Event()
         self.calls = Calls(self.store, registry, client, gate, self.stopping.is_set)
+        self.store.resolve_profile=self.calls.resolve
         self.publication = Publication(self.store)
         self.read_only = settings.configuration_read_only
         self.csrf_token = csrf_token
@@ -26,7 +27,13 @@ class OrganizationService:
         self.last_error = None
 
     def describe(self):
-        return {**self.store.read(), 'csrf_token': self.csrf_token,
+        from app.services.organization.providers import describe
+        state=self.store.read()
+        available=[]
+        for identifier in getattr(self.calls.registry,'profiles',{}):
+            try:available.append(describe(self.calls.resolve({**state['config'],'profile_id':identifier})))
+            except Exception:pass
+        return {**state, 'csrf_token': self.csrf_token,'available_profiles':available,
                 'read_only': self.read_only, 'last_error': self.last_error}
 
     def writable(self):

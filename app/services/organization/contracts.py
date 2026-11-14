@@ -50,5 +50,12 @@ class OrganizationWrite(OrganizationSettings):
     expected_revision: str
 
 
+class ProfileSwitch(BaseModel):
+    model_config=ConfigDict(extra='forbid',strict=True)
+    profile_id: str=Field(pattern=r'^[a-z][a-z0-9_-]{0,63}$')
+    expected_revision: str=Field(pattern=r'^[a-f0-9]{64}$')
+    expected_profile_fingerprint: str=Field(pattern=r'^[a-f0-9]{64}$')
+
+
 def policy(config):
     return fingerprint({k:v for k,v in config.items() if k not in {'enabled','initial_budget_yuan','monthly_budget_yuan'}})

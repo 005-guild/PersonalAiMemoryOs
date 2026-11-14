@@ -29,7 +29,7 @@ export function profileEditor(profile, {keys = [], onRemove, onIdentityChange, o
   grid.append(keyField, choice('auth', '鉴权方式', [['auto', '按协议自动选择'], ['bearer', 'Bearer'], ['x_api_key', 'x-api-key'], ['x_goog_api_key', 'x-goog-api-key'], ['none', '无需密钥']]),
     input('max_output_tokens', '输出 Token 上限', {type: 'number', required: true, min: 1, max: 131072, step: 1}),
     input('timeout_seconds', '调用超时（秒）', {type: 'number', required: true, min: 0.01, max: 600, step: 'any'}));
-  const response = choice('response_format', '结构化输出模式', [['prompt', '提示词约束 JSON'], ['json_object', 'JSON Object（仅 Chat）']]);
+  const response = choice('response_format', '结构化输出模式', [['prompt', '提示词约束 JSON'], ['json_object', 'JSON Object（Chat / Responses）']]);
   const tokenLimit = choice('token_limit_field', 'Chat 输出限额字段', [['max_tokens', 'max_tokens'], ['max_completion_tokens', 'max_completion_tokens']]);
   const version = input('anthropic_version', 'Anthropic API 版本', {required: true, pattern: '\\d{4}-\\d{2}-\\d{2}'});
   const extra = el('textarea', {value: JSON.stringify(profile.extra_body ?? {}, null, 2), className: 'settings-extra mono', 'data-testid': 'profile-extra_body', spellcheck: false});
@@ -50,9 +50,11 @@ export function profileEditor(profile, {keys = [], onRemove, onIdentityChange, o
   }
   function refreshProtocol(changed = false) {
     const chat = inputs.protocol.value === 'openai_chat';
-    inputs.response_format.querySelector('option[value="json_object"]').disabled = !chat;
+    const json = chat || inputs.protocol.value === 'openai_responses';
+    inputs.response_format.querySelector('option[value="json_object"]').disabled = !json;
     tokenLimit.hidden = !chat; version.hidden = inputs.protocol.value !== 'anthropic_messages';
-    if (changed && !chat) {inputs.response_format.value = 'prompt'; inputs.token_limit_field.value = 'max_tokens';}
+    if (changed && !json) inputs.response_format.value = 'prompt';
+    if (changed && !chat) inputs.token_limit_field.value = 'max_tokens';
   }
   inputs.id.addEventListener('input', () => {onIdentityChange(previousId, inputs.id.value); previousId = inputs.id.value; refreshHeader();});
   inputs.label.addEventListener('input', () => {onIdentityChange(previousId, inputs.id.value); refreshHeader();});

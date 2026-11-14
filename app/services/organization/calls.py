@@ -2,12 +2,11 @@
 import asyncio
 import json
 from datetime import datetime, timezone, timedelta
-from urllib.parse import urlsplit
 from sqlalchemy import select,func
 from app.models import OrganizationCall, OrganizationJob
-from app.agents.configuration import ResolvedProfile
 from app.agents.transport import _unique_keys, _invalid_constant
 from app.services.organization.contracts import OrganizationError,fingerprint
+from app.services.organization import providers
 
 
 class Calls:
@@ -16,14 +15,7 @@ class Calls:
         self.stopping=stopping
 
     def resolve(self,config):
-        active=self.registry.resolve(config['profile_id'])
-        if (active.profile.protocol!='openai_chat' or active.profile.model!='deepseek-flash'
-                or urlsplit(active.profile.base_url).hostname!='api.deepseek.com'):
-            raise OrganizationError('organization_profile_unsupported')
-        body={**active.profile.extra_body,'thinking':{'type':'disabled'}}
-        profile=active.profile.model_copy(update={'max_output_tokens':4096,'timeout_seconds':180.0,
-                                                 'response_format':'json_object','extra_body':body})
-        return ResolvedProfile(active.profile_id,profile,active.api_key,fingerprint(profile.model_dump()))
+        return providers.resolve(self.registry,config)
 
     async def generate(self,job_id,item_id,stage,system,user,validate,images=None,repair_system=None):
         with self.store.transaction() as session:
@@ -36,7 +28,8 @@ class Calls:
                 raise OrganizationError('organization_paused')
             if job.settings.get('profile_fingerprint') not in {None,resolved.fingerprint}:
                 raise OrganizationError('organization_profile_changed')
-            job.settings={**job.settings,'profile_fingerprint':resolved.fingerprint}
+            prices=job.settings.get('price_snapshot') or providers.price_snapshot(resolved)
+            job.settings={**job.settings,'profile_fingerprint':resolved.fingerprint,'price_snapshot':prices}
             previous=session.scalar(select(OrganizationCall).where(OrganizationCall.fingerprint==identity).order_by(OrganizationCall.attempt.desc()).limit(1))
             if previous and previous.status in {'received','succeeded','invalid'} and previous.response is not None:
                 cached=(previous.id,previous.response,previous.status)
@@ -66,6 +59,14 @@ class Calls:
                 if self.stopping() or session.get(OrganizationJob,job_id).status!='running':
                     raise OrganizationError('organization_paused')
         try:
+            incoming_bound=None
+            if prices['provider']=='openai':
+                try:
+                    incoming_bound=await self.client.count_input_tokens(resolved,system,user,images=images)
+                    if type(incoming_bound) is not int or not 0<=incoming_bound<=922000:
+                        raise OrganizationError('invalid_token_count')
+                except Exception as error:
+                    raise OrganizationError(getattr(error,'code','organization_token_count_failed')) from None
             with self.store.transaction() as session:
                 job=session.get(OrganizationJob,job_id)
                 control=self.store.control(session)
@@ -73,14 +74,16 @@ class Calls:
                     raise OrganizationError('organization_paused')
                 period='initial' if config['initial_period'] else datetime.now(timezone(timedelta(hours=8))).strftime('%Y-%m')
                 budget=control['config']['initial_budget_yuan' if period=='initial' else 'monthly_budget_yuan']*1_000_000
-                # UTF-8 byte count bounds text tokens conservatively; vision <=1024 tokens/image.
-                reserve=(len((system+user).encode())+1024*len(images or [])+256)*2+4096*8
+                # Keep the historical DeepSeek reservation/cache behavior intact.
+                bound=incoming_bound if incoming_bound is not None else len((system+user).encode())+1024*len(images or [])
+                reserve=providers.cost(prices,bound+256,resolved.profile.max_output_tokens)
                 used=session.scalar(select(func.coalesce(func.sum(OrganizationCall.accounted_micros),0)).where(OrganizationCall.period==period))
                 if used+reserve>budget:
                     raise OrganizationError('organization_budget_exhausted')
                 attempt=1+(previous.attempt if previous else 0)
                 call=OrganizationCall(fingerprint=identity,attempt=attempt,job_id=job_id,item_id=item_id,
-                    stage=stage,period=period,reserved_micros=reserve,accounted_micros=reserve)
+                    stage=stage,period=period,reserved_micros=reserve,accounted_micros=reserve,
+                    price_snapshot={**prices,'estimated_input_tokens':bound})
                 session.add(call);session.flush();identifier=call.id
             try:
                 if images:
@@ -97,7 +100,7 @@ class Calls:
                 call.response=reply.text;call.usage=reply.usage;call.status='received'
                 incoming,outgoing=reply.usage.get('input_tokens'),reply.usage.get('output_tokens')
                 if type(incoming) is int and type(outgoing) is int and incoming>=0 and outgoing>=0:
-                    call.accounted_micros=incoming*2+outgoing*8
+                    call.accounted_micros=providers.cost(prices,incoming,outgoing)
             return self._validate(identifier,reply.text,validate)
         finally:
             self.gate.release()

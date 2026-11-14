@@ -27,7 +27,7 @@ def _merge(target: dict, extension: dict) -> dict:
     return target
 
 
-def build_request(resolved: ResolvedProfile, system: str, user: str) -> tuple[str, dict, dict]:
+def build_request(resolved: ResolvedProfile, system: str, user: str, *, images=None) -> tuple[str, dict, dict]:
     profile = resolved.profile
     headers = {"Accept": "application/json", "Content-Type": "application/json"}
     mode = profile.auth
@@ -56,6 +56,12 @@ def build_request(resolved: ResolvedProfile, system: str, user: str) -> tuple[st
         path = "/responses"
         body = {"model": profile.model, "instructions": system, "input": user,
                 "max_output_tokens": profile.max_output_tokens, "stream": False, "store": False}
+        if profile.response_format == "json_object":
+            body['text'] = {'format': {'type': 'json_object'}}
+            # JSON-mode validation inspects input messages. Keep the actual
+            # system contract in that input instead of relying on instructions.
+            body.pop('instructions')
+            body['input']=[{'role':'developer','content':system},{'role':'user','content':user}]
     elif profile.protocol == "anthropic_messages":
         path = "/messages"
         headers["anthropic-version"] = profile.anthropic_version
@@ -67,7 +73,20 @@ def build_request(resolved: ResolvedProfile, system: str, user: str) -> tuple[st
         body = {"systemInstruction": {"parts": [{"text": system}]},
                 "contents": [{"role": "user", "parts": [{"text": user}]}],
                 "generationConfig": {"maxOutputTokens": profile.max_output_tokens}}
-    return profile.base_url + path, headers, _merge(body, profile.extra_body)
+    body = _merge(body, profile.extra_body)
+    if images:
+        if profile.protocol not in {'openai_chat', 'openai_responses'} or len(images)>4:
+            raise AIError(422, 'unsupported_image_request')
+        if any(not isinstance(value,str) or not value.startswith(('data:image/jpeg;base64,','data:image/png;base64,','data:image/gif;base64,','data:image/webp;base64,')) for value in images):
+            raise AIError(422, 'invalid_image_request')
+        if profile.protocol == 'openai_chat':
+            body['messages'][-1]['content']=[{'type':'text','text':user}, *[
+                {'type':'image_url','image_url':{'url':value,'detail':'original'}} for value in images]]
+        else:
+            body['input']=([{'role':'developer','content':system}] if profile.response_format=='json_object' else [])+[
+                {'role':'user','content':[{'type':'input_text','text':user}, *[
+                {'type':'input_image','image_url':value,'detail':'original'} for value in images]]}]
+    return profile.base_url + path, headers, body
 
 
 def _failure(code: str = "invalid_model_response") -> None:

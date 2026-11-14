@@ -61,7 +61,7 @@ def run(embedding_url: str, qdrant_url: str) -> tuple[dict, Path]:
                         {"expected_version": note["version"], "source_ids": [state["source_id"], second["id"]]})
             # Both source and restored processes are stopped during snapshot and comparison.
             snapshot = _legacy_snapshot(database)
-            saved = backup_storage(original, database, original / "knowledge", "0007")
+            saved = backup_storage(original, database, original / "knowledge", "0008")
             backup_configuration(original, saved)
             manifest = verify_backup(saved)
             report["restore"] = restore_new(saved, restored)

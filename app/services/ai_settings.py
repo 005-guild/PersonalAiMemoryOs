@@ -32,7 +32,8 @@ def _validated(value: dict):
     if any(not PROFILE_ID.fullmatch(name) for name in document.profiles):
         raise ValueError()
     for profile in document.profiles.values():
-        if profile.protocol != "openai_chat" and (profile.response_format != "prompt" or profile.token_limit_field != "max_tokens"):
+        if (profile.response_format != "prompt" and profile.protocol not in {"openai_chat", "openai_responses"}
+                or profile.protocol != "openai_chat" and profile.token_limit_field != "max_tokens"):
             raise ValueError()
     if document.default_profile is not None and document.default_profile not in document.profiles:
         raise ValueError()

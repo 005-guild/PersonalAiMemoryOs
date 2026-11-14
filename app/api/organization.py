@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 from starlette.concurrency import run_in_threadpool
 from app.api.settings import _service, _pairs, _invalid_constant, _bounded_structure
-from app.services.organization.contracts import OrganizationWrite, OrganizationError
+from app.services.organization.contracts import OrganizationWrite, OrganizationError, ProfileSwitch
 from app.services.organization.search import keyword_search, semantic_search
 from app.services.zhihu_sync.storage import safe_path
 from app.vector.errors import RagError
@@ -73,6 +73,16 @@ async def items(request: Request, offset: int = Query(0, ge=0), limit: int = Que
                 error: str | None = Query(None,max_length=100)):
     target = await service(request)
     return await call(target.store.items, offset, limit, job_id,error)
+
+
+@router.post('/switch-profile')
+async def switch_profile(request: Request):
+    target=await service(request,True)
+    try:payload=ProfileSwitch.model_validate(await body(request))
+    except ValueError:raise HTTPException(422,detail={'code':'configuration_invalid'}) from None
+    result=await call(target.store.switch_profile,payload)
+    target.wake.set()
+    return result
 
 
 @router.post('/items/{item_id}/approve-partial-image',status_code=202)

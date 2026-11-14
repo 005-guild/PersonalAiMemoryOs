@@ -31,8 +31,15 @@ profiles:
     enabled: false
     protocol: openai_responses
     base_url: https://api.openai.com/v1
-    model: replace-with-your-model
+    model: gpt-6.1-sol
     api_key_ref: openai
+    response_format: json_object
+    max_output_tokens: 8192
+    timeout_seconds: 180
+    extra_body:
+      reasoning:
+        effort: low
+      service_tier: default
   claude:
     label: Anthropic Claude
     enabled: false

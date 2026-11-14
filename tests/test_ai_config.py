@@ -150,12 +150,13 @@ def test_extensions_cannot_bypass_reserved_settings(extra: dict):
         AIProfile(protocol="openai_chat", base_url="https://example.com", model="m", extra_body=extra)
 
 
-def test_json_mode_only_supported_for_chat(isolated_project: Path):
+@pytest.mark.parametrize('protocol,valid',[('openai_responses',True),('anthropic_messages',False)])
+def test_json_mode_supported_by_chat_and_responses(isolated_project: Path,protocol,valid):
     write_profiles(isolated_project, {"deepseek": {
-        "protocol": "openai_responses", "base_url": "https://example.com", "model": "m",
+        "protocol": protocol, "base_url": "https://example.com", "model": "m",
         "response_format": "json_object",
     }})
-    assert AIRegistry(Settings(_env_file=None)).error_code == "ai_configuration_invalid"
+    assert AIRegistry(Settings(_env_file=None)).error_code == (None if valid else 'ai_configuration_invalid')
 
 
 def test_read_utf8_bom_and_blank_default_override(isolated_project: Path):

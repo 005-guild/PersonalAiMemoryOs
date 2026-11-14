@@ -55,5 +55,6 @@ class OrganizationCall(Base):
     accounted_micros: Mapped[int] = mapped_column(Integer, nullable=False)
     response: Mapped[str | None] = mapped_column(Text)
     usage: Mapped[dict | None] = mapped_column(JSON)
+    price_snapshot: Mapped[dict | None] = mapped_column(JSON)
     error: Mapped[str | None] = mapped_column(String(100))
     created_at: Mapped[str] = mapped_column(String(40), nullable=False, default=utcnow)

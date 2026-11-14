@@ -16,7 +16,9 @@ The [complete Chinese manual](readme-cn.md) covers every management page, instal
 
 The [project review and follow-up checklist](docs/project-audit-cn.md) records the current instance matrix, source map, confirmed documentation fixes and prioritized work with evidence and completion criteria. It distinguishes real quality review, restoration/cold-boot exercises and maintenance work from features already implemented. This review changes documentation only; pending items are not implementation or live-call authorization.
 
-## Current source: 0.10.0 (schema 0007)
+## Current source: 0.11.0 (schema 0008)
+
+OpenAI Responses supports inline vision and JSON mode. Collection processing can explicitly switch to GPT-6.1 Sol while retaining approved style and published notes. Each request freezes conservative provider pricing; OpenAI counts input tokens before generation. Personal defaults and credentials are stored only in the selected installation, with no automatic provider fallback.
 
 Collection organization adds a separate sample-reviewed workflow for Zhihu summaries, two-level categories, new titles and categorized Markdown mirrors while preserving originals. Paid stages are cached and budgeted; automatic processing is off until sample approval and explicit enablement. Local keyword search supports short Chinese queries, and filtered semantic retrieval reuses the existing RAG services. Current acceptance and installation status are recorded in [implementation tasks](IMPLEMENTATION_TASKS.md).
 

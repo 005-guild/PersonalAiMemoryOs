@@ -13,7 +13,7 @@ def bundle(root):
         target = root / name
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(b"new resource " + name.encode())
-    create_manifest(root, "0.8.0", "0007")
+    create_manifest(root, "0.8.0", "0008")
 
 
 def test_inplace_update_preserves_private_and_unknown_files(tmp_path):
@@ -72,7 +72,7 @@ def test_deep_dependency_update_keeps_sibling_temporary_paths_below_windows_limi
         path = root / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(content)
-        create_manifest(root, "0.8.0", "0007")
+        create_manifest(root, "0.8.0", "0008")
     owned = {item["path"] for item in read_manifest(target)["files"]} | {"program-manifest.json"}
     backup.mkdir()
     copy = shutil.copy2
@@ -148,7 +148,7 @@ def test_upgrade_migrates_in_place_with_verified_data_and_configuration(tmp_path
     config = (target / "config/ai-providers.yml").read_bytes()
     result = upgrade_portable(source, target, lease_factory=Lease)
     backup = Path(result["backup"])
-    assert revision(target / "data/memory.db") == "0007"
+    assert revision(target / "data/memory.db") == "0008"
     assert revision(backup / "memory.db") == "0004"
     assert (backup / "configuration/config/ai-providers.yml").read_bytes() == config
     assert (target / "config/ai-providers.yml").read_bytes() == config

@@ -36,7 +36,11 @@ def main():
     model=Model();profile=AIProfile(protocol='openai_chat',base_url='https://api.deepseek.com',model='deepseek-flash')
     organization=server.app.state.organization
     organization.calls.client=model
-    organization.calls.registry=SimpleNamespace(resolve=lambda _:ResolvedProfile('deepseek',profile,None,'synthetic'))
+    openai=AIProfile(protocol='openai_responses',base_url='https://api.openai.com/v1',model='gpt-6.1-sol')
+    profiles={'deepseek':profile,'openai-responses':openai}
+    organization.calls.registry=SimpleNamespace(resolve=lambda identifier:ResolvedProfile(identifier,profiles[identifier],None,'synthetic'),profiles=profiles)
+    async def count(*args,**kwargs):return 100
+    model.count_input_tokens=count
     report={'status':'failed','real_model_calls':0}
     try:
         server.start()
@@ -65,9 +69,20 @@ def main():
             expect(page.get_by_text('找到 10 篇',exact=True)).to_be_visible()
             page.screenshot(path=str(evidence/'search.png'),full_page=True)
             assert len(list(output.glob('*/*/*.md')))==10
+            page.get_by_label('AI 配置名称',exact=True).fill('openai-responses')
+            page.get_by_role('button',name='切换模型并保留样式确认',exact=True).click()
+            expect(page.get_by_label('AI 配置名称',exact=True)).to_have_value('openai-responses')
+            expect(page.get_by_role('button',name='开始全量整理',exact=True)).to_be_enabled()
+            article(source,11)
+            page.get_by_role('button',name='扫描原文',exact=True).click()
+            expect(page.get_by_text('发现 11 篇；长文 2 篇；需识图 2 篇。',exact=True)).to_be_visible()
+            page.get_by_role('button',name='开始全量整理',exact=True).click()
+            expect(page.get_by_text('已入库 11',exact=True)).to_be_visible(timeout=60000)
+            assert len(model.calls)==count+1
+            assert len(list(output.glob('*/*/*.md')))==11
             assert not errors,errors
             report.update(status='passed',sample_count=10,synthetic_requests=count,
-                          checks=['sample_gate','long_document','images','publication_cache','short_chinese_search','no_page_errors'])
+                          checks=['sample_gate','long_document','images','publication_cache','short_chinese_search','explicit_openai_switch','new_items_only','no_page_errors'])
             browser.close()
     except Exception:
         (evidence/'failure.txt').write_text(traceback.format_exc(),encoding='utf-8')

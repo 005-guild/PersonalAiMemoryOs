@@ -28,6 +28,14 @@ def job_view(job):
 class Store:
     def __init__(self,database,lock,root):
         self.database,self.lock,self.root=database,lock,Path(root)
+        self.resolve_profile=None
+
+    def approved(self,control):
+        if control['approved_policy']!=policy(control['config']):return False
+        expected=control.get('approved_profile_fingerprint')
+        if expected is None:return True  # Legacy style approval; bound on recover/start.
+        try:return self.resolve_profile(control['config']).fingerprint==expected
+        except Exception:return False
 
     @contextmanager
     def transaction(self):
@@ -54,7 +62,7 @@ class Store:
             costs=[{'period':period,'accounted_yuan':amount/1_000_000,'calls':count} for period,amount,count in session.execute(
                 select(OrganizationCall.period,func.sum(OrganizationCall.accounted_micros),func.count()).group_by(OrganizationCall.period)).all()]
             return {**control,'revision':fingerprint(control['config']),
-                    'approved':control['approved_policy']==policy(control['config']),
+                    'approved':self.approved(control),
                     'counts':counts,'budgets':costs,'jobs':[job_view(j) for j in jobs]}
 
     def require_idle(self,session):
@@ -78,7 +86,7 @@ class Store:
             if current['config']['input_dir'] and any(config[k]!=current['config'][k] for k in ('input_dir','output_dir')):
                 if session.scalar(select(OrganizationItem.id).limit(1)):
                     raise OrganizationError('organization_paths_locked')
-            if config['enabled'] and current['approved_policy']!=policy(config):
+            if config['enabled'] and not self.approved({**current,'config':config}):
                 raise OrganizationError('sample_approval_required')
             current['config']=config
             self.set_control(session,current)
@@ -122,7 +130,7 @@ class Store:
         with self.transaction() as session:
             self.require_idle(session)
             control=self.control(session)
-            if control['approved_policy']!=policy(control['config']):
+            if not self.approved(control):
                 raise OrganizationError('sample_approval_required')
             item=session.get(OrganizationItem,identifier)
             if not item or item.error!='image_needs_review' or item.input_hash!=input_hash:
@@ -138,7 +146,7 @@ class Store:
                 raise OrganizationError('paused_job_exists')
             control=self.control(session)
             config=control['config']
-            if mode!='sample' and control['approved_policy']!=policy(config):
+            if mode!='sample' and not self.approved(control):
                 raise OrganizationError('sample_approval_required')
             if not(config['input_dir'] and config['output_dir']):
                 raise OrganizationError('configuration_incomplete')
@@ -155,6 +163,10 @@ class Store:
                 if mode in {'retry','continue'} and item.id in selected:
                     item.status='discovered';item.error=None
             settings={**config,'retry':mode=='retry','initial_period':not control['initial_complete']}
+            if self.resolve_profile:
+                from app.services.organization.providers import price_snapshot
+                resolved=self.resolve_profile(config)
+                settings.update(profile_fingerprint=resolved.fingerprint,price_snapshot=price_snapshot(resolved))
             job=OrganizationJob(mode=mode,selection=selected,settings=settings)
             session.add(job);session.flush()
             control['paused']=False
@@ -191,7 +203,38 @@ class Store:
                     or any(session.get(OrganizationItem,x).status!='ready' for x in job.selection)):
                 raise OrganizationError('sample_not_ready')
             control['approved_policy']=policy(control['config'])
+            if self.resolve_profile:
+                resolved=self.resolve_profile(control['config'])
+                if job.settings.get('profile_fingerprint')!=resolved.fingerprint:
+                    raise OrganizationError('organization_profile_changed')
+                control['approved_profile_fingerprint']=resolved.fingerprint
             self.set_control(session,control)
+        return self.read()
+
+    def switch_profile(self,payload):
+        with self.transaction() as session:
+            self.require_idle(session)
+            if session.scalar(select(OrganizationJob.id).where(OrganizationJob.status=='paused').limit(1)):
+                raise OrganizationError('paused_job_exists')
+            control=self.control(session);config=control['config']
+            if payload.expected_revision!=fingerprint(config):
+                raise OrganizationError('configuration_changed')
+            if control['approved_policy']!=policy(config):
+                raise OrganizationError('sample_approval_required')
+            selected={**config,'profile_id':payload.profile_id}
+            resolved=self.resolve_profile(selected)
+            if resolved.fingerprint!=payload.expected_profile_fingerprint:
+                raise OrganizationError('organization_profile_changed')
+            history=list(control.get('profile_switches',[]))
+            history.append({'from':config['profile_id'],'to':payload.profile_id,'at':utcnow(),
+                            'from_fingerprint':control.get('approved_profile_fingerprint'),
+                            'to_fingerprint':resolved.fingerprint,'model':resolved.profile.model})
+            control.update(config=selected,approved_policy=policy(selected),
+                           approved_profile_fingerprint=resolved.fingerprint,profile_switches=history)
+            self.set_control(session,control)
+            for item in session.scalars(select(OrganizationItem).where(OrganizationItem.status!='published')):
+                if item.error!='source_changed':
+                    item.result=None;item.error=None;item.status='discovered'
         return self.read()
 
     def pause(self):
@@ -226,6 +269,12 @@ class Store:
 
     def recover(self):
         with self.transaction() as session:
+            control=self.control(session)
+            if self.resolve_profile and self.approved(control) and not control.get('approved_profile_fingerprint'):
+                try:
+                    control['approved_profile_fingerprint']=self.resolve_profile(control['config']).fingerprint
+                    self.set_control(session,control)
+                except Exception:pass
             for call in session.scalars(select(OrganizationCall).where(OrganizationCall.status=='reserved')):
                 call.status='uncertain';call.error='interrupted_call'
             for job in session.scalars(select(OrganizationJob).where(OrganizationJob.status=='running')):
