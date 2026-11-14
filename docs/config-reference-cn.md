@@ -2,6 +2,8 @@
 
 ## 收藏整理
 
+本机当前生效配置（2026-11-14）：应用默认与收藏 `profile_id` 均为 `openai-responses`，模型 `gpt-6.1-sol`；收藏自动整理开启且未暂停，首次完成状态保留，月预算 30 元。已通过实际重启及接口核验，旧 702 条调用和 7.587728 元首次账本保持原值；独立真实验证记账 0.457660 元，包含失败预留。
+
 0.11.0 增加官方 OpenAI Responses / `gpt-6.1-sol` 支持，继续支持原 DeepSeek 配置。OpenAI 使用 JSON Object、低推理强度、Standard 等级、8192 最大输出 tokens 和 180 秒超时；DeepSeek 的 4096 上限及原请求指纹保持兼容。Responses 图片使用内联 `input_image` 和原始清晰度，完整保留既有分片及模糊内容审核规则。
 
 `GET /api/v1/collection-organization` 增加 `available_profiles`：只列已经启用、配好密钥且受支持的配置，包含非敏感模型指纹和价格快照。新增 `POST /api/v1/collection-organization/switch-profile`，JSON 为 `profile_id`、`expected_revision`、`expected_profile_fingerprint`。需原样式确认有效、无执行或暂停任务，且只修改模型；沿用样式确认并记录切换历史，保留所有已发布结果、历史费用及首次完成状态。未发布结果失效后使用新模型生成。目标或配置指纹变化返回 409。普通设置修改仍不能绕过样本审核。模型内部参数变化也会使自动任务的确认失效。
