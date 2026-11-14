@@ -113,6 +113,25 @@ def test_full_workflow_preserves_originals_and_skips_model_on_publish(organizati
     assert keyword_search(service.store,'',category='无/结果')['total']==0
 
 
+def test_unchanged_refresh_avoids_index_writes_and_recovers_missing_entry(organization):
+    from sqlalchemy import event,text
+    service,model,source,_=organization
+    approved(service,source);run(service,'all')
+    writes=[]
+    def record(connection,cursor,statement,parameters,context,many):
+        if statement.lstrip().upper().startswith(('INSERT','UPDATE','DELETE')):writes.append(statement)
+    event.listen(service.store.database.engine,'before_cursor_execute',record)
+    try:
+        service.publication.refresh(service.store.read()['config'])
+        assert writes==[]
+    finally:event.remove(service.store.database.engine,'before_cursor_execute',record)
+    with service.store.transaction() as session:session.execute(text('DELETE FROM organization_fts'))
+    assert keyword_search(service.store,'人工智能')['total']==0
+    service.publication.refresh(service.store.read()['config'])
+    assert keyword_search(service.store,'人工智能')['total']==1
+    assert len(model.calls)==2
+
+
 def test_sample_covers_two_visual_two_long_and_six_ordinary(organization):
     service,model,root,output=organization
     (root/'images').mkdir(parents=True)

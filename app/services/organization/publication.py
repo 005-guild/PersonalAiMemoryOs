@@ -107,6 +107,10 @@ class Publication:
                     previous=read_file(output,item.export_path)
                     if previous and previous.hash!=item.export_hash: raise FileChangedError('edited')
                 current=read_file(output,relative)
+                unchanged=(current and current.hash==wanted and item.export_path==relative
+                    and item.exported_version==note.version and item.status=='published' and not item.error)
+                if unchanged and session.scalar(text('SELECT rowid FROM organization_fts WHERE item_id=:id LIMIT 1'),{'id':identifier}) is not None:
+                    return
                 if not current or current.hash!=wanted:
                     expected=item.export_hash if item.export_path==relative and current else None
                     atomic_write(output,relative,content,expected)
