@@ -1,5 +1,9 @@
 # ROADMAP.md
 
+## Current workspace delivery —0.15.0 /0009 (2026-11-15)
+
+Delivered four primary entries, a unified shelf for all saved notes, independent organization/settings/maintenance drilldowns and shared reading styling. Source, draft and knowledge roles remain distinct. Verified full1392-test regression, subsequent focused checks, actual frozen workspace/bookshelf/lifecycle, settings and deterministic local workflow acceptance. Backed up and upgraded the fixed installation in place;580 notes are readable (578 collection/2 ordinary), all1903 originals and existing accounting remain preserved, zero new paid model calls. See [delivery evidence](IMPLEMENTATION_TASKS.md). Cold boot and second-machine conditions remain unchanged; subsequent sections are earlier checkpoints.
+
 ## Current follow-up acceptance (2026-11-15)
 
 Source and fixed installation are delivered **0.14.2 / 0009** after three targeted dependency security updates: 53 public package/version combinations rechecked through OSV, 1369 local tests passed, actual frozen EXE/bookshelf and bundled security checks passed, verified backup and in-place upgrade completed. The code commit passed remote Windows CI. Native production Save As save/cancel is now verified with a synthetic input in an isolated copy. Both 0.14.1 code and native maintenance commits passed actual remote Windows CI. Seven fixed real model quality cases passed at their stated scope; same-host full model/runtime/EXE relocation and Qdrant snapshot restore also passed. See [current delivery evidence](IMPLEMENTATION_TASKS.md).
