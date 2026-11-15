@@ -1,6 +1,7 @@
 """Read projections, identity boundaries and zero-mutation collection browsing."""
 
 import hashlib
+from concurrent.futures import ThreadPoolExecutor
 from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
@@ -85,6 +86,30 @@ def test_all_read_requests_preserve_files_rows_and_calls(reading):
     assert database() == before and len(model.calls) == calls
     assert files == {str(p): (p.stat().st_mtime_ns, hashlib.sha256(p.read_bytes()).hexdigest())
                      for root in (source, output) for p in root.rglob('*') if p.is_file()}
+
+
+def test_reading_does_not_wait_for_background_filesystem_scan(reading):
+    view, service, _, ids, _, _ = reading
+    def browse():
+        return view.overview()['total'], view.notes()['total'], view.detail(ids[0])['note']['id']
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        # Simulate a background scan that owns the shared lock. An independent
+        # HTTP reader must still see committed data before that scan completes.
+        with service.store.lock:
+            assert executor.submit(browse).result(timeout=2) == (4, 4, ids[0])
+
+
+def test_local_image_read_does_not_wait_for_background_scan(reading, settings):
+    _, service, _, _, _, output = reading
+    name = hashlib.sha256(PNG).hexdigest() + '.png'
+    (output / 'assets').mkdir(exist_ok=True)
+    (output / 'assets' / name).write_bytes(PNG)
+    app = create_app(settings); app.state.organization = service
+    client = TestClient(app, base_url='http://127.0.0.1')
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        with service.store.lock:
+            response = executor.submit(client.get, '/api/v1/collection-organization/assets/' + name).result(timeout=2)
+            assert response.status_code == 200 and response.content == PNG
 
 
 @pytest.mark.parametrize('problem', ['deleted', 'source_changed', 'conflict', 'version', 'missing_index'])

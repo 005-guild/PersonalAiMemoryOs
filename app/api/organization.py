@@ -115,10 +115,10 @@ async def asset(name: str, request: Request):
     target = await service(request)
     if not re.fullmatch(r'[a-f0-9]{64}\.(png|jpg|gif|webp)', name):
         raise HTTPException(404)
-    config = (await call(target.store.read))['config']
-    if not config['output_dir']:
+    output = await call(target.store.output_directory)
+    if not output:
         raise HTTPException(404)
-    path = safe_path(Path(config['output_dir'])/'assets'/name)
+    path = safe_path(Path(output)/'assets'/name)
     if not path.is_file():
         raise HTTPException(404)
     return FileResponse(path, media_type={'.png':'image/png','.jpg':'image/jpeg','.gif':'image/gif','.webp':'image/webp'}[path.suffix])

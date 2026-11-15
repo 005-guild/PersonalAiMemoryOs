@@ -1,6 +1,7 @@
 """Collection reading never initializes configuration, publishes files, or calls models."""
 
 import re
+from contextlib import contextmanager
 from pathlib import Path
 from app.models import OrganizationControl
 from app.repositories.reading import ReadingRepository
@@ -13,16 +14,25 @@ class ReadingService:
     def __init__(self, store):
         self.store = store
 
+    @contextmanager
+    def _snapshot(self):
+        # Background sync holds its process lock while scanning the whole vault.
+        # Readers only need SQLite's committed snapshot, not that filesystem lock.
+        with self.store.database.session() as session:
+            session.autoflush = False
+            session.connection().exec_driver_sql('BEGIN')
+            yield session  # Session.close rolls back the read transaction.
+
     def overview(self):
-        with self.store.transaction() as session:
+        with self._snapshot() as session:
             return ReadingRepository(session).overview()
 
     def notes(self, **filters):
-        with self.store.transaction() as session:
+        with self._snapshot() as session:
             return ReadingRepository(session).notes(**filters)
 
     def detail(self, identifier):
-        with self.store.transaction() as session:
+        with self._snapshot() as session:
             pair, eligible = ReadingRepository(session).detail(identifier)
             if not pair:
                 raise ContentError(404, 'reading_not_found')
@@ -31,12 +41,14 @@ class ReadingService:
             item, note = pair
             control = session.get(OrganizationControl, 1)
             output = control.value.get('config', {}).get('output_dir', '') if control else ''
-            images = self._images(item.snapshot.get('images', []), output)
+            images = item.snapshot.get('images', [])
             original = item.snapshot['values']
-            return {'note': knowledge_snapshot(note),
+            result = {'note': knowledge_snapshot(note),
                     'original': {key: original.get(key) for key in ('title', 'author', 'url', 'content')},
-                    'images': images,
                     'partial_image_summary': bool((item.result or {}).get('partial_image_summary'))}
+        # Filesystem checks stay outside the short database snapshot.
+        result['images'] = self._images(images, output)
+        return result
 
     @staticmethod
     def _images(images, output):

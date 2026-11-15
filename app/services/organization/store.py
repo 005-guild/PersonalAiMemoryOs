@@ -65,6 +65,13 @@ class Store:
                     'approved':self.approved(control),
                     'counts':counts,'budgets':costs,'jobs':[job_view(j) for j in jobs]}
 
+    def output_directory(self):
+        # Asset reads need one committed configuration value, not the scan lock
+        # or the full control/jobs/cost projection used by the management page.
+        with self.database.session() as session:
+            row = session.get(OrganizationControl, 1)
+            return row.value.get('config', {}).get('output_dir', '') if row else ''
+
     def require_idle(self,session):
         if session.scalar(select(OrganizationJob.id).where(OrganizationJob.status.in_(['pending','running'])).limit(1)):
             raise OrganizationError('organization_busy')
