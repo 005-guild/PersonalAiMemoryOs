@@ -1,5 +1,9 @@
 # 配置完整参考（v0.12.0）
 
+## 0.14.2 依赖安全下限
+
+`pyproject.toml` 的 `tool.uv.constraint-dependencies`约束certifi≥2026.10.19、opentelemetry-api≥1.45.2、setuptools≥84.1.0；`build-constraint-dependencies`另约束隔离构建的setuptools。约束不会主动新增运行包，实际版本仍由uv.lock固定。没有新增正式应用设置或迁移。更新依赖后构建需同步隔离构建环境；`--skip-sync`仅适用于与同一锁文件已同步的环境。公告与验证范围见[维护手册](maintenance-cn.md#安全依赖更新与公告复查)。
+
 ## 0.14.1 验收工具与兼容性
 
 本补丁没有新增正式配置项或数据库迁移。知乎想法沿用收藏同步配置、身份标识与完成账本；文字取完整 `content`，不使用 `fold_content`，图片保留原图链接并验证允许的图片域名。接口的 `image_count` 可能为零，实际按有序图片内容处理。

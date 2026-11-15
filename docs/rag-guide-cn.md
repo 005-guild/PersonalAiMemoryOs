@@ -1,5 +1,9 @@
 # RAG 配置与使用指南
 
+## 安全依赖更新（0.14.2 候选 / 0009）
+
+本次只更新三个已有依赖：HTTPX使用的certifi、FastAPI间接引入的OpenTelemetry API，以及构建环境中的setuptools。嵌入模型、维度、Qdrant代次和缓存约定不变，无需重建向量；候选构建仍需完成实际EXE验收后交付。公告与版本见[维护手册](maintenance-cn.md#安全依赖更新与公告复查)。
+
 ## 搬迁验证补充（0.14.1 / 0009）
 
 `scripts/verify_stack_relocation.py --bundle <干净缓存包目录>` 已实测同机整栈路径搬迁：复制 Ollama/BGE-M3 文件，以真实嵌入建立隔离索引，下载 Qdrant 集合快照，正常关闭 EXE 后搬迁目录，在新建卷恢复快照，核对点、向量、载荷与索引代次，再执行相同检索。正式数据库、知识文件、共享模型与服务保持原状。

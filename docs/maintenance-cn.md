@@ -1,5 +1,21 @@
 # 维护、恢复与验收手册
 
+## 安全依赖更新与公告复查
+
+2026-11-15按现有“每月及发布前”规则重新查询当前锁文件，共53个公开包版本组合，发现3个受公告影响的依赖。先核对维护者公告、固定版本及本项目使用路径，再作定向更新：
+
+| 包 | 原版本 → 修复版本 | 公告与本项目路径 |
+| --- | --- | --- |
+| certifi | 2026.7.22 → 2026.10.19 | [维护者公告](https://github.com/certifi/python-certifi/security/advisories/GHSA-6q48-6c7w-9gw2)：移除受影响的emSign根信任；经HTTPX进入HTTP客户端。采用2026.10.19保留后续恢复的未受影响根。 |
+| opentelemetry-api | 1.45.1 → 1.45.2 | [维护者公告](https://github.com/open-telemetry/opentelemetry-python/security/advisories/GHSA-mf5v-w3w3-f6cg)：超长含换行traceparent正则解析可能耗时；由FastAPI间接引入，应用未提供MCP入口。仍更新其依赖并验证长度拦截。 |
+| setuptools | 84.0.0 → 84.1.0 | [维护者公告](https://github.com/pypa/setuptools/security/advisories/GHSA-xmj3-9gf7-h52w)：Windows旧wheel安装路径可受namespace元数据影响；由PyInstaller构建组引入，应用无wheel安装入口。 |
+
+应用候选版本0.14.2，schema仍0009，仅这三项依赖和应用版本变化。按[uv约束规则](https://docs.astral.sh/uv/reference/settings/#constraint-dependencies)设置传递依赖安全下限，并单独约束setuptools隔离构建版本。此次使用同步后的构建环境重新打包；跳过同步只能复用与当前锁一致的环境。
+
+更新后在线查询53项、受影响0项，报告 `.cache/dependency-audit/report.json`，锁哈希 `ee9491763985ffb9ad2dd91650fe503753d47c163c87d342b0fb106a400a6a0d`。原受影响结果在 `.cache/security-release/audit-before.json`；2026-10旧报告已存 `.cache/dependency-audit/history/`。保存时间与范围，不把“未报告对应公告”等同于不存在漏洞；Docker、OS、WebView2及原生DLL不在本查询范围。
+
+两个直接安全用例通过：CA集合中不再有受影响的emSign ECC根；超长含换行输入在进入正则前被拦截，正常traceparent仍可解析。完整回归、冻结包及备份后原地交付进行中，当前正式安装仍0.14.1；源码记录见[任务记录](../IMPLEMENTATION_TASKS.md)。没有模型调用或预算变化。
+
 ## 收藏导出与整栈搬迁验收
 
 0.14.1 / 0009 增加以下维护入口。先正常关闭固定桌面，执行真实账号导出验收；登录资料仅由本应用浏览器使用，不提取凭据。
@@ -157,7 +173,7 @@ uv run --locked python scripts/prepare_quality_review.py
 
 固定输入位于 `examples/quality/retrieval-cn.json`：6 篇自编笔记、10 个检索问题、4 个问答审阅题。准备命令复制输入并记录 SHA-256，生成审阅清单；不读取密钥、不调用模型。草稿审阅覆盖八阶段、忠实度、逐字依据、事实与推论区分、联网能力边界；问答审阅覆盖跨笔记、依据不足和资料指令。
 
-实际生成、回答、运行 ID、用量和人工判断尚未填入，结果明确为 `not_run`。TASK-004／005 的真实生成质量继续待验收。不要因准备工具成功或固定检索命中成功而将它们标记完成。付费调用仍单独安排预算，不自动重试。
+上述 `not_run` 是2026-10-18准备时的快照。2026-11-15已沿用同一固定语料完成3个八阶段分析及4个引用问答，用真实默认模型生成并对照原文审阅，`.cache/shared-quality/report.json` 的status为passed；费用0.937520元已记入共享月账本。它覆盖这7个固定用例，不能推导任意文章质量。准备工具本身仍不调用模型；后续付费调用沿用显式预算和不自动重试规则。
 
 ## Windows 冷启动核验
 
@@ -213,7 +229,7 @@ uv run --locked python scripts/audit_dependencies.py --online
 
 只将锁文件中的公共 PyPI 名称／版本和两个网页 npm 包提交给 [OSV 批量接口](https://google.github.io/osv.dev/post-v1-querybatch/)，不上传源码、配置、业务数据或密钥。网络失败、响应错误或未处理完的分页结果不能记成扫描干净。可选 `--proxy` 只接受无认证的本机 HTTP 代理；不要把个人代理地址写入受控配置。
 
-2026-10-18 已查 48 个包版本组合，结果 `no_advisories_reported`，报告 `.cache/dependency-audit/report.json`。这表示查询时的数据源没有报告对应公告，不保证所有版本都已被充分覆盖，更不代表没有任何漏洞；Docker 镜像、系统、WebView2、原生 DLL 不在此次扫描范围。
+2026-10-18记录为48个包版本组合、`no_advisories_reported`；旧报告已归档在 `.cache/dependency-audit/history/report-2026-10-17-95bb0c8a2919.json`（报告UTC日期17日，本机为18日）。2026-11-15复查和三项定向修复见本手册顶部，当前 `.cache/dependency-audit/report.json` 对应新锁文件。这些结果仅表示查询时数据源的对应公告，不保证所有版本都已被充分覆盖；Docker 镜像、系统、WebView2、原生 DLL 不在此次扫描范围。
 
 维护频率：每月一次公告查询；升级依赖和发布前再查一次。发现公告后先核对依赖组、实际可达路径和受影响版本，再做最小升级、锁文件更新及相关回归；涉及渲染、迁移、生命周期时补浏览器或 EXE 验收。不要无差别升级所有包或自动替换供应商模型。
 

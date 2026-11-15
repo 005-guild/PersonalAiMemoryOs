@@ -1,5 +1,11 @@
 # ROADMAP.md
 
+## Current follow-up acceptance (2026-11-15)
+
+Source candidate **0.14.2 / 0009** contains three targeted dependency security updates, with 53 public package/version combinations rechecked through OSV. Build and full acceptance are in progress; fixed installation remains verified **0.14.1**. Native production Save As save/cancel is now verified with a synthetic input in an isolated copy. Both 0.14.1 code and native maintenance commits passed actual remote Windows CI. Seven fixed real model quality cases passed at their stated scope; same-host full model/runtime/EXE relocation and Qdrant snapshot restore also passed. See [current delivery evidence](IMPLEMENTATION_TASKS.md).
+
+The remaining physical/event gates are Windows cold boot (user still forbids reboot), a second Windows environment (only this computer is available) and a real newly-favorited media arrival. Manual topic generation and draft adoption retain the user's workflow. Earlier dated sections below describe historical checkpoints, not outstanding implementation requests.
+
 ## Follow-up implementation (2026-11-15)
 
 Detailed summaries were delivered at 0.13.0 with ten cached adoptions and eleven classification updates. Source 0.14.0 / 0009 adds optional manual topic synthesis, grounded cross-article links, shared monthly accounting, candidate-only legacy search and bounded logs for new Ollama processes. Seven fixed real quality cases passed. Final reviewed desktop is installed and verified, preserving 578 sources and all 1903 originals. 1354 full-suite checks passed, with subsequent focused fixes verified. Physical cold boot, whole-stack second-machine transfer and account-dependent new media acceptance retain their actual-environment prerequisites. Startup-helper output also drains into a bounded rotating log.
