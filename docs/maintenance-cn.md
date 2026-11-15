@@ -6,7 +6,7 @@
 
 ```powershell
 uv run --locked python scripts/verify_reading.py
-uv run --locked python scripts/verify_reading.py --bundle .cache/desktop-build/4ad272d458894840915bbbffd20a4b2e/dist/PersonalAiMemoryOs
+uv run --locked python scripts/verify_reading.py --bundle .cache/desktop-build/e47a093b825f4fcaa500332557dd10ce/dist/PersonalAiMemoryOs
 ```
 
 第二条的构建路径应替换为本次产物。它复制干净包到隔离目录，验证真实 EXE 的阅读与正常关闭／重开。截图及报告保存在独立验收目录，不打包私人收藏；真实收藏的读取性能需另在只读副本核验，不由合成数据结果推断。

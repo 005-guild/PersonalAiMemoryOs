@@ -2,7 +2,7 @@
 
 ## 最新增量（2026-11-15，应用 `0.12.0` / 数据库 `0008`）
 
-阅读书架沿用 FastAPI、Repository/Service/API 分层、原生模块化 JavaScript 与桌面宿主。`app/repositories/collection_views.py` 共享有效收藏与关键词条件；`reading.py` 仓储只投影列表所需字段，服务拼装当前 Knowledge 与 OrganizationItem 原文快照，API 只开放 GET。网页 `pages/reading*.js`、`reading-renderer.js`、`reading-gallery.js` 是独立入口，沿用现有 Markdown 解析器和净化器；不改变编辑器、同步、向量或生成链路。主题是现有分类的查询投影，不建立主题实体或第二份权威存储。
+阅读书架沿用 FastAPI、Repository/Service/API 分层、原生模块化 JavaScript 与桌面宿主。`app/repositories/collection_views.py` 共享有效收藏与关键词条件；`reading.py` 仓储只投影列表所需字段，服务拼装当前 Knowledge 与 OrganizationItem 原文快照，API 只开放 GET。网页 `pages/reading*.js`、`reading-renderer.js`、`reading-gallery.js` 是独立入口，沿用现有 Markdown 解析器和净化器；不改变编辑器、同步、向量或生成链路。主题是现有分类的查询投影，不建立主题实体或第二份权威存储。 读取使用独立的短 SQLite 快照事务，关闭时回滚只读事务；图片文件检查在事务外进行。本地图片入口只读取已保存的输出目录，避免等候全库扫描锁，写入互斥机制保持不变。
 
 ## 最新增量（2026-11-14，应用 `0.11.0` / 数据库 `0008`）
 

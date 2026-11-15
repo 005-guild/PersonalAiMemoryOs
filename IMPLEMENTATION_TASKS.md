@@ -1,6 +1,18 @@
 # IMPLEMENTATION_TASKS.md
 
-## Reading bookshelf — implementation checkpoint (2026-11-15)
+## Reading bookshelf — final delivery (2026-11-15)
+
+Status: **complete, 0.12.0 / schema 0008, installed in `dist/PersonalAiMemoryOs-0.6.6`**. The sidebar bookshelf covers **578 published Zhihu favorites / 9 first-level topics**: overview, combined filters, keyword excerpts, stable pagination, current edited notes, original snapshots, complete long-form reading, keyboard image gallery and return state. Existing summaries, manual edits and partial-image warnings remain intact. General knowledge, semantic retrieval and cited answers retain their existing pages; topic synthesis and paid regeneration are outside this delivery.
+
+Final regression: **1333 passed, 3 existing Windows symlink skips, one existing Starlette warning**. The 129 targeted reading/collection/sync checks, 53 JavaScript modules, lock, docs and release checks passed. Source browser: `.cache/reading-verification/232cc13fb70e46759887323a798bef91/report.json`; final frozen bookshelf/reopen: `.cache/reading-verification/9e7f5eac4644492588ca4ec59d8d21ce/report.json`. Earlier same-version full desktop workflow (editing, import, trash, external edits, restart, relocation and draining): `.cache/desktop-validation/41a63b6176854478aad1ab9186b1a5ad/report.json`. The final read-lock optimization was checked by the final frozen bookshelf and regression.
+
+Real-size read-only copy: `.cache/reading-real-verification/c9b68e531ea44335af58e9bdc856fb81/report.json`, all 578 unique records reachable without changing the database. Live workers enabled, 20 requests per case: p95 **230 ms overview / 185 ms list / 146 ms keyword / 207 ms detail**. These are local observations, not a scale guarantee. Reading now uses short independent SQLite snapshots and asset-configuration reads instead of waiting for the background filesystem scan lock. Legacy pages retain their initial-refresh navigation behavior.
+
+Verified database/vault/configuration/program backup: `dist/PersonalAiMemoryOs-0.6.6/backups/upgrade-20261115-040803-0cd0ebef`. External completion ledger and organized mirror copied and hash-verified: `dist/PersonalAiMemoryOs-0.6.6/backups/reading-external-20261115-040742-2cf22055`. All 1903 original files and 1892 mirror files retained their bytes. Formal checks preserved 578 Sources, 580 Knowledge, 702 model-call rows and prior accounting, OpenAI defaults, the 30-yuan monthly budget, hourly sync and 580 published RAG notes. **Zero new model calls**. Installed UI/API/performance evidence: `.cache/reading-delivery/formal-ui.json`, `formal-verification.json`, `live-performance.json` and `delivery.json`.
+
+Final clean bundle: `.cache/desktop-build/e47a093b825f4fcaa500332557dd10ce/dist/PersonalAiMemoryOs`; source fingerprint `110f838fd175bcfad2177529ae2f6966359bb1107d533e6251ba6554d6d91451`. ZIP SHA-256 `eed1887d5d37db3ace1857ab8e47993772ee9626dec4c15ec81e7fc9e71fe963`; EXE SHA-256 `9d67b4257d04cff72bf3654d459b0ad2c203995e948edf983ee688a564a1088d`. No migration, new runtime dependency, framework replacement, OS restart or remote push. Earlier checkpoints below are retained history.
+
+## Reading bookshelf — earlier implementation checkpoint (2026-11-15)
 
 Source version **0.12.0 / schema 0008**. Approved scope: already organized Zhihu favorites, existing summaries retained, no topic synthesis or paid regeneration. Read-only API and modular bookshelf UI are implemented. Focused backend checks: 70 passed; web/UI checks: 46 passed; 53 JavaScript modules parsed. Synthetic browser checks cover topics, keyword excerpts, pagination/scroll return, full long documents, original snapshots, keyboard tabs/gallery, narrow screens, sanitization and zero reading writes/external requests. Full regression, real-size read-only timings, frozen acceptance and fixed-installation delivery remain pending at this checkpoint.
 
