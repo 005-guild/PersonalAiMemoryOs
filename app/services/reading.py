@@ -46,6 +46,7 @@ class ReadingService:
             result = {'note': knowledge_snapshot(note),
                     'original': {key: original.get(key) for key in ('title', 'author', 'url', 'content')},
                     'partial_image_summary': bool((item.result or {}).get('partial_image_summary'))}
+            result['related'] = ReadingRepository(session).related(note)
         # Filesystem checks stay outside the short database snapshot.
         result['images'] = self._images(images, output)
         return result

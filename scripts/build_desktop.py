@@ -61,7 +61,7 @@ def source_fingerprint() -> str:
                      if path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc")
     files.extend(ROOT / name for name in ("pyproject.toml", "uv.lock", "alembic.ini", ".env.example",
                  "config/ai-providers.example.yml", "config/embedding-providers.example.yml",
-                 "config/local-rag-startup.example.json", "scripts/start_local_rag.ps1",
+                 "config/local-rag-startup.example.json", "scripts/start_local_rag.ps1", "scripts/supervise_ollama.ps1",
                  "scripts/desktop_entry.py", "scripts/build_desktop.py"))
     digest = hashlib.sha256()
     for path in sorted(files):

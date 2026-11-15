@@ -58,6 +58,13 @@ export async function mount(container,context) {
       ...value.budgets.map(b=>el('p',{className:'muted'},`${b.period==='initial'?'首次整理':b.period}：已记账 / 预留 ¥${b.accounted_yuan.toFixed(4)} · ${b.calls} 次请求`)));
     if(running)status.append(notice(`${labels[running.status]}：${running.selection.length} 篇${running.error?' · '+explain(running.error):''}`));
     if(value.last_error)status.append(notice(explain(value.last_error),'warning'));
+    for(const job of value.jobs.filter(row=>['quality','topic'].includes(row.mode)&&['failed','paused'].includes(row.status))){
+      status.append(el('p',{},`${job.mode==='topic'?'主题综述':'详细摘要'} · ${labels[job.status]} · ${explain(job.error||'')}`),
+        button('显式重试此任务（可能计费）',async()=>{
+          try{await api(`${endpoint}/jobs/${job.id}/retry`,{method:'POST',body:{},headers:{'X-Configuration-Token':value.csrf_token}});await read();}
+          catch(e){error(e);}
+        }));
+    }
     const review=value.counts.failed?await api(endpoint+'/items?limit=100&error=image_needs_review'):{items:[]};
     if(!alive)return;
     imageReview.render(review.items,busy||value.read_only||!value.approved||value.jobs.some(j=>['running','pending'].includes(j.status)));

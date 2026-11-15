@@ -2,7 +2,7 @@
 
 import math
 
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 from app.models.base import utcnow
 from app.models.rag import RagIndexGeneration, RagIndexJob, RagNoteIndexState
@@ -60,9 +60,9 @@ class RagJobRunner:
 
     async def cleanup(self, generation):
         def observed(repository):
-            jobs = [job_dict(job) for job in repository.session.scalars(select(RagIndexJob).where(
-                RagIndexJob.generation_id == generation["id"])) if job.cleanup_ids]
-            return jobs, set(repository.valid_chunks(generation["id"]))
+            jobs = [dict(row) for row in repository.session.execute(select(RagIndexJob.id,RagIndexJob.cleanup_ids).where(
+                RagIndexJob.generation_id == generation["id"],func.json_array_length(RagIndexJob.cleanup_ids)>0)).mappings()]
+            return jobs, set(repository.valid_chunks(generation["id"])) if jobs else set()
         jobs, published_ids = await self.indexer.db(observed)
         for job in jobs:
             if self.indexer._closing:

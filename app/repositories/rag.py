@@ -4,6 +4,7 @@ import hashlib
 from uuid import UUID, uuid5
 
 from sqlalchemy import select
+from sqlalchemy.orm import load_only
 
 from app.models.base import new_id, utcnow
 from app.models.content import Knowledge, Source
@@ -217,16 +218,20 @@ class RagRepository:
         state.version, state.content_hash, state.updated_at = job.version, job.content_hash, utcnow()
         return True
 
-    def valid_chunks(self, generation_id):
+    def valid_chunks(self, generation_id, identities=None):
         valid = {}
-        states = self.session.scalars(select(RagNoteIndexState).where(
+        query = select(RagNoteIndexState).where(
             RagNoteIndexState.generation_id == generation_id,
-            RagNoteIndexState.status == "published"))
+            RagNoteIndexState.status == "published")
+        if identities is not None:
+            query = query.where(RagNoteIndexState.knowledge_id.in_(identities))
+        states = self.session.scalars(query)
         for state in states:
             snapshot, reason = self.note(state.knowledge_id)
             if reason or snapshot["version"] != state.version or hash_note(snapshot) != state.content_hash:
                 continue
-            job = self.session.get(RagIndexJob, state.published_job_id)
+            job = self.session.get(RagIndexJob, state.published_job_id,
+                options=[load_only(RagIndexJob.status,RagIndexJob.version,RagIndexJob.chunks)])
             if job is None or job.status != "published" or job.version != state.version:
                 continue
             for chunk in job.chunks:

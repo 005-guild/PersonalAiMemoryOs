@@ -1,5 +1,10 @@
 # ARCHITECTURE.md
 
+## 最新增量（2026-11-15，0.14.0）
+
+详细摘要通过现有收藏工作器生成候选，ContentService负责版本校验后的采纳，现有导出与RAG链路负责发布。独立topics服务复用该工作器、模型适配、并发槽和月预算，Repository读取书架可见成员，0009持久化派生主题结果。阅读仍为GET投影，生成和采纳使用受保护的收藏写接口。PowerShell监督进程为新启动的Ollama提供持续日志轮转。
+
+
 ## 最新增量（2026-11-15，应用 `0.12.0` / 数据库 `0008`）
 
 阅读书架沿用 FastAPI、Repository/Service/API 分层、原生模块化 JavaScript 与桌面宿主。`app/repositories/collection_views.py` 共享有效收藏与关键词条件；`reading.py` 仓储只投影列表所需字段，服务拼装当前 Knowledge 与 OrganizationItem 原文快照，API 只开放 GET。网页 `pages/reading*.js`、`reading-renderer.js`、`reading-gallery.js` 是独立入口，沿用现有 Markdown 解析器和净化器；不改变编辑器、同步、向量或生成链路。主题是现有分类的查询投影，不建立主题实体或第二份权威存储。 读取使用独立的短 SQLite 快照事务，关闭时回滚只读事务；图片文件检查在事务外进行。本地图片入口只读取已保存的输出目录，避免等候全库扫描锁，写入互斥机制保持不变。

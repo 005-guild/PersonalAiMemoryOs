@@ -131,6 +131,56 @@ async def quality_view(knowledge_id: str, request: Request):
     return await call(QualityService(target).view, knowledge_id)
 
 
+@router.post('/jobs/{job_id}/retry',status_code=202)
+async def retry_extension(job_id: str, request: Request):
+    from app.models import OrganizationJob
+    target=await service(request,True)
+    if await body(request) != {}:raise HTTPException(422,detail={'code':'configuration_invalid'})
+    def retry():
+        with target.store.transaction() as session:
+            target.store.require_idle(session)
+            job=session.get(OrganizationJob,job_id)
+            if not job or job.mode not in {'topic','quality'} or job.status not in {'failed','paused'}:
+                raise OrganizationError('extension_job_not_retryable')
+            resolved=target.calls.resolve(job.settings)
+            if job.settings.get('profile_fingerprint') not in {None,resolved.fingerprint}:
+                raise OrganizationError('organization_profile_changed')
+            job.settings={**job.settings,'retry':True};job.status='pending';job.error=None;job.finished_at=None
+            control=target.store.control(session);control['paused']=False;target.store.set_control(session,control)
+            return {'id':job.id,'status':job.status}
+    result=await call(retry);target.wake.set();return result
+
+
+@router.get('/topics')
+async def topic_view(request: Request, topic: str = Query(...,min_length=1,max_length=200)):
+    from app.services.topics.service import TopicService
+    return await call(TopicService(await service(request)).view, topic)
+
+
+@router.post('/topics/config')
+async def topic_config(request: Request):
+    from app.services.topics.service import TopicService
+    target = await service(request, True)
+    value = await body(request)
+    if set(value) != {'enabled'} or type(value['enabled']) is not bool:
+        raise HTTPException(422,detail={'code':'configuration_invalid'})
+    return await call(TopicService(target).toggle, value['enabled'])
+
+
+@router.post('/topics/generate',status_code=202)
+async def topic_generate(request: Request):
+    from app.services.topics.service import TopicService
+    target = await service(request, True)
+    value = await body(request)
+    if (set(value) != {'topic','expected_fingerprint'} or not isinstance(value['topic'],str)
+            or not 1 <= len(value['topic']) <= 200 or not isinstance(value['expected_fingerprint'],str)
+            or not re.fullmatch('[a-f0-9]{64}',value['expected_fingerprint'])):
+        raise HTTPException(422,detail={'code':'configuration_invalid'})
+    result = await call(TopicService(target).start,value['topic'],value['expected_fingerprint'])
+    target.wake.set()
+    return result
+
+
 @router.post('/quality/{knowledge_id}/{action}')
 async def quality_action(knowledge_id: str, action: Literal['generate','adopt'], request: Request):
     from app.services.organization.quality import QualityService

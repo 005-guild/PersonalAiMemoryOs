@@ -87,3 +87,31 @@ def test_shared_external_costs_block_before_paid_request(organization):
     service._next();asyncio.run(service.run_job(job['id']))
     assert not calls
     assert next(row for row in service.store.read()['jobs'] if row['id']==job['id'])['status']=='paused'
+
+
+def test_protected_quality_and_topic_api_entrypoints(organization):
+    from fastapi.testclient import TestClient
+    from app.main import create_app
+    service,_,source,_=organization
+    approved(service,source);run(service,'all');install_model(service)
+    with service.store.transaction() as session:identifier=session.scalar(select(Knowledge.id))
+    from app.config import Settings
+    app=create_app(Settings(_env_file=None,runtime_root=service.store.root,
+        database_url=service.store.database.url.render_as_string(),sync_enabled=False))
+    from unittest.mock import AsyncMock
+    app.state.organization.start=AsyncMock()
+    service.csrf_token=app.state.ai_settings.csrf_token
+    app.state.organization=service
+    headers={'Host':'127.0.0.1','Origin':'http://127.0.0.1','X-Configuration-Token':service.csrf_token}
+    with TestClient(app,base_url='http://127.0.0.1') as client:
+        path='/api/v1/collection-organization/quality/'+identifier
+        assert client.post(path+'/generate',json={'expected_version':1}).status_code==403
+        assert client.post(path+'/generate',headers=headers,json={'expected_version':1}).status_code==200
+        job=service._next();asyncio.run(service.run_job(job))
+        view=client.get(path).json();assert view['candidate']
+        assert client.post(path+'/adopt',headers=headers,json={'expected_version':1,'candidate_id':view['candidate']['id']}).status_code==200
+        assert client.post('/api/v1/collection-organization/topics/config',headers=headers,json={'enabled':True}).status_code==200
+        view=client.get('/api/v1/collection-organization/topics?topic=技术').json()
+        assert view['enabled'] and view['member_count']==1
+        assert client.post('/api/v1/collection-organization/topics/generate',headers=headers,
+            json={'topic':'技术','expected_fingerprint':'0'*64}).status_code==409

@@ -1,5 +1,16 @@
 # IMPLEMENTATION_TASKS.md
 
+## Detailed summaries and topics — source acceptance in progress (2026-11-15)
+
+0.13.0 / 0008 was installed in the fixed directory after verified backup `backups/upgrade-20261115-062321-ff1f2fc4`; external original/mirror/ledger backup verified 3799 files at `backups/follow-up-external-20261115`. All ten approved cached pilot summaries were adopted without new generation, and repeated maintenance was idempotent. Classification review applied eleven existing categories; one removed-text declaration remains pending with an explicit reason. Three ready drafts have current source versions and remain available for user adoption. Private review evidence is `.cache/collection-review/`.
+
+0.14.0 / 0009 adds independent topic snapshots and grounded references, manual generation/disable controls, changed-member warnings, related articles, shared monthly reservations and explicit extension retries. Seven synthetic real-model quality cases (three complete eight-stage analyses and four cited-answer edge cases) passed source review with **0.937520 yuan** newly accounted through the monthly collection ledger. The retained pilot **3.671420 yuan** is represented once as external monthly accounting metadata. These fixed cases do not establish universal answer quality. Evidence: `.cache/shared-quality/report.json`.
+
+Performance verification uses synthetic vectors and isolated real SQLite/Qdrant, without model inference. First indexing measured **7.315s / 92.058s** for 100/1000 notes after removing empty per-note global cleanup. Legacy search was subsequently changed to candidate checks and SQL status, with **108/213ms** median at 100/1000 notes and zero vector-cache SELECTs. Current note-level retrieval measured **128/296ms** median. Reports: `.cache/capacity-baseline/fcf0d16a06134f6f99fb36e4119843d5/report.json`, `.cache/retrieval-capacity/25a8d44fadca4869a2d0f5fc51da38e0/report.json`. Different historical host runs remain context, not a controlled speedup claim.
+
+New Ollama startups use a hidden PowerShell reader with bounded rotating logs. Existing running external services acquire this behavior at their next normal start. Startup-preparation logs retain explicit stopped-log maintenance. Physical Windows reboot, second-machine and authenticated new image/article/pin coverage await their real environments. No remote push is included. Final 0.14 packaging and frozen acceptance are pending below this entry.
+
+
 ## Approved follow-up implementation — in progress (2026-11-15)
 
 Summary integration source unit verified at **0.13.0 / 0008**: shared production/pilot evidence contract, one-request detailed summaries for new arrivals, durable version-checked candidates, explicit idempotent adoption, previous-note snapshots and cache-only pilot importer. Monthly reservation includes external pilot accounting metadata. Focused verification: 42 passed; earlier collection/pilot/reading group 63 passed; 54 ESM modules, docs/release checks and source Chromium bookshelf passed (`.cache/reading-verification/338c4c29a15a41f1928df242bd139a48/report.json`). Desktop packaging and actual adoption remain pending this implementation run.

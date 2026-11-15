@@ -69,3 +69,12 @@ class ReadingRepository:
             return None, False
         eligible = self.session.scalar(text('SELECT k.id' + BASE + ' AND k.id=:id LIMIT 1'), {'id': knowledge_id})
         return pair, bool(eligible)
+
+    def related(self, note):
+        query = ('SELECT k.id knowledge_id,k.title,k.category,'
+            '(SELECT count(*) FROM json_each(k.tags) t WHERE t.value IN (SELECT value FROM json_each(:tags))) shared_tags'
+            + BASE + " AND k.id<>:id AND (k.category=:category OR EXISTS(SELECT 1 FROM json_each(k.tags) t "
+            "WHERE t.value IN (SELECT value FROM json_each(:tags)))) "
+            "ORDER BY (k.category=:category) DESC,shared_tags DESC,k.updated_at DESC,k.id LIMIT 5")
+        rows = self.session.execute(text(query),{'id':note.id,'category':note.category or '', 'tags':json.dumps(note.tags)}).mappings()
+        return [dict(row,reason='同一分类' if row['category']==note.category else f"{row['shared_tags']} 个共同标签") for row in rows]

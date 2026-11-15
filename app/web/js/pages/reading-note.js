@@ -46,6 +46,8 @@ export function mountNote(root,data,params,alive) {
   }});
   const rendered=readingMarkdown(note.body,gallery,{foldOriginal:true});documents.push(rendered);notePanel.append(rendered.element);
   panels.append(notePanel,originalPanel);root.append(tabs,panels);choose(false);
+  if(data.related?.length)root.append(el('section',{className:'card stack'},el('h2',{},'相关文章'),
+    ...data.related.map(row=>el('p',{},el('a',{href:'#/reading/'+encodeURIComponent(row.knowledge_id)},row.title),el('small',{},' · '+row.reason)))));
   window.scrollTo(0,0);
   return ()=>{disposeReview();documents.forEach(doc=>doc.dispose());gallery.dispose();};
 }

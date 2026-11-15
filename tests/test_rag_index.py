@@ -119,6 +119,30 @@ def test_empty_index_is_available_without_embedding_a_query(rig):
     assert rig.embeddings.calls == []
 
 
+def test_first_index_skips_global_cleanup_and_legacy_search_reads_candidates(rig, monkeypatch):
+    from app.repositories.rag import RagRepository
+    from sqlalchemy import event
+    for index in range(12):create_note(rig, '容量正文'+str(index))
+    observed=[]
+    original=RagRepository.valid_chunks
+    def tracked(repository,generation_id,identities=None):
+        observed.append(identities)
+        return original(repository,generation_id,identities)
+    monkeypatch.setattr(RagRepository,'valid_chunks',tracked)
+    asyncio.run(rig.indexer.run_once())
+    assert len(observed)<=1  # One final publication check, independent of the number of new notes.
+    observed.clear()
+    statements=[]
+    def record(connection,cursor,statement,parameters,context,many):statements.append(statement.lower())
+    event.listen(rig.database.engine,'before_cursor_execute',record)
+    try:
+        result=asyncio.run(rig.search.search('容量正文',1))
+        assert len(result['items'])==1
+    finally:event.remove(rig.database.engine,'before_cursor_execute',record)
+    assert observed and all(ids is not None and len(ids)<=5 for ids in observed)
+    assert not any('rag_index_jobs.vectors' in statement for statement in statements)
+
+
 def test_batched_intentions_are_committed_before_remote_call(rig):
     note = create_note(rig, "连续中文正文" * 80)
     observed = []

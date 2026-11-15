@@ -57,10 +57,23 @@ if ($listener.Count) {
     $registry = [Uri]'https://registry.ollama.ai'
     $proxy = [Net.WebRequest]::DefaultWebProxy.GetProxy($registry)
     if ($proxy -and $proxy -ne $registry) { $env:HTTPS_PROXY = $proxy.GetLeftPart([UriPartial]::Authority) }
-    $serverProcess = Start-Process -FilePath $ollamaExecutable -ArgumentList 'serve' -WorkingDirectory $projectRoot `
-        -WindowStyle Hidden -RedirectStandardOutput (Join-Path $ollamaCache 'server.stdout.log') `
-        -RedirectStandardError (Join-Path $ollamaCache 'server.stderr.log') -PassThru
+    $supervisorScript = Join-Path $PSScriptRoot 'supervise_ollama.ps1'
+    $supervisorArgs = @('-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File',
+        ('"' + $supervisorScript + '"'), '-ProjectRoot', ('"' + $projectRoot + '"'))
+    $supervisor = Start-Process -FilePath (Join-Path $PSHOME 'powershell.exe') -ArgumentList $supervisorArgs `
+        -WorkingDirectory $projectRoot -WindowStyle Hidden -PassThru
     $deadline = (Get-Date).AddSeconds(45)
+    $serverProcess = $null
+    do {
+        if ($supervisor.HasExited) { throw 'Ollama log supervisor exited during startup.' }
+        $supervisorRecord = Join-Path $ollamaCache 'supervisor.json'
+        if (Test-Path -LiteralPath $supervisorRecord) {
+            $supervisorState = Get-Content -LiteralPath $supervisorRecord -Raw | ConvertFrom-Json
+            if ($supervisorState.supervisor_pid -eq $supervisor.Id) { $serverProcess = Get-Process -Id $supervisorState.child_pid -ErrorAction SilentlyContinue }
+        }
+        if (-not $serverProcess) { Start-Sleep -Milliseconds 100 }
+    } while (-not $serverProcess -and (Get-Date) -lt $deadline)
+    if (-not $serverProcess) { throw 'Ollama did not publish a child process record.' }
     $version = $null
     do {
         if ($serverProcess.HasExited) { throw 'Ollama exited during startup; inspect .cache/ollama/server.stderr.log.' }

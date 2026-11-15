@@ -24,14 +24,15 @@ class RagSearchService:
             await self.qdrant_client.ensure_collection(
                 generation["collection"], generation["dimension"], collection_metadata(generation), create=False
             )
-            if not valid:
+            if not status['counts']['published']:
                 counts = status["counts"]
                 if counts["pending"] or counts["failed"]:
                     raise RagError(503, "rag_index_not_ready")
                 return {"items": [], "index_incomplete": status["index_incomplete"]}
             reply = await self.embedding_client.embed(resolved, [query])
             points = await self.qdrant_client.query(generation["collection"], reply.vectors[0], min(50, top_k * 5))
-            current, _, valid, status = await asyncio.to_thread(self.indexer.checked_snapshot)
+            identities = {point['payload'].get('knowledge_id') for point in points}
+            current, _, valid, status = await asyncio.to_thread(self.indexer.checked_snapshot, identities)
             if current["id"] != generation["id"]:
                 raise RagError(409, "context_changed")
             items, seen = [], set()
@@ -55,7 +56,7 @@ class RagSearchService:
 
     def validate_context(self, items: list[dict]) -> bool:
         try:
-            generation, _, valid, _ = self.indexer.checked_snapshot()
+            generation, _, valid, _ = self.indexer.checked_snapshot({item['knowledge_id'] for item in items})
         except RagError:
             return False
         for item in items:

@@ -59,6 +59,8 @@ def _required_tables(revision: str) -> set[str]:
         tables.update({'organization_control','organization_items','organization_jobs','organization_calls',
                        'organization_fts','organization_fts_data','organization_fts_idx',
                        'organization_fts_content','organization_fts_docsize','organization_fts_config'})
+    if int(revision) >= 9:
+        tables.add('topic_summaries')
     return tables
 
 

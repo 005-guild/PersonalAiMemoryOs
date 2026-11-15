@@ -292,4 +292,6 @@ class Store:
             for call in session.scalars(select(OrganizationCall).where(OrganizationCall.status=='reserved')):
                 call.status='uncertain';call.error='interrupted_call'
             for job in session.scalars(select(OrganizationJob).where(OrganizationJob.status=='running')):
-                job.status='pending'
+                job.status='paused' if job.mode in {'quality','topic','validation'} else 'pending'
+                if job.status=='paused':
+                    control['paused']=True;self.set_control(session,control)

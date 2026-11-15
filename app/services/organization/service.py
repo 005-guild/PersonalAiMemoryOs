@@ -131,9 +131,13 @@ class OrganizationService:
                 selection, config = list(job.selection), dict(job.settings)
                 mode = job.mode
                 entries = [x.snapshot for x in session.scalars(select(OrganizationItem).order_by(OrganizationItem.identity))]
-            if mode == 'quality':
-                from app.services.organization.quality import QualityService
-                await QualityService(self).run(identifier)
+            if mode in {'quality','topic'}:
+                if mode == 'quality':
+                    from app.services.organization.quality import QualityService
+                    await QualityService(self).run(identifier)
+                else:
+                    from app.services.topics.service import TopicService
+                    await TopicService(self).run(identifier)
                 with self.store.transaction() as session:
                     job = session.get(OrganizationJob, identifier)
                     if job.status == 'running':

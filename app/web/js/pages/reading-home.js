@@ -14,7 +14,7 @@ export function mountHome(root, data, alive) {
     el('p', {}, '已经发布并完成导出的知乎收藏会出现在这里。'), el('a', {href:'#/organization'}, '查看收藏整理 →')));
   const topics = el('aside', {className:'reading-topics'}, el('h2', {}, '主题分布'), el('p', {className:'reading-muted'}, '从一个感兴趣的主题开始。'));
   const max = Math.max(1, ...data.topics.map(item => item.count));
-  for (const topic of data.topics) topics.append(el('a', {href:browseLink({topic:topic.name}), className:'reading-topic'},
+  for (const topic of data.topics) topics.append(el('a', {href:'#/reading/topic?name='+encodeURIComponent(topic.name), className:'reading-topic'},
     el('span', {}, topic.name), el('strong', {}, topic.count),
     el('progress', {max, value:topic.count, 'aria-label':`${topic.name}，${topic.count} 篇`} )));
   root.append(el('div', {className:'reading-home-grid'}, recent, topics));

@@ -12,6 +12,7 @@ export function summaryReview(root, note, alive) {
       if(!active())return;state=value;token=control.csrf_token;
       content.replaceChildren();
       if(value.adopted)content.append(notice('本篇已采用详细摘要。'));
+      if(value.previous)content.append(el('details',{},el('summary',{},'采用前的笔记'),renderMarkdown(value.previous.body)));
       if(value.candidate){
         content.append(el('div',{className:'grid'},el('section',{},el('h3',{},'当前笔记'),renderMarkdown(value.current.body)),
           el('section',{},el('h3',{},'候选摘要'),renderMarkdown(value.candidate.markdown))));
@@ -19,7 +20,7 @@ export function summaryReview(root, note, alive) {
         else content.append(button('采用这份摘要',()=>perform('adopt')));
       }
       content.append(button('生成详细摘要候选',()=>perform('generate')),el('p',{className:'muted'},
-        `与新增整理、主题综述共用每月 ¥${control.config.monthly_budget_yuan}。生成后可对照并采纳。`));
+        `${value.estimated_yuan==null?'':`本次保守估计 ¥${value.estimated_yuan.toFixed(2)}。`}与新增整理、主题综述共用每月 ¥${control.config.monthly_budget_yuan}。生成后可对照并采纳。`));
       const job=control.jobs.find(row=>row.mode==='quality'&&['pending','running','paused'].includes(row.status));
       if(job)content.append(notice(`摘要任务${job.status==='paused'?'已暂停，请到收藏整理继续':'处理中，完成后将显示候选'}。`));
       for(const element of content.querySelectorAll('button'))element.disabled=busy||control.read_only||!!job;
@@ -27,7 +28,7 @@ export function summaryReview(root, note, alive) {
   }
   async function perform(action){
     if(busy)return;
-    if(action==='generate'&&!await confirmAction('使用本月剩余额度生成这篇详细摘要候选？',{title:'生成摘要',confirmLabel:'生成'}))return;
+    if(action==='generate'&&!await confirmAction(`使用本月剩余额度生成这篇详细摘要候选？${state.estimated_yuan==null?'':`保守估计 ¥${state.estimated_yuan.toFixed(2)}，实际费用按调用记账。`}`,{title:'生成摘要',confirmLabel:'生成'}))return;
     busy=true;
     try {
       const body={expected_version:state.current.version};

@@ -3,6 +3,7 @@ import {el, showError} from '../ui.js';
 import {mountHome} from './reading-home.js';
 import {mountList} from './reading-list.js';
 import {mountNote} from './reading-note.js';
+import {mountTopic} from './reading-topic.js';
 
 export function mount(container, context) {
   const root = el('div', {className:'reading-root'});
@@ -16,6 +17,9 @@ export function mount(container, context) {
   const content = el('div', {}, el('p', {className:'reading-muted'}, '正在打开书架…')); root.append(content);
   async function start() {
     try {
+      if(context.id==='topic'){
+        content.replaceChildren();cleanup=mountTopic(content,context.params.get('name')||'',alive);return;
+      }
       if (context.id && context.id !== 'browse') {
         const data = await api('/api/v1/reading/notes/' + encodeURIComponent(context.id), {signal:controller.signal});
         if (!alive()) return;

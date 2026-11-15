@@ -9,6 +9,7 @@ from app.models.batches import ProcessingBatch, ProcessingBatchItem
 from app.models.rag import RagIndexGeneration, RagIndexJob, RagNoteIndexState
 from app.models.sync import SyncConflict, SyncOperation, SyncState, SyncVault
 from app.models.organization import OrganizationControl, OrganizationItem, OrganizationJob, OrganizationCall
+from app.models.topics import TopicSummary
 
 __all__ = [
     "Base", "Knowledge", "KnowledgeSource", "Source", "SyncConflict", "SyncOperation", "SyncState",
@@ -16,4 +17,5 @@ __all__ = [
     "RagNoteIndexState", "new_id", "utcnow", "PromptTemplate", "PromptRevision",
     "ProcessingBatch", "ProcessingBatchItem",
     "OrganizationControl", "OrganizationItem", "OrganizationJob", "OrganizationCall",
+    "TopicSummary",
 ]

@@ -186,7 +186,8 @@ class RagIndexService:
         record = repository.session.get(RagIndexGeneration, generation_id)
         record.error_code, record.updated_at = code, utcnow()
 
-    def checked_snapshot(self):
+    def checked_snapshot(self, identities=None, *, metadata_only=False):
+        from app.services.rag_index_views import status as index_status
         resolved = self.registry.resolve()
         fingerprint, _ = self.configuration(resolved)
         def snapshot(repository):
@@ -199,11 +200,11 @@ class RagIndexService:
                 raise RagError(503, "rag_index_building")
             if current["error_code"]:
                 raise RagError(503, "rag_index_unavailable")
-            return current, resolved, repository.valid_chunks(current["id"]), self._status(repository)
+            return current, resolved, ({} if metadata_only else repository.valid_chunks(current["id"],identities)), index_status(self,repository)
         return self.transaction(snapshot)
 
     async def search_snapshot(self):
-        return await asyncio.to_thread(self.checked_snapshot)
+        return await asyncio.to_thread(self.checked_snapshot, metadata_only=True)
 
     def request_stop(self):
         """Finish the current remote batch, but begin no more work during shutdown."""

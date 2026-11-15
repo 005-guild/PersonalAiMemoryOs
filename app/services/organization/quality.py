@@ -48,7 +48,18 @@ class QualityService:
             if not item or not note or note.deleted_at:
                 raise OrganizationError('reading_not_found')
             candidate = (item.result or {}).get('quality_candidate')
+            estimate = None
+            if self.organization.calls.registry is not None:
+                from app.services.organization.providers import price_snapshot, cost
+                config = self.store.control(session)['config']
+                try:
+                    resolved = self.organization.calls.resolve(config)
+                    incoming = len((prompt()+payload(sample(item.snapshot,item.result))).encode('utf-8'))+1024
+                    estimate = cost(price_snapshot(resolved),incoming,resolved.profile.max_output_tokens)/1_000_000
+                except OrganizationError:
+                    pass
             return {'current': knowledge_snapshot(note), 'candidate': candidate,
+                    'estimated_yuan':estimate, 'previous':(item.result or {}).get('quality_previous'),
                     'adopted': (item.result or {}).get('quality_adopted'),
                     'stale': bool(candidate and (candidate['base_version'] != note.version or candidate['input_hash'] != item.input_hash))}
 

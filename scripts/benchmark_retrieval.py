@@ -21,6 +21,7 @@ import yaml
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
 from app.config import Settings
 from app.main import create_app
+from app.repositories.migrations import upgrade_database
 from app.repositories.rag import collection_metadata
 from scripts.benchmark_support import IsolatedQdrant, SyntheticEmbedding, timings
 from scripts.local_rag_support import ForbiddenGeneration
@@ -64,6 +65,7 @@ def run(baseline):
                 shutil.copy2(profile,target/"config/embedding-providers.yml")
                 with closing(sqlite3.connect(source.as_uri()+"?mode=ro",uri=True)) as first,closing(sqlite3.connect(target/"data/memory.db")) as second:first.backup(second)
                 settings=Settings(_env_file=None,runtime_root=target,database_url="sqlite:///"+(target/"data/memory.db").as_posix(),rag_enabled=True,rag_qdrant_url=url,sync_enabled=False,log_level="ERROR")
+                upgrade_database(settings.database_url)
                 forbidden=ForbiddenGeneration();app=create_app(settings,embedding_client=SyntheticEmbedding(),model_client=forbidden)
                 with patch.object(app.state.rag_worker,"start",lambda:None),TestClient(app) as api:
                     generation=app.state.rag_retrieval.snapshot()[0]

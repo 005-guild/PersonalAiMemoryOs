@@ -85,6 +85,8 @@ def browser_checks(page, url, identifier, evidence):
     assert 'null' not in page.locator('.reading-root').inner_text()
     page.screenshot(path=str(evidence / 'home.png'), full_page=True)
     page.locator('.reading-topic').filter(has_text='技术').click()
+    expect(page.get_by_role('heading', name='技术', exact=True)).to_be_visible()
+    page.get_by_role('link', name='浏览本主题全部文章 →').click()
     expect(page.get_by_role('heading', name='找到 22 篇文章')).to_be_visible()
     expect(page.locator('.reading-card')).to_have_count(20)
     page.get_by_role('button', name='下一页', exact=True).click()
