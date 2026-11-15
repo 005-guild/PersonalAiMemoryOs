@@ -6,7 +6,7 @@ export function listState(key, defaults = {}) {
   let value;
   try {value = JSON.parse(sessionStorage.getItem(`memory-os:list:${key}`) || 'null');} catch {}
   const state = {...defaults, ...(value || {})};
-  state.size = PAGE_SIZES.includes(Number(state.size)) ? Number(state.size) : 20;
+  state.size = PAGE_SIZES.includes(Number(state.size)) ? Number(state.size) : 10;
   state.offset = Number.isSafeInteger(state.offset) && state.offset >= 0 ? state.offset : 0;
   return {value: state, save() {try {sessionStorage.setItem(`memory-os:list:${key}`, JSON.stringify(state));} catch {}}};
 }

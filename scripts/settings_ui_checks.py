@@ -19,7 +19,8 @@ def secret_not_exposed(page):
     assert SECRET not in page.locator('body').inner_text()
     assert SECRET not in page.content()
     assert SECRET not in page.url
-    assert page.evaluate('Object.keys(localStorage).length + Object.keys(sessionStorage).length') == 0
+    storage=page.evaluate('JSON.stringify([Object.entries(localStorage),Object.entries(sessionStorage)])')
+    assert SECRET not in storage and 'synthetic-csrf-token' not in storage
     for control in page.get_by_test_id('profile-key').all():
         expect(control).to_have_attribute('type', 'password')
         expect(control).to_have_attribute('autocomplete', 'new-password')
@@ -32,8 +33,12 @@ def check_roundtrip_and_busy(page, api, evidence):
     expect(first.get_by_test_id('profile-key')).to_have_value('')
     expect(first.get_by_test_id('profile-key-state')).to_have_text('已配置（不会显示原值）')
     expect(page.get_by_test_id('ai-default-profile')).to_have_value('deepseek')
+    page.evaluate("location.hash='#/settings/storage'")
     expect(page.get_by_text('D:\\合成便携目录\\data\\memory.db', exact=True)).to_be_visible()
     expect(page.get_by_text('D:\\合成便携目录\\knowledge', exact=True)).to_be_visible()
+    page.evaluate("location.hash='#/settings/ai'")
+    expect(profiles(page)).to_have_count(4)
+    first=open_profile(page)
     expect(open_profile(page, 3).get_by_test_id('profile-key')).to_be_disabled()
     assert page.evaluate('window.__unsafeSettings') is None
     assert page.locator('.settings-profile img,.settings-profile script').count() == 0

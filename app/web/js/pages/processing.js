@@ -5,9 +5,17 @@ import {sourceSelection} from './source-selection.js';
 import {processingHistory} from './processing-history.js';
 import {batchPanel} from './processing-batch.js';
 import {promptPicker} from './prompt-picker.js';
+import {backLink} from './workspace-common.js';
 import {mount as mountDrafts} from './drafts.js';
 
 export function mount(container, context) {
+  if(context.id==='history'||context.params.get('batch_id')){
+    let disposed=false;const controller=new AbortController(),alive=()=>!disposed;let panel,stop;
+    container.append(backLink('#/processing','AI 分析'),pageHeading(context.id==='history'?'分析历史':'任务详情','查看已提交任务与草稿结果。'));
+    if(context.params.get('batch_id')){panel=batchPanel(context.params.get('batch_id'),context,{alive});container.append(panel.element);stop=pollVisible(()=>panel.refresh());}
+    else api('/api/v1/ai/profiles',{signal:controller.signal}).then(registry=>{if(!alive())return;panel=processingHistory(registry,context,{alive,signal:controller.signal});container.append(panel.element);stop=pollVisible(()=>panel.refresh());}).catch(error=>{if(alive())showError(error,container);});
+    return()=>{disposed=true;controller.abort();panel?.dispose?.();stop?.();};
+  }
   if (context.id) return mountDrafts(container, context);
   const mountedHash = location.hash, controller = new AbortController();
   let disposed = false, busy = false, confirming = false, registry, history, batch, stopPoll, selection, model, template, detailRunning = false;
@@ -55,20 +63,21 @@ export function mount(container, context) {
         finally {busy = false; if (alive()) {selection.busy(false); template.busy(false); for (const input of [model, mode, tokens, timeout]) input.disabled = false; update();}}
       }
       for (const input of [model, mode, tokens, timeout]) input.addEventListener('change', () => {context.setDirty(true); update();});
-      history = processingHistory(registry, context, {alive, signal: controller.signal});
+
       content.replaceChildren(...[
         !registry.enabled && notice('AI 当前关闭；历史和草稿仍可查看。请在设置中启用并重启后生成。', 'warning'),
         registry.error_code && notice(`模型配置尚未就绪：${registry.error_code}`, 'warning'),
         el('section', {className: 'card stack'}, el('h2', {}, '生成新草稿'), selection.element,
-          el('div', {className: 'form-grid'}, field('生成方式', mode), field('生成模型', model), field('解析提示词模板', template.element), field('输出 Token 上限', tokens), field('调用超时（秒）', timeout)),
+          el('div', {className: 'form-grid'}, field('生成方式', mode), field('生成模型', model), field('解析提示词模板', template.element)),
+          el('details',{},el('summary',{},'高级参数'),field('输出 Token 上限',tokens),field('调用超时（秒）',timeout)),
           info, el('div', {className: 'processing-actions'}, generate),
           el('a', {href: '#/drafts'}, '打开草稿箱审阅生成结果 →'), errors)
       ].filter(Boolean));
       if (context.params.get('batch_id')) {batch = batchPanel(context.params.get('batch_id'), context, {alive}); content.append(batch.element);}
-      content.append(history.element); await template.ready; update();
+      content.append(el('a',{href:'#/processing/history'},'查看分析历史 →')); await template.ready; update();
       const initial = context.params.get('source_id');
       if (initial) {try {const value = await api(`/api/v1/sources/${encodeURIComponent(initial)}`, {signal: controller.signal}); if (alive()) {selection.add(value,{notify:false});update();}} catch (error) {if (alive()) showError(error, errors);}}
-      stopPoll = pollVisible(async () => {if (!alive()) return; await history.refresh(); if (batch) await batch.refresh();});
+
     } catch (error) {if (alive()) showError(error, content);}
   }
   initialize();

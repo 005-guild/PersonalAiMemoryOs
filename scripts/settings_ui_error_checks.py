@@ -56,17 +56,18 @@ def check_readonly_and_navigation(page, api, evidence):
     first = open_profile(page)
     first.get_by_test_id('profile-key').fill(SECRET)
     page.evaluate('window.__oldPassword = document.querySelector("[data-testid=profile-key]")')
-    page.locator('#navigation a[href="#/knowledge"]').click()
+    page.evaluate("location.hash='#/knowledge'")
     expect(page.get_by_role('dialog', name='离开编辑页面', exact=True)).to_be_visible()
     page.get_by_role('dialog').get_by_role('button', name='取消', exact=True).click()
     expect(first.get_by_test_id('profile-key')).to_have_value(SECRET)
-    page.locator('#navigation a[href="#/knowledge"]').click()
+    page.evaluate("location.hash='#/knowledge'")
     page.get_by_role('dialog').get_by_role('button', name='离开', exact=True).click()
     expect(page.get_by_role('heading', name='知识笔记', exact=True)).to_be_visible()
     assert page.evaluate('window.__oldPassword.value') == ''
     assert not api.payloads
     page.set_viewport_size({'width': 390, 'height': 1000})
     page.get_by_test_id('mobile-settings-link').click()
+    page.locator('.entry-card[href="#/settings/ai"]').click()
     expect(profiles(page)).to_have_count(4)
     expect(page.get_by_test_id('mobile-settings-link')).to_have_attribute('aria-current', 'page')
     expect(open_profile(page).get_by_test_id('profile-key')).to_have_value('')
@@ -88,12 +89,13 @@ def check_readonly_and_navigation(page, api, evidence):
 
 def check_late_load(page, api, evidence):
     expect(profiles(page)).to_have_count(4)
-    page.locator('#navigation a[href="#/knowledge"]').click()
+    page.evaluate("location.hash='#/knowledge'")
     expect(page.get_by_role('heading', name='知识笔记', exact=True)).to_be_visible()
     api.hold_get = True
     page.get_by_test_id('desktop-settings-link').click()
+    page.locator('.entry-card[href="#/settings/ai"]').click()
     expect(page.get_by_text('正在读取本机设置…', exact=True)).to_be_visible()
-    page.locator('#navigation a[href="#/knowledge"]').click()
+    page.evaluate("location.hash='#/knowledge'")
     expect(page.get_by_role('heading', name='知识笔记', exact=True)).to_be_visible()
     while api.pending_gets:
         try: api.complete_get()
@@ -112,7 +114,7 @@ def check_save_during_navigation(page, api, evidence):
     api.hold_put = True
     page.get_by_test_id('ai-settings-save').click()
     expect(page.get_by_test_id('ai-settings-save')).to_be_disabled()
-    page.locator('#navigation a[href="#/knowledge"]').click()
+    page.evaluate("location.hash='#/knowledge'")
     expect(page.get_by_role('dialog', name='离开编辑页面', exact=True)).to_be_visible()
     api.complete_put()
     page.wait_for_timeout(80)

@@ -37,7 +37,7 @@ def main():
                     page.on('pageerror', lambda error: errors.append(str(error)))
                     page.on('request', lambda request: external.append(request.url) if request.url.startswith('https://') else None)
                     try:
-                        page.goto(f'http://127.0.0.1:{server.server_port}/#/settings')
+                        page.goto(f'http://127.0.0.1:{server.server_port}/#/settings/ai')
                         result = check(page, api, folder)
                         assert not errors, errors
                         assert not external, external

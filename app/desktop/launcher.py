@@ -17,7 +17,7 @@ from app.config import resolve_database_url
 def open_ai_settings(window) -> None:
     """Use the existing dirty-aware router rather than reloading the workbench."""
     try:
-        window.evaluate_js("window.location.hash = '#/settings'; void 0;")
+        window.evaluate_js("window.location.hash = '#/settings/ai'; void 0;")
     except Exception as error:
         logging.getLogger(__name__).warning("Settings navigation unavailable (%s).", type(error).__name__)
         message("工作台尚未加载完成，请稍后再次打开设置。")

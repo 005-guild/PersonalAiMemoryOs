@@ -1,7 +1,7 @@
 import {api} from '../api.js';
-import {el,button,field,notice,renderMarkdown,pageHeading,formatDate} from '../ui.js';
-import {collectionSearch} from './organization-search.js';
-import {partialImageReview} from './organization-review.js';
+import {el,button,field,notice,pageHeading} from '../ui.js';
+import {mountRecords} from './organization-records.js';
+import {entryGrid,backLink} from './workspace-common.js';
 
 const endpoint='/api/v1/collection-organization';
 const labels={discovered:'待整理',ready:'摘要已生成',published:'已入库',failed:'失败',pending:'等待执行',running:'执行中',paused:'已暂停',completed:'完成',completed_with_errors:'部分失败'};
@@ -22,18 +22,10 @@ const errors={sample_approval_required:'请先查看并确认样本。',sample_n
 const explain=code=>errors[code]||code;
 
 export async function mount(container,context) {
-  let alive=true,dirty=false,busy=false,state,timer,sampleSignature='';
-  const messages=el('div'),status=el('div'),samples=el('div',{className:'stack'}),failures=el('div');
-  const sampleReview=el('details',{className:'card stack'},el('summary',{},'样本审核'),samples);
-  const searchPanel=collectionSearch(()=>alive);
-  const imageReview=partialImageReview(async item=>{
-    if(busy)return;busy=true;
-    try {
-      await api(`${endpoint}/items/${item.id}/approve-partial-image`,{method:'POST',body:{input_hash:item.input_hash},
-        headers:{'X-Configuration-Token':state.csrf_token}});
-      if(alive)messages.replaceChildren(notice('已允许此篇仅按清晰内容总结。自动整理开启时会继续处理，也可开始全量整理。'));
-    }catch(e){if(alive)error(e);}finally{busy=false;if(alive)await read().catch(error);}
-  });
+  if(['records','review','jobs'].includes(context.id))return mountRecords(container,context);
+  const configPage=context.id==='config';
+  let alive=true,dirty=false,busy=false,state,timer;
+  const messages=el('div'),status=el('div');
   const changed=()=>{dirty=true;context.setDirty(true);};
   const input=el('input',{onInput:changed,placeholder:'articles 文件夹绝对路径'});
   const output=el('input',{onInput:changed,placeholder:'整理库文件夹绝对路径'});
@@ -46,7 +38,6 @@ export async function mount(container,context) {
   function error(error){messages.replaceChildren(notice(explain(error.detail?.code||error.message),'error'));}
   async function read(fill=false){
     const value=await api(endpoint);if(!alive)return;
-    if(fill||state?.approved!==value.approved)sampleReview.open=!value.approved;
     state=value;
     if(fill){const c=value.config;input.value=c.input_dir;output.value=c.output_dir;profile.value=c.profile_id;
       initial.value=c.initial_budget_yuan;monthly.value=c.monthly_budget_yuan;enabled.checked=c.enabled;taxonomy.value=c.taxonomy.join('\n');
@@ -58,35 +49,19 @@ export async function mount(container,context) {
       ...value.budgets.map(b=>el('p',{className:'muted'},`${b.period==='initial'?'首次整理':b.period}：已记账 / 预留 ¥${b.accounted_yuan.toFixed(4)} · ${b.calls} 次请求`)));
     if(running)status.append(notice(`${labels[running.status]}：${running.selection.length} 篇${running.error?' · '+explain(running.error):''}`));
     if(value.last_error)status.append(notice(explain(value.last_error),'warning'));
-    for(const job of value.jobs.filter(row=>['quality','topic'].includes(row.mode)&&['failed','paused'].includes(row.status))){
-      status.append(el('p',{},`${job.mode==='topic'?'主题综述':'详细摘要'} · ${labels[job.status]} · ${explain(job.error||'')}`),
-        button('显式重试此任务（可能计费）',async()=>{
-          try{await api(`${endpoint}/jobs/${job.id}/retry`,{method:'POST',body:{},headers:{'X-Configuration-Token':value.csrf_token}});await read();}
-          catch(e){error(e);}
-        }));
+    for(const job of value.jobs.filter(row=>['quality','topic'].includes(row.mode)&&['failed','paused'].includes(row.status)).slice(0,3)){
+      status.append(el('a',{href:'#/organization/jobs?job='+job.id},`${job.mode==='topic'?'主题综述':'详细摘要'} · ${labels[job.status]} · 查看与处理 →`));
     }
-    const review=value.counts.failed?await api(endpoint+'/items?limit=100&error=image_needs_review'):{items:[]};
-    if(!alive)return;
-    imageReview.render(review.items,busy||value.read_only||!value.approved||value.jobs.some(j=>['running','pending'].includes(j.status)));
     for(const f of fields)f.disabled=busy||value.read_only;
     for(const c of controls)c.disabled=busy||value.read_only;
     approve.disabled=busy||value.read_only||value.approved||!value.jobs.some(j=>j.id===value.sample_job_id&&j.status==='completed');
     all.disabled=busy||value.read_only||!value.approved;
     resume.disabled=busy||value.read_only||!value.paused;
-    const sample=value.jobs.find(j=>j.id===value.sample_job_id);
-    const signature=sample?.id+':'+sample?.status+':'+(value.counts.ready||0)+':'+(value.counts.failed||0);
-    if(sample&&signature!==sampleSignature){
-      const data=await api(endpoint+'/items?limit=100&job_id='+sample.id);if(!alive)return;sampleSignature=signature;
-      samples.replaceChildren(el('p',{className:'muted'},'检查标题、分类、摘要和依据。确认后才能开始全量整理。'),
-        ...data.items.map(item=>el('article',{className:'card stack'},el('h3',{},item.result?.title||item.title),
-          el('p',{className:'muted'},`${labels[item.status]||item.status} · 原文 ${item.body_chars} 字符 · ${item.image_count} 张图${item.image_required?' · 需图片识读':''}`),
-          item.error&&notice(explain(item.error),'warning'),item.result&&el('div',{},
-            el('p',{},item.result.category+' · '+item.result.tags.join(' / ')),el('p',{},item.result.summary),
-            el('ul',{},...item.result.points.map(x=>el('li',{},x))),el('p',{},'适用条件与局限：'+item.result.conditions),
-            ...item.result.quotes.map(x=>el('blockquote',{},x)),
-            item.result.image_observations?.length>0&&el('details',{},el('summary',{},'图片识读记录'),...item.result.image_observations.map(x=>el('p',{},x.text)))),
-          el('details',{},el('summary',{},'对照原文：'+item.title),renderMarkdown(item.original.content)),
-          el('a',{href:item.original.url,target:'_blank',rel:'noopener noreferrer'},'打开知乎原文'))));
+    for(const c of controls){
+      const action=c.dataset.action;
+      if(!configPage)c.hidden=action==='sample'?value.approved:action==='all'?!value.approved:
+        ['resume','cancel'].includes(action)?!value.paused:['continue','retry'].includes(action)?!value.counts.failed:
+        action==='pause'?!value.config.enabled&&!running:false;
     }
   }
   async function perform(action){
@@ -118,25 +93,21 @@ export async function mount(container,context) {
       await read(['save','switch-profile'].includes(action));
     }catch(e){if(alive)error(e);}finally{busy=false;if(alive)await read().catch(error);}
   }
-  const control=(action,label)=>{const b=button(label,()=>perform(action));controls.push(b);return b;};
+  const control=(action,label)=>{const b=button(label,()=>perform(action));b.dataset.action=action;controls.push(b);return b;};
   const approve=control('approve','确认这批样本'),all=control('all','开始全量整理'),resume=control('resume','继续任务或恢复自动整理');
-  container.append(pageHeading('收藏整理','逐篇摘要、自动分类与新标题，保留完整原文和来源。'),
-    button('跳到快速检索',()=>{searchPanel.scrollIntoView({block:'start'});searchPanel.querySelector('input')?.focus({preventScroll:true});}),messages,
-    el('section',{className:'card stack'},el('h2',{},'整理设置'),
-      notice('首次先生成最多 10 篇样本，覆盖普通文章、长文和图片为主的内容。原始 articles 不会被修改。'),
+  container.append(backLink(configPage?'#/settings':'#/workbench',configPage?'设置':'整理工作台'),pageHeading(configPage?'整理规则与预算':'收藏整理',configPage?'修改分类、模型与自动整理规则。':'查看整理进度，处理需要关注的内容。'),messages);
+  if(configPage)container.append(el('section',{className:'card stack'},
       field('原文目录',input),field('整理库目录',output),field('AI 配置名称',profile),
       el('div',{className:'form-grid'},field('首次预算（元）',initial),field('之后每月预算（元）',monthly)),
-      field('两级分类',taxonomy,'分类改变后需要重新审核样本。预算是保守估算，实际账单以所选提供商为准。OpenAI 按 1 美元折合 8 元估算。'),
-      el('label',{},enabled,' 样本确认后，自动整理新增收藏（软件运行时）'),
-      el('div',{className:'page-actions'},control('save','保存设置'),control('switch-profile','切换模型并保留样式确认'),control('scan','扫描原文'),control('sample','生成 10 篇样本'))),
-    el('section',{className:'card stack'},el('h2',{},'任务与预算'),status,
-      el('div',{className:'page-actions'},approve,all,control('pause','暂停'),resume,control('cancel','结束暂停任务'),
-        control('continue-sample','复用响应继续样本'),control('retry-sample','手动重试失败样本'),
-        control('continue','复用响应继续失败条目'),control('retry','手动重试失败条目')),
-      notice('失败或超时的模型请求不会自动重试。手动重试可能产生新的费用；已成功的阶段会复用。'),
-      button('查看全部处理记录',async()=>{try{const data=await api(endpoint+'/items?limit=100');if(alive)failures.replaceChildren(
-        el('p',{},`显示前 ${data.items.length} / ${data.total} 篇`),...data.items.map(x=>el('p',{},`${x.title} · ${labels[x.status]}${x.error?' · '+explain(x.error):''}`)));}catch(e){error(e);}}),failures),
-    imageReview.element,searchPanel,sampleReview);
+      field('两级分类',taxonomy,'分类改变后需要重新审核样本。'),el('label',{},enabled,' 自动整理新增收藏（软件运行时）'),
+      el('div',{className:'page-actions'},control('save','保存设置'),control('switch-profile','切换模型并保留样式确认'))));
+  else container.append(el('section',{className:'card stack'},el('h2',{},'任务与预算'),status,
+    el('div',{className:'page-actions'},control('scan','扫描原文'),control('sample','生成 10 篇样本'),all,control('pause','暂停'),resume,control('cancel','结束暂停任务'),
+    control('continue','复用响应继续失败条目'),control('retry','手动重试失败条目')),
+    notice('手动重试可能产生费用；成功阶段会复用。')),entryGrid([
+      ['样本审核','逐篇对照并确认样式','#/organization/review'],['处理记录','分页查看全部内容与失败原因','#/organization/records'],
+      ['任务记录','查看进度、暂停和失败任务','#/organization/jobs'],['整理规则与预算','分类、模型与自动整理','#/organization/config'],
+    ]));
   await read(true);
   async function poll(){if(!alive)return;if(!busy)await read().catch(error);if(alive)timer=setTimeout(poll,2000);}
   timer=setTimeout(poll,2000);

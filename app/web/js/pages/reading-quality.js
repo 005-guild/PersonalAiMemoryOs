@@ -1,8 +1,8 @@
 import {api} from '../api.js';
 import {el, button, notice, renderMarkdown, confirmAction} from '../ui.js';
 
-export function summaryReview(root, note, alive) {
-  const panel=el('details',{className:'card stack'},el('summary',{},'详细摘要与升级')),content=el('div',{className:'stack'});
+export function summaryReview(root, note, alive, open=false) {
+  const panel=el('details',{className:'card stack',open},el('summary',{},'详细摘要与升级')),content=el('div',{className:'stack'});
   panel.append(content);root.append(panel);
   let state,token,busy=false,disposed=false,timer;
   const active=()=>!disposed&&alive();

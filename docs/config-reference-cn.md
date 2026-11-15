@@ -1,5 +1,11 @@
 # 配置完整参考（v0.12.0）
 
+## 分页工作空间与阅读范围（0.15.0）
+
+设置首页只展示分类入口：AI在`#/settings/ai`，向量与Qdrant在`#/settings/rag`，知乎同步在`#/settings/zhihu`，整理规则和预算在`#/organization/config`，存储位置在`#/settings/storage`。系统维护的文件同步、冲突、索引和各类明细分别下钻，原有配置内容和保存／重启约定保持。没有新增环境变量或数据库迁移，schema仍0009。
+
+只读`GET /api/v1/reading/overview`和`/notes`新增`scope=all|collection|other`；省略时保持原收藏行为，新页面显式用all。详情同样支持scope；新增来源类型、关联来源与可用管理操作，普通笔记不伪装成收藏原文快照。`POST /api/v1/rag/retrieve`可选scope（默认all）、category和tag，先过滤候选再检索；问答接口范围不变。收藏`/records`与`/jobs`提供摘要分页，`/records/{id}`与`/jobs/{id}`提供详情，现有修改接口及版本校验保留。分页状态不包含密钥；新界面列表默认10条，书架可选20条。
+
 ## 历史图片验收工具（2026-11-15）
 
 没有新增正式配置项。`scripts/verify_zhihu_media.py --suite historical-images`读取现有同步目标，离线检查原文引用和所有图片帧；不使用登录资料、不占用桌面互斥锁。追加`--execute`才使用已有登录资料，在新的`.cache/zhihu-media/<随机目录>`隔离导出6–8篇历史样本并验证去重、独立进程重读账本和失败续传；此时需要先正常关闭桌面，完成后重新打开。原有`smoke`模式和默认命令行为保留，区别及结果见[维护手册](maintenance-cn.md#历史带图收藏补验)。工具不写正式同步目标、模型配置或预算账本；桌面版本保持0.14.2／0009。

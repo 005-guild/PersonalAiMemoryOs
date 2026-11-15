@@ -1,3 +1,4 @@
+import {safeWorkspaceReturn} from './workspace-common.js';
 import {api} from '../api.js';
 import {el,button,field,notice,badge,formatDate,renderMarkdown,confirmAction,showError,pageHeading,toast,debounce} from '../ui.js';
 import {sourceSelection} from './source-selection.js';
@@ -12,7 +13,7 @@ export function mountEditor(container,context) {
 
 async function initializeEditor(container,context,lifecycle,alive) {
   const type=context.section,note=type==='knowledge',isNew=context.id==='new',word=note?'笔记':'资料',base=`/api/v1/${type}`;
-  const returnTo=note?null:sourceReturn(context.params.get('return_to'),null);
+  const returnTo=note?(context.params.get('return_to')?safeWorkspaceReturn(context.params.get('return_to')):null):sourceReturn(context.params.get('return_to'),null);
   function editorRoute(id,values={}){
     const params=new URLSearchParams(values);if(returnTo)params.set('return_to',returnTo);
     return `#/${type}/${id}${params.size?'?'+params:''}`;

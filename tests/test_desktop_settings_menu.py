@@ -14,7 +14,7 @@ def test_desktop_settings_uses_hash_navigation_without_reloading_the_page():
             raise AssertionError("Settings must retain the active dirty-form router.")
 
     open_ai_settings(Window())
-    assert scripts == ["window.location.hash = '#/settings'; void 0;"]
+    assert scripts == ["window.location.hash = '#/settings/ai'; void 0;"]
 
 
 def test_unready_workbench_message_does_not_echo_renderer_errors(monkeypatch, caplog):

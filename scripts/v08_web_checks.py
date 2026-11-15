@@ -124,11 +124,14 @@ def run_checks(page, url, request, evidence, seeded, *, read_only=False, desktop
     page.get_by_test_id('processing-adopt').click();expect(page.get_by_test_id('knowledge-body')).to_be_visible()
     page.get_by_test_id('knowledge-save').click();page.wait_for_url('**/#/')
     checks.append('generation >100 template choice, 100-size select rejection, task pagination, standalone draft, adopt/save overview')
-    page.goto(url+'/#/settings');expect(page.get_by_test_id('rag-settings-save')).to_be_visible()
+    page.goto(url+'/#/settings/ai');expect(page.get_by_test_id('ai-settings-save')).to_be_visible()
+    choose_sizes(page.get_by_role('navigation',name='生成模型配置分页'))
+    if read_only:expect(page.get_by_test_id('ai-settings-save')).to_be_disabled()
+    page.goto(url+'/#/settings/rag');expect(page.get_by_test_id('rag-settings-save')).to_be_visible()
     assert page.get_by_test_id('prompt-new').count()==0
-    choose_sizes(page.get_by_role('navigation',name='生成模型配置分页'));choose_sizes(page.get_by_role('navigation',name='向量配置分页'))
+    choose_sizes(page.get_by_role('navigation',name='向量配置分页'))
     if read_only:
-        expect(page.get_by_test_id('rag-settings-save')).to_be_disabled();expect(page.get_by_test_id('ai-settings-save')).to_be_disabled()
+        expect(page.get_by_test_id('rag-settings-save')).to_be_disabled()
     else:
         rag_nav=page.get_by_role('navigation',name='向量配置分页');rag_nav.get_by_role('combobox').select_option('10')
         page.get_by_test_id('rag-profile').first.locator('summary').first.click()
@@ -183,17 +186,18 @@ def run_checks(page, url, request, evidence, seeded, *, read_only=False, desktop
     checks.append('import report all sizes without resubmit and full report download')
     qa_calls=[]
     note=request('GET','/api/v1/knowledge?limit=1')['items'][0]
-    hit={'knowledge_id':note['id'],'version':note['version'],'title':'安全引用标题 <script>window.__unsafeV08=1</script>','chunk_id':'synthetic-chunk','text':'这是本次检索的逐字依据。','score':.8,'path':None,'sources':[]}
+    hit={'knowledge_id':note['id'],'version':note['version'],'title':'安全引用标题 <script>window.__unsafeV08=1</script>','chunk_id':'synthetic-chunk','text':'这是本次检索的逐字依据。','score':.8,'path':None,'sources':[],'scope':'full','body_chars':20,'read_chars':20,'matches':[],'context_id':'synthetic-chunk'}
     def search_stub(route):
-        qa_calls.append(('search',route.request.post_data_json));route.fulfill(status=200,content_type='application/json',body=json.dumps({'items':[hit]*10,'index_incomplete':True},ensure_ascii=False))
+        qa_calls.append(('search',route.request.post_data_json));route.fulfill(status=200,content_type='application/json',body=json.dumps({'notes':[dict(hit,knowledge_id=note['id']) for _ in range(10)],'contexts':[{'context_id':'synthetic-chunk','text':hit['text']}],'index_incomplete':True},ensure_ascii=False))
     def ask_stub(route):
         qa_calls.append(('ask',route.request.post_data_json));route.fulfill(status=200,content_type='application/json',body=json.dumps({'insufficient_evidence':False,'paragraphs':[{'text':'严格根据片段作答。','citation_ids':['1']}],'citations':[{'citation_id':'1',**hit,'quote':hit['text']}],'profile_id':'local','model':'fixture-v08','prompt_template':{'id':route.request.post_data_json['prompt_template_id']}},ensure_ascii=False))
     page.route('**/api/v1/rag/index/status*',lambda route:route.fulfill(status=200,content_type='application/json',body='{"enabled":true}'))
-    page.route('**/api/v1/rag/search',search_stub);page.route('**/api/v1/rag/ask',ask_stub)
-    page.goto(url+'/#/search');page.get_by_test_id('search-query').fill('数据库索引');page.get_by_test_id('search-submit').click()
-    choose_sizes(page.get_by_role('navigation',name='本次检索片段分页'))
+    page.route('**/api/v1/rag/retrieve',search_stub);page.route('**/api/v1/rag/answer',ask_stub)
+    page.goto(url+'/#/search?mode=search');page.get_by_test_id('search-query').fill('数据库索引');page.get_by_test_id('search-submit').click()
+    choose_sizes(page.get_by_role('navigation',name='本次检索笔记分页'))
     assert len(qa_calls)==1
-    page.get_by_role('tab',name='引用问答',exact=True).click();page.get_by_test_id('ask-question').fill('如何建立知识索引？')
+    page.get_by_role('link',name='引用问答',exact=True).click();page.get_by_test_id('ask-question').fill('如何建立知识索引？')
+    page.get_by_text('模型与模板',exact=True).click()
     page.get_by_test_id('ask-template').get_by_label('搜索问答模板',exact=True).fill('rag_qa 模板 104')
     page.get_by_test_id('ask-template').get_by_role('button',name='rag_qa 模板 104 · v2',exact=True).click()
     page.get_by_test_id('ask-submit').click();expect(page.get_by_test_id('ask-answer')).to_be_visible()
@@ -203,8 +207,8 @@ def run_checks(page, url, request, evidence, seeded, *, read_only=False, desktop
     choose_sizes(page.get_by_role('navigation',name='本次回答引用分页'));assert len(qa_calls)==2
     assert page.evaluate('window.__unsafeV08')is None
     page.get_by_role('link',name='查看引用 1',exact=True).click()
-    page.get_by_test_id('ask-answer').locator('a[href^="#/knowledge/"]').first.click();expect(page.get_by_test_id('knowledge-body')).to_be_visible()
-    page.unroute('**/api/v1/rag/index/status*');page.unroute('**/api/v1/rag/search');page.unroute('**/api/v1/rag/ask')
+    page.get_by_test_id('ask-answer').locator('a[href^="#/reading/"]').first.click();expect(page.get_by_role('tab',name='整理笔记',exact=True)).to_be_visible()
+    page.unroute('**/api/v1/rag/index/status*');page.unroute('**/api/v1/rag/retrieve');page.unroute('**/api/v1/rag/answer')
     checks.append('synthetic retrieval/QA transport: purpose-specific prompt, safe citation, result pagination zero repeat calls, citation navigation')
     page.goto(url+'/#/system')
     for name in ['记录分页','文件问题分页','笔记同步明细分页','索引错误分页','索引排除分页','模型状态分页']:
@@ -213,8 +217,8 @@ def run_checks(page, url, request, evidence, seeded, *, read_only=False, desktop
     for route in ['prompts','drafts','processing','settings','search']:
         page.goto(url+'/#/'+route)
         if route=='processing':expect(page.get_by_test_id('processing-source-all')).to_be_visible()
-        if route=='settings':expect(page.get_by_test_id('rag-settings-save')).to_be_visible()
-        if route=='search':page.get_by_role('tab',name='引用问答',exact=True).click();expect(page.get_by_test_id('ask-template')).to_be_visible()
+        if route=='settings':expect(page.locator('.entry-card')).to_have_count(7)
+        if route=='search':page.get_by_role('link',name='引用问答',exact=True).click();page.get_by_text('模型与模板',exact=True).click();expect(page.get_by_test_id('ask-template')).to_be_visible()
         for width in [1440,1024,390]:
             page.set_viewport_size({'width':width,'height':1000 if width>390 else 844})
             assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1'),(route,width)

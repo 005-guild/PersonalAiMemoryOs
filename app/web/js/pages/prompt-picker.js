@@ -37,5 +37,5 @@ export function promptPicker({purpose = 'knowledge', alive = () => true, onChang
     else {for (const [node,disabled] of disabledStates) node.disabled=disabled;disabledStates.clear();}
   }
   element.append(search, selected, errors, list); const ready = load();
-  return {element, ready, value: () => current, busy, destroy() {stopped = true; sequence++; selectionSequence++; controller?.abort(); delayed.cancel();}};
+  return {element, ready, choose, value: () => current, busy, destroy() {stopped = true; sequence++; selectionSequence++; controller?.abort(); delayed.cancel();}};
 }

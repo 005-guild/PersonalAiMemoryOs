@@ -4,9 +4,9 @@ import {keyValues} from './workflow-utils.js';
 import {settingsEditor} from './settings-editor.js';
 import {ragSettings} from './rag-settings.js';
 import {offerRestart} from './settings-restart.js';
-import {zhihuSettings} from './zhihu-settings.js';
+import {entryGrid, backLink} from './workspace-common.js';
 
-export function mount(container, context) {
+export function mountAI(container, context) {
   const mountedHash = location.hash, controller = new AbortController();
   let disposed = false, saving = false, snapshot, editor, pendingKeys;
   const clearPendingKeys = () => {if (pendingKeys) {for (const key of pendingKeys) key.value = ''; pendingKeys.length = 0; pendingKeys = null;}};
@@ -20,10 +20,7 @@ export function mount(container, context) {
     return alive();
   }
   const messages = el('div', {className: 'stack'}), status = el('div'), body = el('div', {}, el('div', {className: 'loading'}, '正在读取本机设置…'));
-  const rag = ragSettings({alive, onDirty: value => dirty('rag', value), hasDirty: () => dirtySections.size > 0});
-  const zhihu = zhihuSettings({alive, onDirty: value => dirty('zhihu', value)});
-  container.append(pageHeading('设置', '管理文本生成、Embedding 与 Qdrant 配置；提示词在独立中心管理。', el('a', {className: 'btn', href: '#/prompts'}, '打开提示词中心')), messages, status, body, rag.element);
-  container.append(zhihu.element);
+  container.append(backLink('#/settings','设置'),pageHeading('AI 模型','管理生成模型、默认配置与密钥。'), messages, status, body);
   function errorMessage(error) {
     if (error.status === 409) return '配置已在其他位置修改。你的输入仍保留，请确认后重新读取配置。';
     if (error.status === 403) return '本次保存验证已失效或当前访问方式不允许修改，请重新读取设置后再操作。';
@@ -44,12 +41,7 @@ export function mount(container, context) {
       value.environment_overrides?.length > 0 && el('div', {}, notice('部分设置受启动环境覆盖，请在对应环境中修改并重启。', 'warning'),
         el('details', {className: 'settings-advanced'}, el('summary', {}, '查看环境覆盖项'), el('p', {className: 'mono muted'}, value.environment_overrides.join('、'))))));
     editor = settingsEditor(value, {onSave: save, onDirty: () => {if (alive()) dirty('ai',true);}, alive});
-    body.replaceChildren(editor.node, el('section', {className: 'card stack settings-locations'}, el('h2', {}, '本机存储位置（只读）'),
-      keyValues([['运行目录', locations.runtime_root || '未提供'], ['数据目录', locations.data_directory || '未提供'],
-        ['数据库文件', locations.database_file || '未提供'], ['知识目录', locations.knowledge_directory || '未提供'], ['配置目录', locations.config_directory || '未提供'],
-        ['模型配置', locations.ai_config_file || '未提供'], ['密钥配置', locations.env_file || '未提供']]),
-      notice('便携 EXE 使用 EXE 所在目录，和项目或其他便携目录的数据相互独立。备份时请保留完整便携目录。'),
-      el('p', {className: 'muted'}, '下方可配置 Embedding 与 Qdrant；默认保持 RAG 关闭。')));
+    body.replaceChildren(editor.node);
   }
   async function reload() {
     if (saving || !alive()) return;
@@ -80,5 +72,31 @@ export function mount(container, context) {
     } finally {saving = false; if (alive()) editor.busy(false); clearPendingKeys(); values = null;}
   }
   reload();
-  return () => {disposed = true; controller.abort(); rag.dispose(); zhihu.dispose(); editor?.clearSecrets(); clearPendingKeys();};
+  return () => {disposed = true; controller.abort(); editor?.clearSecrets(); clearPendingKeys();};
+}
+
+export function mount(container,context){
+  if(context.id==='ai')return mountAI(container,context);
+  if(context.id==='rag'){
+    container.append(backLink('#/settings','设置'),pageHeading('向量检索','管理 Embedding、Qdrant 与重排服务。'));
+    let disposed=false,dirty=false;const rag=ragSettings({alive:()=>!disposed,onDirty:value=>{dirty=value;context.setDirty(value);},hasDirty:()=>dirty});container.append(rag.element);
+    return()=>{disposed=true;rag.dispose();};
+  }
+  if(context.id==='zhihu')return import('./zhihu-settings.js').then(({zhihuSettings})=>{
+    let disposed=false;container.append(backLink('#/settings','设置'),pageHeading('知乎同步','管理收藏夹、下载目录与同步计划。'));
+    const panel=zhihuSettings({alive:()=>!disposed,onDirty:context.setDirty});container.append(panel.element);return()=>{disposed=true;panel.dispose();};
+  });
+  if(context.id==='storage'){
+    let disposed=false;const controller=new AbortController();container.append(backLink('#/settings','设置'),pageHeading('存储与关于','当前实例的数据位置与开发接口。'));
+    const body=el('section',{className:'card stack'});container.append(body);
+    api('/api/v1/settings/ai',{signal:controller.signal}).then(value=>{if(disposed)return;body.append(keyValues(Object.entries(value.locations||{})),
+      el('p',{},'便携安装的数据属于当前运行目录。备份请保留完整目录。'),el('a',{href:'/docs',target:'_blank',rel:'noopener'},'API 文档 ↗'));}).catch(error=>{if(!disposed)body.append(notice(error.message,'error'));});
+    return()=>{disposed=true;controller.abort();};
+  }
+  container.append(pageHeading('设置','按需要进入配置，日常阅读不受影响。'),entryGrid([
+    ['AI 模型','默认模型、接口与密钥','#/settings/ai'],['向量检索','Embedding、Qdrant 与重排','#/settings/rag'],
+    ['知乎同步','收藏夹、保存目录与自动同步','#/settings/zhihu'],['整理规则与预算','分类、自动整理和费用上限','#/organization/config'],
+    ['提示词中心','笔记与问答模板版本','#/prompts'],['系统维护','文件同步、冲突和知识索引','#/system'],
+    ['存储与关于','数据位置、备份说明和API','#/settings/storage'],
+  ]));
 }

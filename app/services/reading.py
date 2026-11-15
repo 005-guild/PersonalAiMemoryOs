@@ -72,7 +72,7 @@ class ReadingService:
             source = session.get(Source, source_id)
             if source and not source.deleted_at:
                 sources.append({key: getattr(source, key) for key in ('id', 'title', 'author', 'url', 'content')})
-        related = AllReadingRepository(session).notes(category=note.category or '', limit=6)['items']
+        related = AllReadingRepository(session).notes(category=note.category, limit=6)['items'] if note.category else []
         return {'note': knowledge_snapshot(note), 'original': None, 'sources': sources,
                 'source_kind': 'other', 'sync_status': state.status if state else 'pending',
                 'capabilities': {'quality': False}, 'images': [], 'partial_image_summary': False,

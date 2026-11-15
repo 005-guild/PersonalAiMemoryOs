@@ -8,22 +8,22 @@
   <link rel="icon" href="/assets/css/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/assets/css/styles.css">
   <link rel="stylesheet" href="/assets/css/reading.css">
+  <link rel="stylesheet" href="/assets/css/workspace.css">
   <script type="module" src="/assets/js/app.js"></script>
 </head>
 <body>
   <a class="skip-link" href="#main">跳转到内容</a>
   <aside id="sidebar" class="sidebar" aria-label="主导航">
-    <a class="brand" href="#/"><span class="brand-mark">m</span><span>Memory OS<small>PERSONAL KNOWLEDGE</small></span></a>
-    <a class="nav-link settings-link settings-nav" href="#/settings" data-testid="desktop-settings-link"><span class="nav-icon" aria-hidden="true">⚙</span>设置</a>
+    <a class="brand" href="#/reading"><span class="brand-mark">m</span><span>Memory OS<small>PERSONAL KNOWLEDGE</small></span></a>
     <div class="nav-caption">工作空间</div>
     <nav id="navigation"></nav>
-    <div class="sidebar-footer"><span class="local-dot"></span>本地工作空间<small>数据属于你，思考持续生长。</small><span class="version">v0.14.2</span></div>
+    <div class="sidebar-footer"><span class="local-dot"></span>本地工作空间<small>数据属于你，思考持续生长。</small><span class="version">v0.15.0</span></div>
   </aside>
   <div class="workspace">
     <header class="topbar">
       <button id="menu-toggle" class="icon-button" aria-label="展开导航" aria-expanded="false">☰</button>
       <div class="breadcrumb">个人知识库 <span>/</span> <strong id="page-title">概览</strong></div>
-      <div class="topbar-right"><a href="#/settings" class="settings-link mobile-settings" data-testid="mobile-settings-link" aria-label="打开设置">⚙ 设置</a><span id="service-status" class="service-status">检查连接…</span><a href="/docs" target="_blank" rel="noopener" class="docs-link">API 文档 ↗</a><span class="avatar" aria-label="本地用户">我</span></div>
+      <div class="topbar-right"><a href="#/settings" class="settings-link mobile-settings" data-testid="mobile-settings-link" aria-label="打开设置">⚙ 设置</a><span id="service-status" class="service-status">检查连接…</span><span class="avatar" aria-label="本地用户">我</span></div>
     </header>
     <main id="main" tabindex="-1" aria-live="polite"></main>
     <footer class="workspace-footer">Personal AI Memory OS <span>将信息沉淀为自己的知识</span></footer>

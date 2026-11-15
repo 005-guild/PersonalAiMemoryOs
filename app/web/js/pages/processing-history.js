@@ -13,10 +13,11 @@ export function processingHistory(registry, context, {alive, signal}) {
   const profile = profilePicker(registry, {emptyLabel: '全部模型配置'}); profile.setAttribute('aria-label', '历史模型配置');
   profile.options[0].textContent='全部模型配置';
   const records = el('div'), batches = el('div'), errors = el('div');
+  const batchMode=context.params.get('kind')==='batches';
   const element = el('section', {className: 'card stack'}, el('div', {className: 'detail-header'}, el('h2', {}, '处理历史'), button('刷新记录', () => refresh())),
-    el('div', {className: 'form-grid'}, field('历史来源', source), field('历史模型', profile), field('记录状态', status)),
-    el('a', {href: '#/drafts'}, '打开草稿箱 →'), errors, records,
-    el('h3', {}, '持久批次'), batches);
+    el('nav',{className:'subnav'},el('a',{href:'#/processing/history'},'处理记录'),el('a',{href:'#/processing/history?kind=batches'},'持久批次')),
+    !batchMode&&el('div', {className: 'form-grid'}, field('历史来源', source), field('历史模型', profile), field('记录状态', status)),
+    el('a', {href: '#/drafts'}, '打开草稿箱 →'), errors, batchMode?batches:records);
   let offset = state.offset, size = state.size, sequence = 0, batchOffset=batchState.offset, batchSize=batchState.size, batchSequence=0;
   status.value=state.status;source.value=state.source;profile.value=state.profile;
   async function loadRuns(next = offset, nextSize = size) {
@@ -40,7 +41,7 @@ export function processingHistory(registry, context, {alive, signal}) {
         el('td', {}, el('a', {href: `#/processing?batch_id=${item.id}`}, item.id.slice(0,8))), el('td', {}, `${item.mode === 'merged' ? '合并' : '逐篇'} · ${item.source_count} 篇`), el('td', {}, ({pending:'待执行',running:'处理中',paused:'已暂停',completed:'已完成',cancelling:'正在取消',cancelled:'已取消'})[item.status]||item.status), el('td', {}, formatDate(item.created_at))))) : empty('还没有批次'),pager(page,loadBatches));
     } catch (error) {if (alive()&&ticket===batchSequence) showError(error, batches);}
   }
-  async function refresh() {await Promise.all([loadRuns(), loadBatches()]);}
+  async function refresh() {await (batchMode?loadBatches():loadRuns());}
   for (const input of [status, source, profile]) input.addEventListener('change', () => loadRuns(0));
   refresh(); return {element, refresh, statusField:field('历史记录状态',status)};
 }
