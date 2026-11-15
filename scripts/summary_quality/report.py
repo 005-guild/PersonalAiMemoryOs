@@ -1,10 +1,29 @@
 """Offline escaped comparison reports; model text is never executable HTML."""
 from html import escape
 from pathlib import Path
+import re
 from scripts.summary_quality.generation import markdown
 from scripts.summary_quality.storage import load,save
 
 CRITERIA = ['忠实性','完整度','结构','可读性','原文依据']
+
+
+def current_note_html(current):
+    text=current['body']
+    if all('\n## '+name in '\n'+text for name in ('总结','核心要点','适用条件与局限')):
+        # Original and OCR remain available in the adjacent/common evidence
+        # panels; avoid displaying the same full source twice in this column.
+        text=text.split('\n## 图片读取记录（AI 识读）',1)[0].split('\n## 原文\n',1)[0]
+    html=[]
+    if current['summary'].strip() not in text:html.append('<p>'+escape(current['summary'])+'</p>')
+    for line in text.splitlines():
+        if not line.strip():continue
+        heading=re.match(r'^#{1,6}\s+(.+)',line)
+        if heading:html.append('<h4>'+escape(heading[1])+'</h4>')
+        elif line.startswith('> '):html.append('<blockquote>'+escape(line[2:])+'</blockquote>')
+        elif line.startswith('- '):html.append('<p>• '+escape(line[2:])+'</p>')
+        else:html.append('<p>'+escape(line)+'</p>')
+    return '<section><h3>现有摘要与要点</h3><div class="panel-body">'+''.join(html)+'</div></section>'
 
 
 def render(packet,results,review,budget,directory):
@@ -23,9 +42,10 @@ def render(packet,results,review,budget,directory):
         identity=sample['identity'];result=results.get(identity,{'status':'not_run'});assessment=assessments[identity]
         current=sample['current'];candidate=result.get('candidate')
         enhanced=markdown(candidate) if candidate else '尚未生成：'+result.get('error',result['status'])
-        quality='\n'.join([f"审核结论：{assessment.get('outcome','pending')}",
+        outcome={'pending':'待审核','improved':'优于现版','same':'与现版持平','worse':'不如现版','rejected':'不合格'}.get(assessment.get('outcome'),'待审核')
+        quality='\n'.join([f"对照初评：{outcome}",
             *[f'{key}：{assessment.get("scores",{}).get(key,"待评")} / 5' for key in CRITERIA],
-            '评价：'+assessment.get('notes','待审核'), '严重问题：'+('；'.join(assessment.get('fatal_findings',[])) or '尚未记录')])
+            '评价：'+assessment.get('notes','待审核'), '严重问题：'+('；'.join(assessment.get('fatal_findings',[])) or ('尚未记录' if outcome=='待审核' else '未发现'))])
         charge=result.get('accounted_micros',0)/1e6
         def panel(title,text):return f'<section><h3>{escape(title)}</h3><div class="panel-body"><pre>{escape(text)}</pre></div></section>'
         def paragraphs(text):return ''.join('<p>'+escape(part)+'</p>' for part in text.split('\n') if part.strip())
@@ -47,7 +67,7 @@ def render(packet,results,review,budget,directory):
         articles.append(f'<article id="sample-{index}"><header><small>{escape(sample["kind"])} · {escape(identity)}</small>'
             f'<h2>{index}. {escape(current["title"])}</h2><p>{escape(current["category"])} · 单篇记账 ¥{charge:.6f}</p></header>'
             '<div class="comparison">'+panel('原文 · '+sample['original']['title'],sample['original']['content'])+
-            panel('现有摘要与笔记',current['summary']+'\n\n'+current['body'])+candidate_panel+'</div>'+
+            current_note_html(current)+candidate_panel+'</div>'+
             (f'<details><summary>本地原图与既有清晰识读</summary><div class="images">'+''.join(images)+'</div><pre>'+escape(observations)+'</pre></details>' if images else '')+
             panel('质量评价',quality)+f'<a href="#top">返回目录 ↑</a></article>')
         md += [f'## {index}. {current["title"]}',f'{sample["kind"]} · {identity} · 单篇 ¥{charge:.6f}','',
@@ -58,7 +78,7 @@ def render(packet,results,review,budget,directory):
     html='<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'+\
         '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src file: data:; style-src \'unsafe-inline\'; base-uri \'none\'">'+\
         '<title>摘要质量对照报告</title><style>'+css+'</style><main id="top"><h1>'+escape(header)+'</h1><p class="notice">'+escape(notice)+\
-        '</p><p>保留现有标题、分类、标签与正式收藏。文字引文按 Q 编号核对，O 编号是既有图片识读。</p><ol>'+nav+'</ol>'+''.join(articles)+'</main></html>'
+        '</p><p>保留现有标题、分类、标签与正式收藏。文字引文按 Q 编号核对，O 编号是既有图片识读。</p><p>审阅者：'+escape(review.get('reviewer','尚未填写'))+'；用户样式确认待完成。</p><ol>'+nav+'</ol>'+''.join(articles)+'</main></html>'
     (directory/'report.html').write_text(html,encoding='utf-8')
     (directory/'report.md').write_text('\n'.join(md),encoding='utf-8')
     status={'generated':sum(row['status']=='succeeded' for row in results.values()),'total':10,
