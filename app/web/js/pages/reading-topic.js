@@ -30,14 +30,14 @@ export function mountTopic(root,topic,alive) {
       }else content.append(notice('点击生成后将在这里显示主题综述。'));
       const generate=button(value.result?'更新主题综述':'生成主题综述',()=>perform('generate'));
       generate.disabled=busy||!!value.pending||topic==='待分类'||control.read_only;
-      content.append(generate,el('p',{className:'muted'},`${value.estimated_yuan==null?'':`本次保守估计 ¥${value.estimated_yuan.toFixed(2)}。`}与收藏整理和质量验收共用每月 ¥${value.monthly_budget_yuan}，超出剩余额度时任务暂停。`),
+      content.append(generate,el('p',{className:'muted'},`${value.estimated_yuan==null?'':`本次预计约 ¥${value.estimated_yuan.toFixed(2)}，实际费用随结果篇幅变化。`}与收藏整理和质量验收共用每月 ¥${value.monthly_budget_yuan}，超出剩余额度时任务暂停。`),
         button('关闭主题综述',()=>perform('disable')));
       if(value.pending)content.append(notice(value.pending.status==='paused'?'任务已暂停，请到收藏整理查看原因并继续。':'正在整理主题，结果会自动显示。'));
     }catch(error){if(active())content.replaceChildren(notice(error.message,'error'));}
   }
   async function perform(action){
     if(busy)return;
-    if(action==='generate'&&!await confirmAction(`使用本月剩余额度生成主题综述？${state.estimated_yuan==null?'':`保守估计 ¥${state.estimated_yuan.toFixed(2)}。`}较大的主题会分组处理，每组记录费用。`,{title:'生成主题综述',confirmLabel:'生成'}))return;
+    if(action==='generate'&&!await confirmAction(`使用本月剩余额度生成主题综述？${state.estimated_yuan==null?'':`预计约 ¥${state.estimated_yuan.toFixed(2)}，实际费用随篇幅变化。`}较大的主题会分组处理，每组记录费用。`,{title:'生成主题综述',confirmLabel:'生成'}))return;
     busy=true;
     try {
       await api('/api/v1/collection-organization/topics/'+(action==='generate'?'generate':'config'),{method:'POST',

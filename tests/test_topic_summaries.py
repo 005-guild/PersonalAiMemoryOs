@@ -31,6 +31,7 @@ def test_topic_groups_cache_and_stale_members(organization):
         return SimpleNamespace(text=json.dumps(result(reference)),usage={'input_tokens':100,'output_tokens':100})
     service.calls.client=SimpleNamespace(generate=generate)
     view=topics.view('技术');assert view['member_count']==25 and not view['result']
+    assert 0 < view['estimated_yuan'] < 1
     job=topics.start('技术',view['fingerprint']);service._next();asyncio.run(service.run_job(job['id']))
     view=topics.view('技术');assert view['result'] and not view['stale'] and not view['pending']
     assert len(calls)==4

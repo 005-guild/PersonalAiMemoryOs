@@ -30,9 +30,11 @@ class TopicService:
                     requests=(len(articles)+11)//12; merges=0; count=requests
                     while count>1:
                         count=(count+5)//6;merges+=count
-                    incoming=len(json.dumps(articles,ensure_ascii=False).encode('utf-8'))+(requests+merges)*4096
-                    incoming+=merges*resolved.profile.max_output_tokens*6*16
-                    estimated=cost(price_snapshot(resolved),incoming,(requests+merges)*resolved.profile.max_output_tokens)/1_000_000
+                    prices=price_snapshot(resolved)
+                    estimated_cost=sum(cost(prices,len(json.dumps(articles[offset:offset+12],ensure_ascii=False).encode('utf-8'))//2+2048,2500)
+                                       for offset in range(0,len(articles),12))
+                    estimated_cost+=merges*cost(prices,6*2500+2048,2500)
+                    estimated=estimated_cost/1_000_000
                 except OrganizationError:
                     pass
             return {'topic':topic,'enabled':control.get('topics_enabled',False),'member_count':len(articles),
@@ -41,7 +43,7 @@ class TopicService:
                 'members':[{'knowledge_id':row['knowledge_id'],'title':row['title']} for row in articles],
                 'pending':{'id':pending.job_id,'status':session.get(OrganizationJob,pending.job_id).status} if pending else None,
                 'monthly_budget_yuan':control['config']['monthly_budget_yuan'],'estimated_yuan':estimated}
-            # The estimate uses local byte bounds; actual reservations are counted before each HTTP call.
+            # Local estimates use expected output sizes; each actual request has its own counted reservation.
 
     def toggle(self,enabled):
         self.organization.writable()
