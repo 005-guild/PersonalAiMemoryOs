@@ -29,6 +29,7 @@ from app.api.zhihu_sync import router as zhihu_sync_router
 from app.services.zhihu_sync.service import ZhihuSyncService
 from app.services.organization.service import OrganizationService
 from app.api.organization import router as organization_router
+from app.api.reading import router as reading_router
 from app.api.settings_security import ConfigurationNoStoreMiddleware, configuration_guard
 from app.config import Settings
 from app.repositories.database import Database
@@ -173,6 +174,7 @@ def create_app(settings: Settings | None = None, *, model_client=None,
     app.include_router(rag_settings_router)
     app.include_router(zhihu_sync_router)
     app.include_router(organization_router)
+    app.include_router(reading_router)
     app.include_router(desktop_router)
     app.add_middleware(ConfigurationNoStoreMiddleware)
     install_web(app)

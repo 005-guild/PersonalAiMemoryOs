@@ -2,26 +2,20 @@
 import json
 from sqlalchemy import text,select
 from app.models import OrganizationItem,Knowledge,SyncState
+from app.repositories.collection_views import ELIGIBLE, INDEXED_FROM, keyword_condition
 
 
 def keyword_search(store,query,category='',tag='',limit=20,offset=0):
     query=query.strip()
     with store.transaction() as session:
         params={'limit':limit,'offset':offset,'category':category,'tag':tag}
-        where="o.status='published' AND o.error IS NULL AND o.exported_version=k.version AND k.deleted_at IS NULL AND (s.status IS NULL OR s.status NOT IN ('conflict','error'))"
+        where=ELIGIBLE
         where+=" AND (:category='' OR k.category=:category) AND (:tag='' OR EXISTS(SELECT 1 FROM json_each(k.tags) WHERE value=:tag))"
-        if len(query)>=3:
-            params['match']='"'+query.replace('"','""')+'"'
-            where+=' AND organization_fts MATCH :match'
-            order='bm25(organization_fts,0,5,3,1,2)'
-        elif query:
-            params['q']='%'+query.replace('!','!!').replace('%','!%').replace('_','!_')+'%'
-            where+=" AND (organization_fts.title LIKE :q ESCAPE '!' OR organization_fts.summary LIKE :q ESCAPE '!' OR organization_fts.original LIKE :q ESCAPE '!' OR organization_fts.tags LIKE :q ESCAPE '!')"
-            order='k.updated_at DESC'
-        else: order='k.updated_at DESC'
+        where+=keyword_condition(query,params)
+        order='bm25(organization_fts,0,5,3,1,2)' if len(query)>=3 else 'k.updated_at DESC'
         # Keep the FTS scan outermost: escaped short LIKE queries have no trigram
         # constraint, so a reordered join would rescan all text for every item.
-        base=' FROM organization_fts CROSS JOIN organization_items o ON o.id=organization_fts.item_id CROSS JOIN knowledge k ON k.id=o.knowledge_id LEFT JOIN sync_states s ON s.knowledge_id=k.id WHERE '+where
+        base=INDEXED_FROM+' WHERE '+where
         total=session.scalar(text('SELECT count(*)'+base),params)
         rows=session.execute(text('SELECT o.id,k.id AS knowledge_id,k.title,k.summary,k.category,k.tags,k.body,o.snapshot'+base+' ORDER BY '+order+' LIMIT :limit OFFSET :offset'),params).mappings()
         items=[]
