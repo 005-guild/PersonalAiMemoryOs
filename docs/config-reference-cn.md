@@ -4,6 +4,8 @@
 
 本补丁没有新增正式配置项或数据库迁移。知乎想法沿用收藏同步配置、身份标识与完成账本；文字取完整 `content`，不使用 `fold_content`，图片保留原图链接并验证允许的图片域名。接口的 `image_count` 可能为零，实际按有序图片内容处理。
 
+`verify_native_save.py prepare`仅在缓存副本关闭AI/RAG/同步并增加合成文件载入按钮，原版EXE和报告／保存代码保持校验一致。`--confirm-native-ui`是操作者已实际观察保存和取消的验收声明；仅有文件检查不能证明原生交互完成。它不修改正式设置，命令见[维护手册](maintenance-cn.md#原生报告保存验收)。
+
 `verify_zhihu_media.py` 默认只发现候选，`--execute` 才向新的 `.cache` 目录导出三种既有收藏；需正常关闭桌面以独占本应用登录资料。`verify_stack_relocation.py --bundle ...` 复制干净包与模型到 `.cache`，使用独立端口、隔离配置和临时 Qdrant 卷，不复用正式数据目录。两者不调用付费模型。操作及限制见[维护手册](maintenance-cn.md#收藏导出与整栈搬迁验收)。
 
 ## 主题综述与关联阅读（0.14.0 / 0009）

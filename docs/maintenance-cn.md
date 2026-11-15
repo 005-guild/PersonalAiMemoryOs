@@ -22,7 +22,31 @@ Windows 干净检出需保留第三方资源原始 LF；`.gitattributes` 仅为 
 
 0.14.1已备份后原地交付，全量1362项通过、3项既有跳过，真实EXE及正式页面通过，代码提交ac99924的Windows远端CI已通过。新冷启动基线为 `.cache/cold-boot/0e4462678a284528867308ab0fcbe063/report.json`。用户自行安排重启并直接打开EXE后，可运行 `uv run --locked python scripts/cold_boot_check.py --verify .cache/cold-boot/0e4462678a284528867308ab0fcbe063/report.json`，再执行实际查询；该命令自身不重启电脑。
 
-原生“另存为”仍未验收：0.14.1正常模式隔离副本在选择合成输入文件时，被计算机使用工具的窗口归属检查拦截（文件选择器属于WebView2子进程），没有进入保存环节；测试副本已停止，正式数据未变。证据在 `.cache/native-save-as/b76d04b674864eeea5b7031e56bc03b4/report.json`。后续需实际完成保存和取消路径，检查UTF-8 JSON及取消不落文件；测试模式自动下载不能代替。
+原生“另存为”后续已补验通过，见下面流程。此前 `.cache/native-save-as/b76d04b674864eeea5b7031e56bc03b4/report.json` 保留为输入选择器被工具窗口归属检查拦截的失败记录；本次补验不覆盖该选择器。
+
+## 原生报告保存验收
+
+`scripts/verify_native_save.py`仅准备随机缓存目录并校验文件；原生对话框操作需由操作者或计算机使用工具实际完成。正式安装保持原样，使用0.14.1干净包的副本，关闭AI/RAG/同步，不设置桌面测试模式。仅修改副本index.html并加入合成文件载入JS，EXE、导入／报告模块和原生保存处理器均与干净包一致。
+
+```powershell
+uv run --locked python scripts/verify_native_save.py prepare --bundle .cache/desktop-build/<本次构建>/dist/PersonalAiMemoryOs --launch
+```
+
+打开新副本的“资料导入 → 载入验收用合成文件 → 预演文件 → 下载报告”。在真正的原生“另存为”窗口，将文件存到该副本 `exports/原生保存报告.json`。不提交导入。以prepare打印的实际目录替换下面路径：
+
+```powershell
+uv run --locked python scripts/verify_native_save.py checkpoint-save --evidence .cache/native-save-as/<本次验收>
+```
+
+再次点击“下载报告”，在原生窗口将文件名设为 `取消不应创建.json`，点击“取消”，再执行：
+
+```powershell
+uv run --locked python scripts/verify_native_save.py verify --evidence .cache/native-save-as/<本次验收> --confirm-native-ui
+```
+
+`--confirm-native-ui`只声明操作者已经观察并完成原生保存和取消；不要仅凭文件存在添加此标志。省略时报告为UI待确认，退出码2。工具检查UTF-8 JSON、预演计数、无原文content字段、取消后所有导出文件及哈希保持原样、隔离数据库完整且没有导入Source、正式业务行哈希未变、除测试HTML/JS外程序资源一致。准备拒绝正式安装目录，篡改context不能将校验指向正式runtime；原生输入文件选择器和退出流程另有范围，不能由本工具推导通过。
+
+2026-11-15实际完成保存和取消，报告436字节，正式记录未变，付费调用0。证据在 `.cache/native-save-as/74163155c9324a3bb2f18fdd30095bb3/{save-check,cancel-check,report,verification}.json`。五项路径／上下文保护测试、干净包准备、实际报告校验和fixture语法检查通过。无需再次打包或升级正式EXE。
 
 ## 0.14.0 维护增量（2026-11-15）
 

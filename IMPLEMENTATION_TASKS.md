@@ -1,5 +1,15 @@
 # IMPLEMENTATION_TASKS.md
 
+## Native Save As follow-up — accepted on 0.14.1 (2026-11-15)
+
+Real production-mode native Save As save/cancel passed in an isolated copy of the delivered EXE. The executable, native download handler and existing import/report modules match the pristine bundle. Only cloned index.html and one added fixture JS provide a synthetic input button, avoiding the separately blocked WebView2 input picker. The normal import preview produced the actual report; computer-use observed the real native dialog, saved `原生保存报告.json`, reopened the dialog with `取消不应创建.json` and clicked Cancel. This does not claim native input-picker acceptance or a new EXE build.
+
+The saved **436-byte UTF-8 JSON** has dry_run=true, total=1, would_create=1, created=0, with no source body. Cancel created no file and preserved the exact saved-report hash. Isolated SQLite integrity and zero Sources passed; formal Sources/Knowledge/organization_calls/topic_summaries row hashes stayed identical. Every other copied program resource matches the pristine bundle. The owned isolated test process was stopped for cleanup; no graceful-exit claim is added here. Evidence: `.cache/native-save-as/74163155c9324a3bb2f18fdd30095bb3/{context,save-check,cancel-check,report,verification}.json`.
+
+Added reproducible cache-only maintenance entry `scripts/verify_native_save.py` and its synthetic JS fixture. Preparing does not touch the fixed installation or load credentials; checkpoint validates saved content, verification checks unchanged exports and business rows, and an explicit operator attestation is required to claim the separately observed native UI actions. Five safety tests passed (evidence boundaries, tampered runtime context, refusing a formal bundle before inspection/copy); fresh preparation and verification of the actual artifact passed, fixture JS parsed. No product code/configuration/schema/version change or paid call. Prior 0.14.1 code and delivery-record commits passed actual remote CI; this maintenance unit uses the same workflow.
+
+Remaining environmental acceptance is **physical Windows cold boot, a second Windows environment and a real newly-favorited media event**. User reboot prohibition and only-one-computer constraint remain in force. Manual topic generation, draft adoption and the explicit removed-text classification reason retain their chosen workflows. Earlier native-save failure below is a superseded checkpoint.
+
 ## Remaining acceptance follow-up — delivered 0.14.1 / 0009 (2026-11-15)
 
 Delivered in place to `dist/PersonalAiMemoryOs-0.6.6`, reopened and healthy. Clean build `.cache/desktop-build/367eef196d114a37983ceae81042cc3f/dist/PersonalAiMemoryOs`; source fingerprint `66fb60b202d8f3bdaba1fbec77edc20d9d2d437145a9a5a752833a3315dde8c6`. All 729 installed program resources verified. Database/vault/configuration/program backup `backups/upgrade-20261115-073141-b4daeab1`; external articles/mirror/completion ledger backup `backups/media-external-20261115-40dd31c1`, all 3799 files hash-verified. Upgrade verified all legacy rows and configuration bytes.
