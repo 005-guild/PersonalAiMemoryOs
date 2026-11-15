@@ -1,5 +1,23 @@
 # 维护、恢复与验收手册
 
+## 摘要质量试点工具
+
+在项目根目录运行以下命令。准备阶段只读固定安装数据库，挑选 2 篇长文、2 篇图片文章和尽量分散主题的 6 篇普通文章；输出目录必须是 `.cache/summary-quality/` 的子目录，首次准备需使用尚不存在的目录。
+
+```powershell
+uv run --locked python scripts/summary_quality_pilot.py prepare --directory .cache/summary-quality/pilot-20261115
+uv run --locked python scripts/summary_quality_pilot.py generate --directory .cache/summary-quality/pilot-20261115 --allow-paid
+uv run --locked python scripts/summary_quality_pilot.py report --directory .cache/summary-quality/pilot-20261115
+```
+
+`--runtime` 默认指向固定桌面 `dist/PersonalAiMemoryOs-0.6.6`；准备读取其 `data/memory.db`，生成通过现有配置解析器在内存中取得默认模型与密钥，不回显、不复制凭据。生成会把选中的私人原文及清晰图片识读文字发送给已配置的 OpenAI 服务。其余收藏不进入请求；样本、结果、原始响应和评价均留在被 Git 忽略的私人缓存中，不随源码提交。
+
+同一试点共用固定 `budget.json` 和独占锁：最多 5 元、10 次生成，生成前计数并持久化预留；失败／中断仍计入预留，不自动付费重试。重复成功请求复用响应。禁止删除账本或锁文件来重置额度；中断后须先核对进程与已保存的意图，不能把未知请求当作未发生。价格沿用既有保守价格快照，实际账单以提供商为准。
+
+打开输出目录的 `report.html` 可离线对照；`report.md` 为完整文本副本。短提要通常 80–180 字，详细部分通常 600–1500 字，按信息量调整。每个要点关联 Q 引文或 O 图片识读编号，Q 必须能逐字回到原文；O 不冒充逐字引文。部分图片无法辨认的提示必须保留。原文或人工笔记变化会停止生成，重新准备不能绕过原试点费用和次数上限。
+
+`review.json` 保存逐篇人工评价：`outcome` 为 `pending`、`improved`、`same`、`worse` 或 `rejected`；`scores` 对“忠实性／完整度／结构／可读性／原文依据”分别给 1–5 分，`notes` 写明理由，`fatal_findings` 记录编造、错误归因等严重问题。编辑评价后运行 `report` 刷新。全部 10 篇完成、至少 8 篇改进且其余不退步、无严重问题，才显示达到推广门槛；这不自动采纳候选，也不自动处理全部收藏。该工具无需升级 EXE 或迁移数据库。
+
 ## 0.12.0 阅读书架验收（2026-11-15）
 
 `scripts/verify_reading.py` 在 `.cache/reading-verification/` 创建独立的 35 篇合成收藏，关闭 AI/RAG/同步，验证主题、筛选、分页与滚动返回、完整长文、原文、键盘读图及窄屏。脚本比较浏览前后数据库内容，检查无浏览写请求或外部请求；不读取正式密钥或调用模型。需要现有测试依赖和缓存的 Playwright Chromium；冻结模式还需要 Windows WebView2 与本次干净构建目录。

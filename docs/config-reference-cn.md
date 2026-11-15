@@ -2,6 +2,8 @@
 
 ## 阅读书架只读接口
 
+摘要质量试点是维护命令，不增加生产接口或环境变量。`scripts/summary_quality_pilot.py` 提供 `prepare`、`generate`、`report`；生成沿用所选安装的默认 OpenAI profile，仅在请求内限制输出为 4096 tokens，不修改模型配置。试点独立预算固定为 5 元、最多 10 次生成，账本在 `.cache/summary-quality/budget.json`，更换报告目录不会获得新额度。输入先经计数接口校验，超过 272000 tokens 暂缓；失败不自动重试。图片只用已冻结且哈希匹配的清晰识读记录，缺失时暂缓。
+
 阅读接口复用现有收藏全文索引，不新增配置、数据库表或模型调用。`GET /api/v1/reading/overview` 返回有效文章、主题、分类、标签、更新月份、最近 12 篇及暂不可阅读条目数；`GET /api/v1/reading/notes` 接受 `q`、`topic`、`category`、`tag`、`updated_month`、`sort`、`offset`、`limit`，默认每页 20 篇、最多 100 篇。`sort` 为 `updated_desc` 或 `title_asc`，月份按北京时间的本地笔记更新时间计算。关键词沿用收藏搜索的字面匹配规则。
 
 `GET /api/v1/reading/notes/{knowledge_id}` 返回当前知识笔记、整理时原文快照与已关联的本地图片。已删除或不存在返回 404，待导出、索引缺失或冲突返回 409。列表不返回完整正文；所有读取都不触发扫描、导出、索引修复或 AI。阅读范围为已发布、无错误、未删除、无同步冲突且导出版本一致的收藏，与既有全文搜索共用可见性规则。
