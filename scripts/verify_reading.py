@@ -51,6 +51,9 @@ def main():
                 browser = playwright.chromium.launch(channel='chromium', args=['--no-proxy-server'])
                 page = browser.new_page(viewport={'width': 1440, 'height': 1100}, locale='zh-CN')
             checks = browser_checks(page, server.url, identifier, evidence)
+            # Reading acceptance closes an idle window; active-request draining
+            # is exercised separately by verify_desktop's lifecycle workflow.
+            page.wait_for_load_state('networkidle')
             assert snapshot(root) == before, 'Reading changed database records'
             if args.bundle:
                 server.request_close(); server.wait_closed(); server.start(); browser, page = attach_window(playwright, server)
