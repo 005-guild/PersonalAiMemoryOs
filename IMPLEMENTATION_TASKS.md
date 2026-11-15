@@ -1,6 +1,18 @@
 # IMPLEMENTATION_TASKS.md
 
-## Remaining acceptance follow-up — 0.14.1 candidate (2026-11-15)
+## Remaining acceptance follow-up — delivered 0.14.1 / 0009 (2026-11-15)
+
+Delivered in place to `dist/PersonalAiMemoryOs-0.6.6`, reopened and healthy. Clean build `.cache/desktop-build/367eef196d114a37983ceae81042cc3f/dist/PersonalAiMemoryOs`; source fingerprint `66fb60b202d8f3bdaba1fbec77edc20d9d2d437145a9a5a752833a3315dde8c6`. All 729 installed program resources verified. Database/vault/configuration/program backup `backups/upgrade-20261115-073141-b4daeab1`; external articles/mirror/completion ledger backup `backups/media-external-20261115-40dd31c1`, all 3799 files hash-verified. Upgrade verified all legacy rows and configuration bytes.
+
+Complete unified local checks passed: **1362 tests / 3 existing Windows symlink skips / one existing Starlette warning**, lock, docs, release and 55 ESM modules (`.cache/project-check/report.json`, `.cache/remaining-project-check.log`). Actual EXE CRUD/import/restart/relocation/draining and frozen bookshelf/reopen passed at the evidence paths in the checkpoint below. Installed read-only UI passed with no page errors, mutations or external requests. Formal verification retains 578 Sources, 580 Knowledge, 709 historical collection calls, zero topic results, all 1903 original files, the ten approved detailed summaries and 580 indexed notes with zero pending/failed. Shared monthly accounting stays **4.608940/30 yuan**; this follow-up used zero paid model calls. Hourly collection sync remains enabled and unpaused.
+
+User-authorized push completed to origin/main. Code commit `ac9992456c823b306c20059a538b377ed15d97a3` passed the actual [Windows remote workflow](https://github.com/005-guild/PersonalAiMemoryOs/actions/runs/43690004758), including locked sync and all unified checks. The earlier remote failure was reproduced through Git's CRLF checkout filter; four vendor hash mismatches became four matches after preserving vendor LF. Subsequent documentation commits are also checked by the workflow, without changing the delivered program fingerprint.
+
+Authenticated answer/article/pin media export and repeat-deduplication passed; complete same-host model/runtime/EXE relocation and fresh-volume Qdrant snapshot restore passed. These checks preserve their precise scopes below. Installed evidence is under `.cache/remaining-delivery/{upgrade,external-backup,live,ui,ci,launch}.json`. Fresh valid cold-boot baseline: `.cache/cold-boot/0e4462678a284528867308ab0fcbe063/report.json`; services and all 580 indexed notes ready, same Windows boot as before.
+
+**Remaining acceptance boundaries:** user still forbids reboot and only this Windows machine is available; physical cold boot and second-machine validation remain pending. Existing authenticated favorites exported to a fresh isolated directory do not prove a newly favorited remote event. Native production Save As was not reached: the computer-use helper rejected the WebView2-owned input file picker; the isolated owned EXE was stopped and formal storage remained unchanged (`.cache/native-save-as/b76d04b674864eeea5b7031e56bc03b4/report.json`). No native-save success is claimed. Real topic generation and three draft adoptions remain manual user operations; the one removed-text classification keeps its explicit reason.
+
+## Remaining acceptance follow-up — earlier 0.14.1 checkpoint (2026-11-15)
 
 The user keeps the Windows reboot prohibition, has no second Windows environment, and explicitly authorizes pushing verified commits to origin/main and completing remote CI acceptance. Physical cold boot and second-machine checks remain pending; manual real topic generation remains a user operation.
 

@@ -20,6 +20,10 @@ uv run --locked python scripts/verify_stack_relocation.py --bundle .cache/deskto
 
 Windows 干净检出需保留第三方资源原始 LF；`.gitattributes` 仅为 `app/web/vendor` 固定换行，确保发行完整性校验与上游一致。统一检查失败会输出对应日志末尾，便于远端 CI 定位，不再只显示失败状态。
 
+0.14.1已备份后原地交付，全量1362项通过、3项既有跳过，真实EXE及正式页面通过，代码提交ac99924的Windows远端CI已通过。新冷启动基线为 `.cache/cold-boot/0e4462678a284528867308ab0fcbe063/report.json`。用户自行安排重启并直接打开EXE后，可运行 `uv run --locked python scripts/cold_boot_check.py --verify .cache/cold-boot/0e4462678a284528867308ab0fcbe063/report.json`，再执行实际查询；该命令自身不重启电脑。
+
+原生“另存为”仍未验收：0.14.1正常模式隔离副本在选择合成输入文件时，被计算机使用工具的窗口归属检查拦截（文件选择器属于WebView2子进程），没有进入保存环节；测试副本已停止，正式数据未变。证据在 `.cache/native-save-as/b76d04b674864eeea5b7031e56bc03b4/report.json`。后续需实际完成保存和取消路径，检查UTF-8 JSON及取消不落文件；测试模式自动下载不能代替。
+
 ## 0.14.0 维护增量（2026-11-15）
 
 详细摘要沿用收藏记录和调用账本，主题综述由0009新增的topic_summaries保存派生结果。备份和恢复需包含完整数据库，升级工具已核对0008与0009表结构。先正常退出固定桌面，再使用缓存采纳和分类审核维护命令。
