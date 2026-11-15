@@ -9,6 +9,7 @@ import sys
 from urllib.parse import urlsplit
 
 from app.config import Settings
+from app.desktop.service_logs import capture_output
 from app.desktop.local_service_process import (
     external_environment, host_dll_search, merge_local_proxy_bypass, powershell_path,
 )
@@ -125,16 +126,18 @@ def start_local_services(root: Path, settings: Settings) -> None:
         log_path = portable_path(root, root / "logs/local-rag-startup.log")
         log_path.parent.mkdir(parents=True, exist_ok=True)
         merge_local_proxy_bypass()
-        with log_path.open("ab") as output:
-            with host_dll_search():
-                process = subprocess.Popen(command, cwd=str(project), env=external_environment(),
-                    stdin=subprocess.DEVNULL, stdout=output, stderr=subprocess.STDOUT,
-                    shell=False, close_fds=True, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-            try:
-                result = process.wait(timeout=STARTUP_TIMEOUT)
-            except subprocess.TimeoutExpired:
-                raise LocalServicesError("本地 RAG 服务准备超过 150 秒，后台仍可能继续启动。"
-                    "请稍后重试，不会强制停止服务。\n日志位置：" + str(log_path)) from None
+        with host_dll_search():
+            process = subprocess.Popen(command, cwd=str(project), env=external_environment(),
+                stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                shell=False, close_fds=True, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        reader=capture_output(process,log_path)
+        try:
+            result = process.wait(timeout=STARTUP_TIMEOUT)
+        except subprocess.TimeoutExpired:
+            raise LocalServicesError("本地 RAG 服务准备超过 150 秒，后台仍可能继续启动。"
+                "请稍后重试，不会强制停止服务。\n日志位置：" + str(log_path)) from None
+        if reader:
+            reader.join(timeout=5)
         if result != 0:
             raise LocalServicesError("本地 RAG 服务启动失败，请检查 Ollama、Docker 和本地运行目录。"
                 "\n日志位置：" + str(log_path))

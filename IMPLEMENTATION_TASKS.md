@@ -8,7 +8,7 @@
 
 Performance verification uses synthetic vectors and isolated real SQLite/Qdrant, without model inference. First indexing measured **7.315s / 92.058s** for 100/1000 notes after removing empty per-note global cleanup. Legacy search was subsequently changed to candidate checks and SQL status, with **108/213ms** median at 100/1000 notes and zero vector-cache SELECTs. Current note-level retrieval measured **128/296ms** median. Reports: `.cache/capacity-baseline/fcf0d16a06134f6f99fb36e4119843d5/report.json`, `.cache/retrieval-capacity/25a8d44fadca4869a2d0f5fc51da38e0/report.json`. Different historical host runs remain context, not a controlled speedup claim.
 
-New Ollama startups use a hidden PowerShell reader with bounded rotating logs. Existing running external services acquire this behavior at their next normal start. Startup-preparation logs retain explicit stopped-log maintenance. Physical Windows reboot, second-machine and authenticated new image/article/pin coverage await their real environments. No remote push is included. Final 0.14 packaging and frozen acceptance are pending below this entry.
+New Ollama startups use a hidden PowerShell reader with bounded rotating logs. Existing running external services acquire this behavior at their next normal start. Startup-preparation logs now have bounded live capture, verified with an output-draining regression. Physical Windows reboot, second-machine and authenticated new image/article/pin coverage await their real environments. No remote push is included. Final 0.14 packaging and frozen acceptance are pending below this entry.
 
 
 ## Approved follow-up implementation — in progress (2026-11-15)

@@ -2,7 +2,7 @@
 
 ## Follow-up implementation (2026-11-15)
 
-Detailed summaries were delivered at 0.13.0 with ten cached adoptions and eleven classification updates. Source 0.14.0 / 0009 adds optional manual topic synthesis, grounded cross-article links, shared monthly accounting, candidate-only legacy search and bounded logs for new Ollama processes. Seven fixed real quality cases passed. Final packaging is in progress. Physical cold boot, whole-stack second-machine transfer and account-dependent new media acceptance retain their actual-environment prerequisites. Startup-preparation logs still use explicit stopped-log rotation.
+Detailed summaries were delivered at 0.13.0 with ten cached adoptions and eleven classification updates. Source 0.14.0 / 0009 adds optional manual topic synthesis, grounded cross-article links, shared monthly accounting, candidate-only legacy search and bounded logs for new Ollama processes. Seven fixed real quality cases passed. Final packaging is in progress. Physical cold boot, whole-stack second-machine transfer and account-dependent new media acceptance retain their actual-environment prerequisites. Startup-helper output also drains into a bounded rotating log.
 
 
 # MVP Roadmap
