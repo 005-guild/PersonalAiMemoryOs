@@ -12,6 +12,7 @@ from app.models import OrganizationControl, OrganizationItem, Knowledge
 from app.repositories.database import Database
 from app.repositories.migrations import upgrade_database
 from app.services.content import ContentService
+from app.services.sync import Synchronizer
 from app.services.organization.publication import Publication, body
 from app.services.organization.store import Store, defaults
 
@@ -60,6 +61,11 @@ def seed(root, settings):
             item = OrganizationItem(identity=f'article:{number}', snapshot=snapshot, input_hash=hashlib.sha256(original.encode()).hexdigest(),
                 source_id=source_note['id'], knowledge_id=note['id'], result={**summary, 'title': '旧模型标题不应覆盖当前笔记'}, status='ready')
             session.add(item); session.flush(); identifiers.append((item.id, note['id']))
+    # A frozen desktop validates the vault identity before opening an existing DB.
+    # Materialize synthetic notes using the normal sync contract before browsing.
+    synchronizer = Synchronizer(database, settings, RLock())
+    synchronizer.run_once()
+    assert synchronizer.last_error is None
     publication = Publication(store)
     for item_id, _ in identifiers: publication.export(item_id, config)
     database.dispose()
