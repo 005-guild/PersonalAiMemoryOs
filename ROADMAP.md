@@ -1,5 +1,9 @@
 # ROADMAP.md
 
+## Current visual patch —0.15.1 /0009 (2026-11-15)
+
+Delivered the requested blue palette across reading, navigation, forms and gallery without changing layout or business behavior. Source/frozen browser checks and standalone reopen passed; verified backups and in-place installation completed. All580 notes and existing accounting preserved, zero new paid calls. Evidence and the retained earlier shutdown-timeout record are in [delivery notes](IMPLEMENTATION_TASKS.md). Earlier sections describe previous checkpoints.
+
 ## Current workspace delivery —0.15.0 /0009 (2026-11-15)
 
 Delivered four primary entries, a unified shelf for all saved notes, independent organization/settings/maintenance drilldowns and shared reading styling. Source, draft and knowledge roles remain distinct. Verified full1392-test regression, subsequent focused checks, actual frozen workspace/bookshelf/lifecycle, settings and deterministic local workflow acceptance. Backed up and upgraded the fixed installation in place;580 notes are readable (578 collection/2 ordinary), all1903 originals and existing accounting remain preserved, zero new paid model calls. See [delivery evidence](IMPLEMENTATION_TASKS.md). Cold boot and second-machine conditions remain unchanged; subsequent sections are earlier checkpoints.

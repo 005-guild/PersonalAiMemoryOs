@@ -1,10 +1,16 @@
 # IMPLEMENTATION_TASKS.md
 
-## Blue theme — source verified, delivery in progress (2026-11-15)
+## Blue theme — delivered0.15.1 /0009 (2026-11-15)
+
+Fixed desktop was normally closed, verified backups completed and the approved blue package installed in place, then reopened healthy. Backup `backups/upgrade-20261115-130305-3648df40`; external backup `backups/blue-theme-external-20261115-c1dc1aa1` verifies3800 files. All734 manifest resources, legacy database rows, configuration and program backups verified. Build fingerprint `2c8b1afac047e3ed5c5e80584a3dbf59d7aebd3360383c0b10b5e9caa634c1e9`; EXE SHA-256 `92cd6448a0b898aee35781f31ae120dba014475bea4d1465c558aa6155bba66f`.
+
+Frozen workspace acceptance passed at `.cache/workspace-verification/aab26ed3002342b7aa128b8b1f172eee/report.json`; frozen reading/gallery/reopen passed at `.cache/reading-verification/0d283a2df84e4e4ea4736a1310fcade1/report.json`. An earlier parallel run completed visual/gallery checks but timed out waiting for shutdown; its logs remain at `.cache/reading-verification/54869c8caab24abf8c43753ee98a267d`. Standalone retest passed without lifecycle code changes. Docs/release/build-resource checks pass. Installed UI also verifies actual blue button and background computed colors, with no page errors, mutation requests, external requests or model calls. Evidence `.cache/blue-theme-release/{palette,delivery,external-backup,live,ui}.json` and private screenshots.
+
+Final formal audit retains580 notes (578 collection/2 ordinary),578 Sources,709 organization calls,580 indexed/zero pending or failed, all1903 originals and ten adopted summaries. Monthly accounting stays4.608940/30 yuan; new paid calls0. Source visual unit committed locally as67457f5; no push or Windows reboot. The following paragraphs record the earlier source verification checkpoint.
 
 User requested a blue overall appearance. Source0.15.1 keeps the four-entry layout and drilldowns while replacing green/cream accents with blue, pale blue-gray backgrounds and white cards across workspace and reading styles. Shared accent/surface variables are reused by the reading palette; hero, tags, progress bars, quotes, filters and gallery controls also match. Semantic warning/error/success colors remain. No business logic, schema, dependencies or configuration changes; the version bump identifies the visual patch.
 
-Existing source browser acceptance passed: workspace22 page types and1366/1920/390 widths at `.cache/workspace-verification/92a4ce0680844b0db9285dfe9f1eeeff/report.json`; reading/paging/long text/gallery at `.cache/reading-verification/bead44ea64b5492d8384869f32ce2156/report.json`. Screenshots were visually inspected. Core palette contrast measurements: primary button6.04:1, body10.61:1, muted4.76:1, secondary4.61:1. No new tests were added for this color-only change, and the earlier full1392-test run is not reported as rerun. Packaging and backed-up in-place delivery follow before marking the patch delivered.
+Existing source browser acceptance passed: workspace22 page types and1366/1920/390 widths at `.cache/workspace-verification/92a4ce0680844b0db9285dfe9f1eeeff/report.json`; reading/paging/long text/gallery at `.cache/reading-verification/bead44ea64b5492d8384869f32ce2156/report.json`. Screenshots were visually inspected. Core palette contrast measurements: primary button6.04:1, body10.61:1, muted4.76:1, secondary4.61:1. No new tests were added for this color-only change, and the earlier full1392-test run is not reported as rerun. Packaging and in-place delivery subsequently completed as recorded above.
 
 ## Workspace navigation and unified reading — delivered0.15.0 /0009 (2026-11-15)
 
