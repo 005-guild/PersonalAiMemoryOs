@@ -174,6 +174,8 @@ def create_app(settings: Settings | None = None, *, model_client=None,
     app.include_router(rag_settings_router)
     app.include_router(zhihu_sync_router)
     app.include_router(organization_router)
+    from app.api.organization_views import router as organization_views_router
+    app.include_router(organization_views_router)
     app.include_router(reading_router)
     app.include_router(desktop_router)
     app.add_middleware(ConfigurationNoStoreMiddleware)

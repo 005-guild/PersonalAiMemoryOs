@@ -80,7 +80,13 @@ async def ask(payload: AskRequest, request: Request):
 @router.post("/retrieve", response_model=RetrieveRead)
 async def retrieve(payload: RetrieveRequest, request: Request):
     with errors():
-        return await request.app.state.rag_retrieval.retrieve(payload.query, payload.max_notes)
+        identities = None
+        if payload.scope != 'all' or payload.category or payload.tag:
+            from app.repositories.reading_all import AllReadingRepository
+            with request.app.state.organization.store.database.session() as session:
+                identities = AllReadingRepository(session).identities(scope=payload.scope, category=payload.category, tag=payload.tag)
+        return await request.app.state.rag_retrieval.retrieve(payload.query, payload.max_notes,
+            **({'knowledge_ids': identities} if identities is not None else {}))
 
 
 @router.post("/answer", response_model=NoteAnswerRead)

@@ -15,6 +15,8 @@ class ReadingNoteSummary(BaseModel):
     source_title: str
     source_url: str | None
     author: str | None
+    source_kind: Literal['collection', 'other'] = 'collection'
+    sync_status: str = 'synced'
     match_section: Literal['title', 'summary', 'tag', 'original']
     excerpt: str
 

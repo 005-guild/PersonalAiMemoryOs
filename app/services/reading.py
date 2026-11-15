@@ -3,7 +3,9 @@
 import re
 from contextlib import contextmanager
 from pathlib import Path
-from app.models import OrganizationControl
+from app.models import OrganizationControl, Knowledge, OrganizationItem, Source, SyncState
+from sqlalchemy import select
+from app.repositories.reading_all import AllReadingRepository
 from app.repositories.reading import ReadingRepository
 from app.services.content import ContentError, knowledge_snapshot
 from app.services.organization.publication import ASSET_PREFIX
@@ -23,17 +25,23 @@ class ReadingService:
             session.connection().exec_driver_sql('BEGIN')
             yield session  # Session.close rolls back the read transaction.
 
-    def overview(self):
+    def overview(self, scope="collection"):
         with self._snapshot() as session:
-            return ReadingRepository(session).overview()
+            return (ReadingRepository(session).overview() if scope == "collection" else
+                    AllReadingRepository(session).overview(scope))
 
     def notes(self, **filters):
         with self._snapshot() as session:
-            return ReadingRepository(session).notes(**filters)
+            return (ReadingRepository(session).notes(**{k:v for k,v in filters.items() if k != "scope"})
+                    if filters.get("scope", "collection") == "collection" else AllReadingRepository(session).notes(**filters))
 
-    def detail(self, identifier):
+    def detail(self, identifier, scope="collection"):
         with self._snapshot() as session:
             pair, eligible = ReadingRepository(session).detail(identifier)
+            if not pair and scope != 'collection':
+                return self._ordinary_detail(session, identifier)
+            if scope == 'other' and pair:
+                raise ContentError(404, 'reading_not_found')
             if not pair:
                 raise ContentError(404, 'reading_not_found')
             if not eligible:
@@ -47,9 +55,28 @@ class ReadingService:
                     'original': {key: original.get(key) for key in ('title', 'author', 'url', 'content')},
                     'partial_image_summary': bool((item.result or {}).get('partial_image_summary'))}
             result['related'] = ReadingRepository(session).related(note)
+            result.update(source_kind='collection', sources=[], sync_status='synced', capabilities={'quality': True})
         # Filesystem checks stay outside the short database snapshot.
         result['images'] = self._images(images, output)
         return result
+
+    def _ordinary_detail(self, session, identifier):
+        note = session.get(Knowledge, identifier)
+        if not note or note.deleted_at:
+            raise ContentError(404, 'reading_not_found')
+        state = session.get(SyncState, identifier)
+        if state and state.status in {'conflict', 'error'}:
+            raise ContentError(409, 'reading_not_ready')
+        sources = []
+        for source_id in note.source_ids:
+            source = session.get(Source, source_id)
+            if source and not source.deleted_at:
+                sources.append({key: getattr(source, key) for key in ('id', 'title', 'author', 'url', 'content')})
+        related = AllReadingRepository(session).notes(category=note.category or '', limit=6)['items']
+        return {'note': knowledge_snapshot(note), 'original': None, 'sources': sources,
+                'source_kind': 'other', 'sync_status': state.status if state else 'pending',
+                'capabilities': {'quality': False}, 'images': [], 'partial_image_summary': False,
+                'related': [dict(r, reason='同一分类') for r in related if r['knowledge_id'] != note.id][:5]}
 
     @staticmethod
     def _images(images, output):

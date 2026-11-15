@@ -1,5 +1,9 @@
 # IMPLEMENTATION_TASKS.md
 
+## Workspace navigation and unified reading — implementation in progress (2026-11-15)
+
+Approved design: four primary entries (reading, search, workbench, settings), all saved knowledge in the reading shelf, independent management drilldowns, shared reading visual language. The first data unit adds opt-in all/collection/other reading scopes, ordinary-note sources and capabilities, pre-retrieval semantic filters and bounded organization record/job projections. Existing collection eligibility and default API scope remain compatible; no migration or model calls. Focused collection/reading/retrieval checks passed68 tests before the new ordinary-note cases; the two added source/deduplication and management-projection cases pass. UI changes and desktop delivery are still being verified and are not yet claimed complete.
+
 ## Historical image favorites acceptance — completed (2026-11-15)
 
 User approved historical favorites as the acceptance scope, without waiting for a newly-favorited remote event. Added `--suite historical-images` to `scripts/verify_zhihu_media.py`, with separate inventory, captured-export/recovery and orchestration modules. Default historical mode is offline; `--execute` uses the existing authenticated profile only while the desktop is normally closed, exports 6–8 representative historical items into a fresh isolated cache target, and verifies real bytes/order, immediate deduplication, a separate process reopening the disk ledger and offline interrupted-download recovery. Existing default smoke mode remains compatible. No application, dependency, schema, model, prompt or budget change; fixed desktop remains **0.14.2 / 0009**, with the existing application build fingerprint.

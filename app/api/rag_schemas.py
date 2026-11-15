@@ -59,6 +59,9 @@ class SearchRead(BaseModel):
 
 class RetrieveRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
+    scope: str = Field(default='all', pattern=r'^(all|collection|other)$')
+    category: str = Field(default='', max_length=200)
+    tag: str = Field(default='', max_length=200)
     query: QueryText
     max_notes: int = Field(default=5, ge=1, le=10)
 

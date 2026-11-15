@@ -21,21 +21,21 @@ async def invoke(request, method, *args, **kwargs):
 
 
 @router.get('/overview', response_model=ReadingOverview)
-async def overview(request: Request):
-    return await invoke(request, 'overview')
+async def overview(request: Request, scope: Literal['all','collection','other'] = 'collection'):
+    return await invoke(request, 'overview', scope=scope)
 
 
 @router.get('/notes', response_model=ReadingPage)
 async def notes(request: Request, q: str = Query('', max_length=2000),
                 topic: str = Query('', max_length=200), category: str = Query('', max_length=200),
-                tag: str = Query('', max_length=200),
+                tag: str = Query('', max_length=200), scope: Literal['all','collection','other'] = 'collection',
                 updated_month: str = Query('', pattern=r'^(?:\d{4}-(?:0[1-9]|1[0-2]))?$'),
                 sort: Literal['updated_desc', 'title_asc'] = 'updated_desc',
                 offset: int = Query(0, ge=0), limit: int = Query(20, ge=1, le=100)):
     return await invoke(request, 'notes', q=q, topic=topic, category=category, tag=tag,
-                        updated_month=updated_month, sort=sort, offset=offset, limit=limit)
+                        updated_month=updated_month, sort=sort, offset=offset, limit=limit, scope=scope)
 
 
 @router.get('/notes/{knowledge_id}')
-async def detail(knowledge_id: UUID, request: Request):
-    return await invoke(request, 'detail', str(knowledge_id))
+async def detail(knowledge_id: UUID, request: Request, scope: Literal['all','collection','other'] = 'collection'):
+    return await invoke(request, 'detail', str(knowledge_id), scope=scope)
