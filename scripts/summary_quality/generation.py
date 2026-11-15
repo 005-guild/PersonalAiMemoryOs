@@ -23,5 +23,3 @@ def user_input(sample):
     return json.dumps({'title':sample['original']['title'],'author':sample['original'].get('author'),
         'content':sample['original']['content'],'clear_image_observations':sample['observations'],
         'partial_image_input':sample['partial']},ensure_ascii=False)
-
-
