@@ -2,6 +2,10 @@
 
 # MVP Roadmap
 
+## Current delivery and approved implementation (2026-11-15)
+
+Current source and fixed desktop are **0.12.0 / 0008**. Authenticated append-only Zhihu sync, 578 organized favorites, OpenAI defaults, local reranking and the reading bookshelf are delivered. The ten-article detailed-summary pilot is approved for those samples and new articles. Existing articles upgrade on demand. Next work integrates summary candidates, manual topic synthesis with stale-member detection, shared CNY 30 monthly accounting, classification review and bounded quality acceptance. Source work is committed locally. Remote publication and physical-machine acceptance retain their explicit authorization/environment prerequisites. The dated sections below describe earlier deliveries.
+
 ## Current Summary and Follow-up Review (2026-10-19)
 
 Current source and fixed desktop: **0.9.0 / 0006**; the historical name `PersonalAiMemoryOs-0.6.6` is retained. Answer-first UI, grouped retrieval, full short-note/section reading and pinned local TEI reranking passed browser/EXE acceptance and were delivered after verified backup. Existing AI/RAG/key settings and 571 Sources/two notes retained; reranking enabled. Clean distributions default off. The independent old Docker API was not redeployed. See the [instance matrix](docs/project-audit-cn.md#current).

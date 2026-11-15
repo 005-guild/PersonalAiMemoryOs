@@ -1,5 +1,9 @@
 # IMPLEMENTATION_TASKS.md
 
+## Approved follow-up implementation — in progress (2026-11-15)
+
+User approved the existing detailed-summary style for the ten pilot articles and future arrivals, with older articles upgraded on demand. Topic synthesis is manual and marks member changes stale. New organization, topic generation and this task's real quality checks share CNY 30 per calendar month. Preserve all previous ledgers and user edits. Implementation proceeds through summary integration, classification/draft review, topic synthesis, targeted quality/performance verification and fixed-directory desktop delivery. Physical reboot/second-PC and account-dependent coverage require their actual environments. The pre-change audit passed 1342 tests with three existing symlink skips; 53 ESM modules, docs and release checks passed. This entry records authorized scope, not completion.
+
 ## Ten-article summary quality pilot — delivered for review (2026-11-15)
 
 Status: **implemented and generated; user style approval pending**. A separate maintenance CLI provides `prepare`, explicit `generate --allow-paid`, and offline `report`. It freezes two long articles, two image-heavy articles (including the previously approved partial-image sample), and six ordinary articles spread across available themes. Current titles, categories, tags, note versions and original/image hashes are preserved. No production API, table, migration, automatic adoption or desktop upgrade was added; fixed desktop remains 0.12.0 / schema 0008.
