@@ -78,6 +78,7 @@ class Calls:
                 bound=incoming_bound if incoming_bound is not None else len((system+user).encode())+1024*len(images or [])
                 reserve=providers.cost(prices,bound+256,resolved.profile.max_output_tokens)
                 used=session.scalar(select(func.coalesce(func.sum(OrganizationCall.accounted_micros),0)).where(OrganizationCall.period==period))
+                used += sum(row['accounted_micros'] for row in control.get('external_costs', []) if row['period'] == period)
                 if used+reserve>budget:
                     raise OrganizationError('organization_budget_exhausted')
                 attempt=1+(previous.attempt if previous else 0)

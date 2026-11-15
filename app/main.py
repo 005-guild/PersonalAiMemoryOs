@@ -135,7 +135,7 @@ def create_app(settings: Settings | None = None, *, model_client=None,
 
     app = FastAPI(
         title="Personal AI Memory OS",
-        version="0.12.0",
+        version="0.13.0",
         lifespan=lifespan,
     )
     app.state.settings = settings

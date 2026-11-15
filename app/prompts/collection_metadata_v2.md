@@ -1,0 +1,1 @@
+同时在 JSON 顶层增加 title、category、tags 三个字段。title 是准确明确的新标题，最长80字符。category 必须取自输入 categories 的一个完整分类。tags 提供3至6个不重复的具体中文标签。其余字段严格遵守详细摘要协议。输入 parts 是按原文顺序提取的长文材料，引用必须逐字来自 content 或 parts 的 quotes，不能补写缺失的内容。

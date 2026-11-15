@@ -129,7 +129,16 @@ class OrganizationService:
             with self.store.transaction() as session:
                 job = session.get(OrganizationJob, identifier)
                 selection, config = list(job.selection), dict(job.settings)
+                mode = job.mode
                 entries = [x.snapshot for x in session.scalars(select(OrganizationItem).order_by(OrganizationItem.identity))]
+            if mode == 'quality':
+                from app.services.organization.quality import QualityService
+                await QualityService(self).run(identifier)
+                with self.store.transaction() as session:
+                    job = session.get(OrganizationJob, identifier)
+                    if job.status == 'running':
+                        job.status = 'completed'; job.finished_at = utcnow()
+                return
             if not config['taxonomy']:
                 config['taxonomy'] = await taxonomy(self.calls, self.store, identifier, entries)
             failures = False

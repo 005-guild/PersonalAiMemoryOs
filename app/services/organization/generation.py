@@ -112,6 +112,23 @@ async def summarize(calls,job_id,item_id,snapshot,config):
     value={'title':snapshot['values']['title'],'author':snapshot['values'].get('author'),'content':body,
            'parts':parts,'image_observations':clear,'categories':config['taxonomy']}
     system=prompt('summary')
+    if config.get('quality_enabled'):
+        from app.services.organization.quality import sample, prompt as quality_prompt
+        from app.services.organization.quality_contract import validate as validate_quality
+        evidence = sample(snapshot, {'image_observations': observations, 'partial_image_summary': partial})
+        value['clear_image_observations'] = evidence['observations']
+        value['partial_image_input'] = partial
+        def detailed_validate(raw):
+            metadata = {key: raw[key] for key in ('title', 'category', 'tags')}
+            detail = validate_quality(json.dumps({key: val for key, val in raw.items() if key not in metadata}, ensure_ascii=False), evidence)
+            legacy = summary_validator(snapshot, config['taxonomy'], bool(observations))({**metadata,
+                'summary': detail['summary'], 'points': [row['heading'] for row in detail['points']],
+                'conditions': detail['conditions'][:600], 'quotes': [row['quote'][:200] for row in detail['source_quotes'][:3]]})
+            return {**legacy, 'detail': detail, 'image_observations': observations,
+                    **({'partial_image_summary': True} if partial else {})}
+        metadata_prompt = (resource_root() / 'app/prompts/collection_metadata_v2.md').read_text(encoding='utf-8')
+        return await calls.generate(job_id, item_id, 'summary-v2', quality_prompt()+'\n\n'+metadata_prompt,
+            json.dumps(value, ensure_ascii=False), detailed_validate)
     if partial:
         value['partial_image_input']=True
         system+='\n\n'+prompt('partial_image')

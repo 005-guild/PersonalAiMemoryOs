@@ -2,6 +2,8 @@
 
 ## Approved follow-up implementation — in progress (2026-11-15)
 
+Summary integration source unit verified at **0.13.0 / 0008**: shared production/pilot evidence contract, one-request detailed summaries for new arrivals, durable version-checked candidates, explicit idempotent adoption, previous-note snapshots and cache-only pilot importer. Monthly reservation includes external pilot accounting metadata. Focused verification: 42 passed; earlier collection/pilot/reading group 63 passed; 54 ESM modules, docs/release checks and source Chromium bookshelf passed (`.cache/reading-verification/338c4c29a15a41f1928df242bd139a48/report.json`). Desktop packaging and actual adoption remain pending this implementation run.
+
 User approved the existing detailed-summary style for the ten pilot articles and future arrivals, with older articles upgraded on demand. Topic synthesis is manual and marks member changes stale. New organization, topic generation and this task's real quality checks share CNY 30 per calendar month. Preserve all previous ledgers and user edits. Implementation proceeds through summary integration, classification/draft review, topic synthesis, targeted quality/performance verification and fixed-directory desktop delivery. Physical reboot/second-PC and account-dependent coverage require their actual environments. The pre-change audit passed 1342 tests with three existing symlink skips; 53 ESM modules, docs and release checks passed. This entry records authorized scope, not completion.
 
 ## Ten-article summary quality pilot — delivered for review (2026-11-15)

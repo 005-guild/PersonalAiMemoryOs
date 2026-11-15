@@ -124,6 +124,33 @@ async def asset(name: str, request: Request):
     return FileResponse(path, media_type={'.png':'image/png','.jpg':'image/jpeg','.gif':'image/gif','.webp':'image/webp'}[path.suffix])
 
 
+@router.get('/quality/{knowledge_id}')
+async def quality_view(knowledge_id: str, request: Request):
+    from app.services.organization.quality import QualityService
+    target = await service(request)
+    return await call(QualityService(target).view, knowledge_id)
+
+
+@router.post('/quality/{knowledge_id}/{action}')
+async def quality_action(knowledge_id: str, action: Literal['generate','adopt'], request: Request):
+    from app.services.organization.quality import QualityService
+    from app.services.content import ContentError
+    target = await service(request, True)
+    value = await body(request)
+    allowed = {'expected_version', 'candidate_id'} if action == 'adopt' else {'expected_version'}
+    if set(value) != allowed or type(value.get('expected_version')) is not int or value['expected_version'] < 1:
+        raise HTTPException(422, detail={'code':'configuration_invalid'})
+    if action == 'adopt' and (not isinstance(value['candidate_id'], str) or not re.fullmatch('[a-f0-9]{64}', value['candidate_id'])):
+        raise HTTPException(422, detail={'code':'configuration_invalid'})
+    try:
+        result = await call(getattr(QualityService(target), 'start' if action == 'generate' else 'adopt'),
+                            knowledge_id, *[value[key] for key in ('expected_version','candidate_id') if key in value])
+    except ContentError as error:
+        raise HTTPException(error.status_code, detail=error.message) from None
+    target.wake.set()
+    return result
+
+
 @router.post('/{action}', status_code=202)
 async def control(action: str, request: Request):
     target = await service(request, True)

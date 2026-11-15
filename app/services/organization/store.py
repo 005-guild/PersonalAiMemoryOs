@@ -61,6 +61,12 @@ class Store:
             counts=dict(session.execute(select(OrganizationItem.status,func.count()).group_by(OrganizationItem.status)).all())
             costs=[{'period':period,'accounted_yuan':amount/1_000_000,'calls':count} for period,amount,count in session.execute(
                 select(OrganizationCall.period,func.sum(OrganizationCall.accounted_micros),func.count()).group_by(OrganizationCall.period)).all()]
+            for row in control.get('external_costs', []):
+                total = next((value for value in costs if value['period'] == row['period']), None)
+                if total is None:
+                    total = {'period':row['period'], 'accounted_yuan':0, 'calls':0}; costs.append(total)
+                total['accounted_yuan'] += row['accounted_micros']/1_000_000
+                total['calls'] += row.get('calls',0)
             return {**control,'revision':fingerprint(control['config']),
                     'approved':self.approved(control),
                     'counts':counts,'budgets':costs,'jobs':[job_view(j) for j in jobs]}
@@ -169,7 +175,8 @@ class Store:
             for item in rows:
                 if mode in {'retry','continue'} and item.id in selected:
                     item.status='discovered';item.error=None
-            settings={**config,'retry':mode=='retry','initial_period':not control['initial_complete']}
+            settings={**config,'retry':mode=='retry','initial_period':not control['initial_complete'],
+                      'quality_enabled':control.get('quality_enabled',False)}
             if self.resolve_profile:
                 from app.services.organization.providers import price_snapshot
                 resolved=self.resolve_profile(config)

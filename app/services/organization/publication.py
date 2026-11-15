@@ -24,6 +24,17 @@ def component(value):
 
 
 def body(snapshot,result,original):
+    if result.get('detail'):
+        from app.services.organization.quality_contract import markdown
+        lines = [markdown(result['detail'])]
+        if result.get('partial_image_summary'):
+            lines.insert(0, '> 部分图片文字无法辨认。本摘要仅依据清晰内容。')
+        if result.get('image_observations'):
+            lines += ['', '## 图片读取记录（AI 识读）', *[
+                f"- O{index+1}：" + ('部分文字无法辨认，未用于摘要。' if row.get('uncertain') else row['text'])
+                for index, row in enumerate(result['image_observations'])]]
+        return '\n'.join([*lines, '', '## 原文', f"原题：{snapshot['values']['title']}",
+                          f"来源：{snapshot['values']['url']}", '', original])
     lines=['## 总结',result['summary'],'','## 核心要点',*['- '+x for x in result['points']],
            '','## 适用条件与局限',result['conditions'] or '原文未明确说明。']
     if result.get('partial_image_summary'):

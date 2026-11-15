@@ -2,6 +2,7 @@ import {el, button} from '../ui.js';
 import {createGallery} from '../reading-gallery.js';
 import {readingMarkdown} from '../reading-renderer.js';
 import {browseLink, localDate, safeReturn} from './reading-common.js';
+import {summaryReview} from './reading-quality.js';
 
 export function mountNote(root,data,params,alive) {
   const {note,original}=data,from=safeReturn(params.get('from'));
@@ -14,6 +15,7 @@ export function mountNote(root,data,params,alive) {
     el('div',{className:'reading-note-actions'},el('a',{href:`#/knowledge/${note.id}`,className:'reading-secondary'},'编辑笔记'),
       /^https?:\/\//i.test(original.url||'')?el('a',{href:original.url,target:'_blank',rel:'noopener noreferrer'},'查看知乎来源 ↗'):null));
   root.append(header);
+  const disposeReview=summaryReview(root,note,alive);
   if(data.partial_image_summary)root.append(el('p',{className:'reading-status',role:'status'},'部分图片文字无法辨认。本摘要仅依据清晰内容，不代表截图全文。'));
   if(note.summary)root.append(el('section',{className:'reading-abstract'},el('h2',{},'摘要'),el('p',{},note.summary)));
   if(note.tags.length)root.append(el('div',{className:'reading-note-tags'},...note.tags.map(tag=>el('a',{href:browseLink({tag})},tag))));
@@ -45,5 +47,5 @@ export function mountNote(root,data,params,alive) {
   const rendered=readingMarkdown(note.body,gallery,{foldOriginal:true});documents.push(rendered);notePanel.append(rendered.element);
   panels.append(notePanel,originalPanel);root.append(tabs,panels);choose(false);
   window.scrollTo(0,0);
-  return ()=>{documents.forEach(doc=>doc.dispose());gallery.dispose();};
+  return ()=>{disposeReview();documents.forEach(doc=>doc.dispose());gallery.dispose();};
 }
