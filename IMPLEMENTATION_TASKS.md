@@ -1,5 +1,11 @@
 # IMPLEMENTATION_TASKS.md
 
+## Blue theme — source verified, delivery in progress (2026-11-15)
+
+User requested a blue overall appearance. Source0.15.1 keeps the four-entry layout and drilldowns while replacing green/cream accents with blue, pale blue-gray backgrounds and white cards across workspace and reading styles. Shared accent/surface variables are reused by the reading palette; hero, tags, progress bars, quotes, filters and gallery controls also match. Semantic warning/error/success colors remain. No business logic, schema, dependencies or configuration changes; the version bump identifies the visual patch.
+
+Existing source browser acceptance passed: workspace22 page types and1366/1920/390 widths at `.cache/workspace-verification/92a4ce0680844b0db9285dfe9f1eeeff/report.json`; reading/paging/long text/gallery at `.cache/reading-verification/bead44ea64b5492d8384869f32ce2156/report.json`. Screenshots were visually inspected. Core palette contrast measurements: primary button6.04:1, body10.61:1, muted4.76:1, secondary4.61:1. No new tests were added for this color-only change, and the earlier full1392-test run is not reported as rerun. Packaging and backed-up in-place delivery follow before marking the patch delivered.
+
 ## Workspace navigation and unified reading — delivered0.15.0 /0009 (2026-11-15)
 
 Fixed installation `dist/PersonalAiMemoryOs-0.6.6` was normally closed, upgraded after verified storage/configuration/program backup, and reopened healthy. Backup `backups/upgrade-20261115-120155-f61eb874`; external originals/ledger/mirror backup `backups/workspace-external-20261115-b67f9f85` verifies all3800 current external files. All legacy database rows, personal configuration and published notes are preserved. All734 manifest program resources match the approved bundle (build report counts735 files including the manifest). Application fingerprint `7a71237f63297581d47af6338b23a5cf8e1740797c717a0ba5fe0caab4e4a1e0`; EXE SHA-256 `8eaf100beea50165d33f34308363114cf93ed0d81ea5971e004fced7d46c9505`.
