@@ -261,13 +261,17 @@ class Store:
     def resume(self,job_id):
         with self.transaction() as session:
             self.require_idle(session)
-            job=session.get(OrganizationJob,job_id)
             control=self.control(session)
-            if not job or job.status!='paused':
-                raise OrganizationError('job_not_paused')
-            if policy({k:job.settings[k] for k in OrganizationSettings.model_fields})!=policy(control['config']):
-                raise OrganizationError('configuration_changed')
-            job.status='pending';job.error=None
+            if job_id is None:
+                if session.scalar(select(OrganizationJob.id).where(OrganizationJob.status=='paused').limit(1)):
+                    raise OrganizationError('paused_job_exists')
+            else:
+                job=session.get(OrganizationJob,job_id)
+                if not job or job.status!='paused':
+                    raise OrganizationError('job_not_paused')
+                if policy({k:job.settings[k] for k in OrganizationSettings.model_fields})!=policy(control['config']):
+                    raise OrganizationError('configuration_changed')
+                job.status='pending';job.error=None
             control['paused']=False;self.set_control(session,control)
         return self.read()
 

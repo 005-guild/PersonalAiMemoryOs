@@ -72,7 +72,7 @@ export async function mount(container,context) {
     for(const c of controls)c.disabled=busy||value.read_only;
     approve.disabled=busy||value.read_only||value.approved||!value.jobs.some(j=>j.id===value.sample_job_id&&j.status==='completed');
     all.disabled=busy||value.read_only||!value.approved;
-    resume.disabled=busy||value.read_only||!value.jobs.some(j=>j.status==='paused');
+    resume.disabled=busy||value.read_only||!value.paused;
     const sample=value.jobs.find(j=>j.id===value.sample_job_id);
     const signature=sample?.id+':'+sample?.status+':'+(value.counts.ready||0)+':'+(value.counts.failed||0);
     if(sample&&signature!==sampleSignature){
@@ -119,7 +119,7 @@ export async function mount(container,context) {
     }catch(e){if(alive)error(e);}finally{busy=false;if(alive)await read().catch(error);}
   }
   const control=(action,label)=>{const b=button(label,()=>perform(action));controls.push(b);return b;};
-  const approve=control('approve','确认这批样本'),all=control('all','开始全量整理'),resume=control('resume','继续暂停任务');
+  const approve=control('approve','确认这批样本'),all=control('all','开始全量整理'),resume=control('resume','继续任务或恢复自动整理');
   container.append(pageHeading('收藏整理','逐篇摘要、自动分类与新标题，保留完整原文和来源。'),
     button('跳到快速检索',()=>{searchPanel.scrollIntoView({block:'start'});searchPanel.querySelector('input')?.focus({preventScroll:true});}),messages,
     el('section',{className:'card stack'},el('h2',{},'整理设置'),

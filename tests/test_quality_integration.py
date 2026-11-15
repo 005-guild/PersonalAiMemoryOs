@@ -115,3 +115,11 @@ def test_protected_quality_and_topic_api_entrypoints(organization):
         assert view['enabled'] and view['member_count']==1
         assert client.post('/api/v1/collection-organization/topics/generate',headers=headers,
             json={'topic':'技术','expected_fingerprint':'0'*64}).status_code==409
+
+
+def test_automation_can_resume_after_cancelled_extension(organization):
+    service,_,source,_=organization
+    approved(service,source);run(service,'all')
+    service.store.pause()
+    assert service.store.read()['paused']
+    assert not service.store.resume(None)['paused']
