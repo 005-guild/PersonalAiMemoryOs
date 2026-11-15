@@ -66,7 +66,9 @@ def validate(raw,sample):
     used = set(value['image_evidence_ids'])
     if not used <= clear or len(used) != len(value['image_evidence_ids']): raise ValueError('unsupported_image_evidence')
     if sample['image_only']:
-        if value['source_quotes'] or not used: raise ValueError('image_reading_is_not_literal_quote')
+        # Image-heavy posts may still have a literal text caption. The quote
+        # checks above verify it against the actual text, never OCR prose.
+        if not used and not ids: raise ValueError('image_evidence_required')
     elif not ids: raise ValueError('source_quote_required')
     for point in value['points']:
         if not set(point['evidence_ids']) <= set(ids)|used: raise ValueError('unsupported_point_evidence')

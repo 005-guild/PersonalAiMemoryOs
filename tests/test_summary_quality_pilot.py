@@ -95,6 +95,10 @@ def test_literal_and_image_evidence_cannot_be_invented_or_confused():
         else:value['image_evidence_ids']=['O9']
         with pytest.raises(ValueError):validate(json.dumps(value),sample())
     assert validate(json.dumps(output(True)),sample(True))['image_evidence_ids']==['O1']
+    caption=output(True);caption['source_quotes']=output()['source_quotes']
+    assert validate(json.dumps(caption),sample(True))['source_quotes']
+    caption['source_quotes'][0]['quote']='把图片识读当作原文'
+    with pytest.raises(ValueError):validate(json.dumps(caption),sample(True))
     with pytest.raises(ValueError):validate(json.dumps(output(True)),sample(True,True))
     value=output(True)
     for field in ('summary','overview','conditions'):value[field]+='部分图片文字无法辨认。'
