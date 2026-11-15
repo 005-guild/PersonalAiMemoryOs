@@ -59,7 +59,9 @@ def validate(raw,sample):
     ids = [quote['id'] for quote in value['source_quotes']]
     if len(set(ids)) != len(ids): raise ValueError('duplicate_quote')
     for quote in value['source_quotes']:
-        literal = source_quote(quote['quote'],original,mapped)
+        # The legacy card helper caps excerpts at 200 characters. This pilot
+        # explicitly permits 400; an already exact quote must remain intact.
+        literal = quote['quote'] if quote['quote'] in original else source_quote(quote['quote'],original,mapped)
         if not literal: raise ValueError('unsupported_quote')
         quote['quote'] = literal
     clear = {row['id'] for row in sample['observations']}

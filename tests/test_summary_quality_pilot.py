@@ -99,6 +99,9 @@ def test_literal_and_image_evidence_cannot_be_invented_or_confused():
     assert validate(json.dumps(caption),sample(True))['source_quotes']
     caption['source_quotes'][0]['quote']='把图片识读当作原文'
     with pytest.raises(ValueError):validate(json.dumps(caption),sample(True))
+    long_sample=sample();long_sample['original']['content']='连续论据，'*55+'到此结束。'
+    value=output();value['source_quotes'][0]['quote']=long_sample['original']['content']
+    assert validate(json.dumps(value),long_sample)['source_quotes'][0]['quote']==long_sample['original']['content']
     with pytest.raises(ValueError):validate(json.dumps(output(True)),sample(True,True))
     value=output(True)
     for field in ('summary','overview','conditions'):value[field]+='部分图片文字无法辨认。'
