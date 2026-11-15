@@ -10,11 +10,11 @@
 | opentelemetry-api | 1.45.1 → 1.45.2 | [维护者公告](https://github.com/open-telemetry/opentelemetry-python/security/advisories/GHSA-mf5v-w3w3-f6cg)：超长含换行traceparent正则解析可能耗时；由FastAPI间接引入，应用未提供MCP入口。仍更新其依赖并验证长度拦截。 |
 | setuptools | 84.0.0 → 84.1.0 | [维护者公告](https://github.com/pypa/setuptools/security/advisories/GHSA-xmj3-9gf7-h52w)：Windows旧wheel安装路径可受namespace元数据影响；由PyInstaller构建组引入，应用无wheel安装入口。 |
 
-应用候选版本0.14.2，schema仍0009，仅这三项依赖和应用版本变化。按[uv约束规则](https://docs.astral.sh/uv/reference/settings/#constraint-dependencies)设置传递依赖安全下限，并单独约束setuptools隔离构建版本。此次使用同步后的构建环境重新打包；跳过同步只能复用与当前锁一致的环境。
+交付版本0.14.2，schema仍0009，仅这三项依赖和应用版本变化。按[uv约束规则](https://docs.astral.sh/uv/reference/settings/#constraint-dependencies)设置传递依赖安全下限，并单独约束setuptools隔离构建版本。此次使用同步后的构建环境重新打包；跳过同步只能复用与当前锁一致的环境。
 
 更新后在线查询53项、受影响0项，报告 `.cache/dependency-audit/report.json`，锁哈希 `ee9491763985ffb9ad2dd91650fe503753d47c163c87d342b0fb106a400a6a0d`。原受影响结果在 `.cache/security-release/audit-before.json`；2026-10旧报告已存 `.cache/dependency-audit/history/`。保存时间与范围，不把“未报告对应公告”等同于不存在漏洞；Docker、OS、WebView2及原生DLL不在本查询范围。
 
-两个直接安全用例通过：CA集合中不再有受影响的emSign ECC根；超长含换行输入在进入正则前被拦截，正常traceparent仍可解析。完整回归、冻结包及备份后原地交付进行中，当前正式安装仍0.14.1；源码记录见[任务记录](../IMPLEMENTATION_TASKS.md)。没有模型调用或预算变化。
+两个直接安全用例通过：CA集合中不再有受影响的emSign ECC根；超长含换行输入在进入正则前被拦截，正常traceparent仍可解析。1369项完整回归、实际冻结EXE及阅读书架通过，729个安装资源校验通过，固定目录已备份后交付0.14.2并打开；源码记录见[任务记录](../IMPLEMENTATION_TASKS.md)。没有模型调用或预算变化。
 
 ## 收藏导出与整栈搬迁验收
 
@@ -36,7 +36,7 @@ uv run --locked python scripts/verify_stack_relocation.py --bundle .cache/deskto
 
 Windows 干净检出需保留第三方资源原始 LF；`.gitattributes` 仅为 `app/web/vendor` 固定换行，确保发行完整性校验与上游一致。统一检查失败会输出对应日志末尾，便于远端 CI 定位，不再只显示失败状态。
 
-0.14.1已备份后原地交付，全量1362项通过、3项既有跳过，真实EXE及正式页面通过，代码提交ac99924的Windows远端CI已通过。新冷启动基线为 `.cache/cold-boot/0e4462678a284528867308ab0fcbe063/report.json`。用户自行安排重启并直接打开EXE后，可运行 `uv run --locked python scripts/cold_boot_check.py --verify .cache/cold-boot/0e4462678a284528867308ab0fcbe063/report.json`，再执行实际查询；该命令自身不重启电脑。
+0.14.1已备份后原地交付，全量1362项通过、3项既有跳过，真实EXE及正式页面通过，代码提交ac99924的Windows远端CI已通过。0.14.1冷启动基线保留；当前0.14.2新基线为 `.cache/cold-boot/da9bd81d02394efe9bcac79d7d90afe6/report.json`。用户自行安排重启并直接打开EXE后，可运行 `uv run --locked python scripts/cold_boot_check.py --verify .cache/cold-boot/da9bd81d02394efe9bcac79d7d90afe6/report.json`，再执行实际查询；该命令自身不重启电脑。
 
 原生“另存为”后续已补验通过，见下面流程。此前 `.cache/native-save-as/b76d04b674864eeea5b7031e56bc03b4/report.json` 保留为输入选择器被工具窗口归属检查拦截的失败记录；本次补验不覆盖该选择器。
 
@@ -163,7 +163,7 @@ uv run --locked python scripts/verify_recovery.py
 
 2026-10-18 实测通过：`.cache/recovery-validation/08b3e7c22a0745c8a213ff7b4b6fda8d/report.json`。全部数据库记录、多来源关系、知识文件、同步身份和配置哈希保留。缓存恢复零重新向量化，确认搜索使用本地 Embedding。13 个测试覆盖篡改、路径越界、Windows 设备路径、重复键、缺失配置或标记、未登记文件，以及非空模板／中断草稿／暂停任务恢复后不自动调用模型。Windows 目录发布前显式关闭 SQLite 连接。
 
-底层 `scripts/recovery_support.py` 要求目标不存在；映射为 `data/memory.db`、`knowledge/`、`.env` 和 `config/`。自定义路径须另行设计映射。失败保留隔离 staging，工具不自行启动应用。本轮验证缓存重建路线，不宣称 Qdrant 快照恢复已实测。正式恢复仍需单独停机、备份和回退计划。
+底层 `scripts/recovery_support.py` 要求目标不存在；映射为 `data/memory.db`、`knowledge/`、`.env` 和 `config/`。自定义路径须另行设计映射。失败保留隔离 staging，工具不自行启动应用。上述2026-10-18演练只验证缓存重建；2026-11-15另行完成的整栈演练验证了Qdrant集合快照，见本手册顶部。正式恢复仍需单独停机、备份和回退计划。
 
 ## 真实质量审阅准备
 
@@ -219,7 +219,7 @@ uv run --locked python scripts/check_release.py
 uv run --locked python scripts/audit_dependencies.py
 ```
 
-发布检查离线核对 `pyproject.toml`、FastAPI 和锁文件版本、迁移链头、四个网页 vendor／许可证文件 SHA-256。依赖命令默认只生成公开包清单，不联网。维护工具变动不重新发行 EXE，本轮继续 0.8.0／0006；下次应用行为或打包资源改动至少升级补丁版本，保存 commit、构建指纹、锁文件哈希、ZIP／EXE 哈希及验收报告，避免只凭版本号辨认构建。
+发布检查离线核对 `pyproject.toml`、FastAPI 和锁文件版本、迁移链头、四个网页 vendor／许可证文件 SHA-256。依赖命令默认只生成公开包清单，不联网。维护工具首版对应0.8.0／0006，当前发行以顶部记录为准；仅维护工具变动无需重新发行EXE，依赖或程序资源变化需要重新打包；下次应用行为或打包资源改动至少升级补丁版本，保存 commit、构建指纹、锁文件哈希、ZIP／EXE 哈希及验收报告，避免只凭版本号辨认构建。
 
 显式在线公告检查：
 
@@ -233,7 +233,7 @@ uv run --locked python scripts/audit_dependencies.py --online
 
 维护频率：每月一次公告查询；升级依赖和发布前再查一次。发现公告后先核对依赖组、实际可达路径和受影响版本，再做最小升级、锁文件更新及相关回归；涉及渲染、迁移、生命周期时补浏览器或 EXE 验收。不要无差别升级所有包或自动替换供应商模型。
 
-项目许可证暂不新增，保留现有第三方声明；现有 GitHub 可见性不作为新的项目许可证授权。签名、安装器和自动更新仍不在本轮范围。工作流及本地提交完成后不会自动推送远端，远端 CI 待下次授权推送后实际验证。
+项目许可证暂不新增，保留现有第三方声明；现有 GitHub 可见性不作为新的项目许可证授权。签名、安装器和自动更新仍不在本轮范围。后续普通变更默认仅本地提交，明确授权后推送；本批已获授权且代码远端CI通过，见最新任务记录。
 
 ## 固定检索集与容量测量
 

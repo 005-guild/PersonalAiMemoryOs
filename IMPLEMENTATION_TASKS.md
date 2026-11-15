@@ -1,6 +1,14 @@
 # IMPLEMENTATION_TASKS.md
 
-## Dependency security follow-up — 0.14.2 candidate / 0009 (2026-11-15)
+## Dependency security follow-up — delivered 0.14.2 / 0009 (2026-11-15)
+
+Fixed installation `dist/PersonalAiMemoryOs-0.6.6` was already normally stopped (instance mutex verified), upgraded after verified backup and reopened healthy. Backup: `backups/upgrade-20261115-081732-7dec7eaa`; external backup `backups/media-external-20261115-40dd31c1` reverified against all **3799 current files**. All legacy rows and configuration bytes preserved; all 729 installed resources match the approved bundle. Source fingerprint `245250bb6eedc2045e49d1e30054749c3eb8222af42162ec32a058d2577f3fe8`; EXE SHA-256 `ab877753a4ae800d35da4411844c3b910965a01e5fd61d3eaa53fb0681df32b4`.
+
+Full local **1369 passed / 3 existing skips / one existing Starlette warning**, frozen EXE/bookshelf and actual bundled security checks passed. Installed read-only UI passed without browser errors, mutations or external requests. Formal audit retains **578 Sources / 580 Knowledge / 709 organization calls / 580 indexed notes / zero pending or failed**, all 1903 originals and the ten adopted summaries. Monthly accounting remains **4.608940/30 yuan**, with **zero new paid model calls**. Evidence: `.cache/security-release/{artifact,upgrade,external-backup,program-verification,launch,live,ui}.json` and `project-check.log`.
+
+User-authorized source push `f3bd8cb2d0247037d78fb798fb0bfb572ed64ed1` passed [Windows CI](https://github.com/005-guild/PersonalAiMemoryOs/actions/runs/43693674254); subsequent delivery documentation uses the same workflow. Fresh valid cold baseline: `.cache/cold-boot/da9bd81d02394efe9bcac79d7d90afe6/report.json`. Windows was not rebooted. Physical cold boot, second Windows environment and a real newly-favorited media event remain pending under the user's existing conditions. Native save/cancel was completed on 0.14.1 with the unchanged handler at its stated scope below.
+
+## Dependency security follow-up — earlier 0.14.2 checkpoint (2026-11-15)
 
 The monthly/pre-release OSV check was overdue for the current lock. Current 53 package/version combinations reported certifi 2026.7.22 (GHSA-6q48-6c7w-9gw2 / duplicate PYSEC-2026-4320), opentelemetry-api 1.45.1 (GHSA-mf5v-w3w3-f6cg) and build-only setuptools 84.0.0 (GHSA-xmj3-9gf7-h52w). Official maintainer advisories and PyPI release metadata were checked before selecting the three fixes. Original 48-package evidence is preserved at `.cache/dependency-audit/history/report-2026-10-17-95bb0c8a2919.json`; the current vulnerable-lock report is `.cache/security-release/audit-before.json`.
 

@@ -1,8 +1,8 @@
 # RAG 配置与使用指南
 
-## 安全依赖更新（0.14.2 候选 / 0009）
+## 安全依赖更新（0.14.2 / 0009）
 
-本次只更新三个已有依赖：HTTPX使用的certifi、FastAPI间接引入的OpenTelemetry API，以及构建环境中的setuptools。嵌入模型、维度、Qdrant代次和缓存约定不变，无需重建向量；候选构建仍需完成实际EXE验收后交付。公告与版本见[维护手册](maintenance-cn.md#安全依赖更新与公告复查)。
+本次只更新三个已有依赖：HTTPX使用的certifi、FastAPI间接引入的OpenTelemetry API，以及构建环境中的setuptools。嵌入模型、维度、Qdrant代次和缓存约定不变，无需重建向量；实际EXE验收后已原地交付，正式索引580篇就绪，无待处理或失败。公告与版本见[维护手册](maintenance-cn.md#安全依赖更新与公告复查)。
 
 ## 搬迁验证补充（0.14.1 / 0009）
 
