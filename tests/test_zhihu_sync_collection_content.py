@@ -38,3 +38,38 @@ def test_article_uses_matching_canonical_identity():
     content['url']='https://zhuanlan.zhihu.com/p/1235'
     with pytest.raises(SyncError,match='source_incomplete'):
         collection_body(content,identity)
+
+
+def pin():
+    return {'type':'pin','id':'12345','url':'https://www.zhihu.com/pin/12345','excerpt_title':'想法标题',
+            'author':{'name':'作者'},'image_count':1,'content':[
+                {'type':'text','content':'<p>完整的想法正文与结尾。</p>','fold_type':'detail_fold','fold_content':'折叠预览'},
+                {'type':'image','url':'https://picx.zhimg.com/preview.jpg','original_url':'https://picx.zhimg.com/original.jpg'}]}
+
+
+def test_pin_reuses_full_content_in_order_and_original_image():
+    identity=normalize_zhihu_url('https://www.zhihu.com/pin/12345')
+    result=collection_body(pin(),identity)
+    assert result['title']=='想法标题' and result['author']=='作者'
+    assert '完整的想法正文与结尾。' in result['html']
+    assert 'original.jpg' in result['html'] and 'preview.jpg' not in result['html']
+    assert '折叠预览' not in result['html']
+    assert result['html'].index('<p>') < result['html'].index('<img')
+
+
+@pytest.mark.parametrize('change',['identity','missing_image','unknown_part','excerpt_only','foreign_image'])
+def test_incomplete_pin_is_rejected_instead_of_silently_dropping_content(change):
+    value=pin()
+    if change=='identity':value['url']='https://www.zhihu.com/pin/99999'
+    elif change=='missing_image':value['content'][1]={'type':'image'}
+    elif change=='unknown_part':value['content'].append({'type':'video'})
+    elif change=='excerpt_only':value['content'][0]['content']=''
+    else:value['content'][1]['original_url']='https://foreign.invalid/image.png'
+    with pytest.raises((SyncError,ValueError)):
+        collection_body(value,normalize_zhihu_url('https://www.zhihu.com/pin/12345'))
+
+
+def test_pin_preserves_image_parts_when_server_counter_is_zero():
+    value=pin();value['image_count']=0;value['url']+='?native=0'
+    result=collection_body(value,normalize_zhihu_url('https://www.zhihu.com/pin/12345'))
+    assert 'original.jpg' in result['html']

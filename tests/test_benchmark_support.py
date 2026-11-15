@@ -57,3 +57,6 @@ def test_failed_run_without_container_can_remove_only_its_labeled_volume(monkeyp
     monkeypatch.setattr(resource, "command", command)
     resource.stop()
     assert commands[-1] == ("volume", "rm", resource.volume)
+    completed=list(commands)
+    resource.stop()
+    assert commands==completed

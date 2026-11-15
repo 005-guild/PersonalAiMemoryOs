@@ -1,0 +1,2 @@
+# Preserve upstream bytes used by vendor integrity checks on Windows checkouts.
+app/web/vendor/** text eol=lf

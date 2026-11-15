@@ -40,6 +40,11 @@ def main() -> int:
                             "exit_code": result.returncode, "seconds": round(time.monotonic() - started, 3)})
         except (OSError, subprocess.TimeoutExpired) as error:
             records.append({"name": name, "status": "failed", "reason": type(error).__name__})
+        if records[-1]["status"] == "failed":
+            log = output / f"{name}.log"
+            if log.is_file():
+                print(f"Failed {name}; final 12000 characters of {log.name}:", flush=True)
+                print(log.read_text(encoding="utf-8", errors="replace")[-12000:], flush=True)
     report = {"status": "failed" if any(r["status"] == "failed" for r in records) else "passed",
               "checks": records, "real_model_calls": 0, "external_acceptance": "not run"}
     (output / "report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")

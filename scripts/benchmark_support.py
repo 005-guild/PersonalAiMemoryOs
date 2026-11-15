@@ -118,8 +118,10 @@ class IsolatedQdrant:
                     raise ValueError("Container ownership mismatch")
                 self.command("stop", "--time", "10", self.name)
                 self.command("rm", self.name)
+            self.container_created = False
         if self.volume_created:
             metadata = json.loads(self.command("volume", "inspect", self.volume))[0]
             if metadata["Labels"].get("personal-ai-memory-os.benchmark") != self.name:
                 raise ValueError("Volume ownership mismatch")
             self.command("volume", "rm", self.volume)
+            self.volume_created = False

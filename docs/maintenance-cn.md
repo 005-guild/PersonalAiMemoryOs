@@ -1,5 +1,25 @@
 # 维护、恢复与验收手册
 
+## 收藏导出与整栈搬迁验收
+
+0.14.1 / 0009 增加以下维护入口。先正常关闭固定桌面，执行真实账号导出验收；登录资料仅由本应用浏览器使用，不提取凭据。
+
+```powershell
+uv run --locked python scripts/verify_zhihu_media.py
+uv run --locked python scripts/verify_zhihu_media.py --execute
+uv run --locked python scripts/verify_stack_relocation.py --bundle .cache/desktop-build/<本次构建>/dist/PersonalAiMemoryOs
+```
+
+前两条扫描当前收藏，选取回答、文章、想法各一篇带图片的既有内容；默认仅预览。`--execute` 首次导出到新的 `.cache/zhihu-media/<随机目录>/articles`，重复运行同一批验证跳过、文件哈希不变且没有再次请求正文或图片，同时核对正式原文和数据库未变。这不修改远端收藏，也不证明真实“刚加入收藏”事件已发生。私人原文、图片及报告都不提交。
+
+第三条需要 Windows、Docker、`.tools/ollama`、`.cache/ollama/models` 和至少约7GiB空闲空间。它把干净 EXE、82个 Ollama 文件和7个模型文件复制到隔离目录；以真实 BGE-M3 建立三篇合成笔记的索引，下载集合快照并记入校验和，正常关闭后整体移动到中文路径，在新建 Qdrant 卷上传恢复。核对数据库、vault、模型哈希、集合归属、点与向量载荷、同一索引代次及搬迁前后的真实查询，最后仅停止自建服务和清理自建卷。报告保存在 `.cache/stack-relocation/`。依据 [Qdrant 快照接口](https://qdrant.tech/documentation/snapshots/)使用集合快照；不把它当作正式备份工具或跨机器验收。
+
+2026-11-15实测：三类首次各导出1篇及1张图，重复新增0、跳过3；整栈同机搬迁恢复3个点并通过全部查询，正式数据和共享模型未变。证据分别为 `.cache/zhihu-media/3a67df3c4fc741ba9d971531a63de988/report.json` 和 `.cache/stack-relocation/9ff02b90c7c241a686c5cc5b9c9c64e8/report.json`。后者使用已验证的0.14.0干净包验证搬迁流程，0.14.1另行完成发行回归。
+
+用户继续禁止重启，且目前只有此电脑：物理冷启动和第二台 Windows 验收保留待办。`cold_boot_check.py` 只记录和比较，不重启或操作服务。等待用户安排窗口后，直接打开 EXE，再比较重启前后证据并验证实际查询。真实新增收藏的图片、文章及想法导出也保留事件验收边界。主题综述继续由用户手动生成。
+
+Windows 干净检出需保留第三方资源原始 LF；`.gitattributes` 仅为 `app/web/vendor` 固定换行，确保发行完整性校验与上游一致。统一检查失败会输出对应日志末尾，便于远端 CI 定位，不再只显示失败状态。
+
 ## 0.14.0 维护增量（2026-11-15）
 
 详细摘要沿用收藏记录和调用账本，主题综述由0009新增的topic_summaries保存派生结果。备份和恢复需包含完整数据库，升级工具已核对0008与0009表结构。先正常退出固定桌面，再使用缓存采纳和分类审核维护命令。
