@@ -1,5 +1,16 @@
 # 维护、恢复与验收手册
 
+## 0.12.0 阅读书架验收（2026-11-15）
+
+`scripts/verify_reading.py` 在 `.cache/reading-verification/` 创建独立的 35 篇合成收藏，关闭 AI/RAG/同步，验证主题、筛选、分页与滚动返回、完整长文、原文、键盘读图及窄屏。脚本比较浏览前后数据库内容，检查无浏览写请求或外部请求；不读取正式密钥或调用模型。需要现有测试依赖和缓存的 Playwright Chromium；冻结模式还需要 Windows WebView2 与本次干净构建目录。
+
+```powershell
+uv run --locked python scripts/verify_reading.py
+uv run --locked python scripts/verify_reading.py --bundle .cache/desktop-build/4ad272d458894840915bbbffd20a4b2e/dist/PersonalAiMemoryOs
+```
+
+第二条的构建路径应替换为本次产物。它复制干净包到隔离目录，验证真实 EXE 的阅读与正常关闭／重开。截图及报告保存在独立验收目录，不打包私人收藏；真实收藏的读取性能需另在只读副本核验，不由合成数据结果推断。
+
 ## 0.9.0 检索与本地重排验收（2026-10-19）
 
 应用为 0.9.0、数据库为 0006，既有向量无需重建。以下命令是维护验收入口，日常仍双击固定目录 EXE。缓存中的模型权重和校验清单属于运行依赖，不随旧构建一起清理。

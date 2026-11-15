@@ -16,7 +16,9 @@ The [complete Chinese manual](readme-cn.md) covers every management page, instal
 
 The [project review and follow-up checklist](docs/project-audit-cn.md) records the current instance matrix, source map, confirmed documentation fixes and prioritized work with evidence and completion criteria. It distinguishes real quality review, restoration/cold-boot exercises and maintenance work from features already implemented. This review changes documentation only; pending items are not implementation or live-call authorization.
 
-## Current source: 0.11.0 (schema 0008)
+## Current source: 0.12.0 (schema 0008)
+
+The new **Reading bookshelf** sidebar entry presents published Zhihu favorites through topic counts, combined keyword/category/tag/month filters and paged lists. Read current edited notes alongside preserved original snapshots, progressively expand long Markdown and inspect local images in a keyboard-accessible gallery. Returning preserves filters, page and session scroll position. It reuses the existing full-text index and makes no model calls, migrations or content rewrites; semantic search and cited answers retain their existing entry points. Topic synthesis remains outside this first delivery.
 
 OpenAI Responses supports inline vision and JSON mode. Collection processing can explicitly switch to GPT-6.1 Sol while retaining approved style and published notes. Each request freezes conservative provider pricing; OpenAI counts input tokens before generation. Personal defaults and credentials are stored only in the selected installation, with no automatic provider fallback.
 

@@ -6,6 +6,7 @@ const routes = [
   ['', '概览', '◫', 'overview'], ['sources', '资料库', '▤', 'content'],
   ['imports', '资料导入', '↥', 'imports'], ['knowledge', '知识笔记', '▧', 'content'],
   ['organization', '收藏整理', '▥', 'organization'],
+  ['reading', '阅读书架', '▧', 'reading'],
   ['processing', 'AI 分析', '✧', 'processing'], ['drafts', '草稿箱', '▱', 'drafts'],
   ['prompts', '提示词中心', '✎', 'prompts'], ['search', '搜索问答', '⌕', 'search'],
   ['system', '同步与系统', '⚙', 'system'], ['settings', '设置', '⚙', 'settings'],

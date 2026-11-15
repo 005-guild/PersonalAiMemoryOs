@@ -1,5 +1,10 @@
 # IMPLEMENTATION_TASKS.md
 
+## Reading bookshelf — implementation checkpoint (2026-11-15)
+
+Source version **0.12.0 / schema 0008**. Approved scope: already organized Zhihu favorites, existing summaries retained, no topic synthesis or paid regeneration. Read-only API and modular bookshelf UI are implemented. Focused backend checks: 70 passed; web/UI checks: 46 passed; 53 JavaScript modules parsed. Synthetic browser checks cover topics, keyword excerpts, pagination/scroll return, full long documents, original snapshots, keyboard tabs/gallery, narrow screens, sanitization and zero reading writes/external requests. Full regression, real-size read-only timings, frozen acceptance and fixed-installation delivery remain pending at this checkpoint.
+
+
 ## OpenAI default — final delivery (2026-11-14)
 
 Status: **complete, 0.11.0 / schema 0008, delivered in the existing fixed installation**. Active and persisted default profile is `openai-responses` / `gpt-6.1-sol`; collection processing uses the same profile, retains style approval and `initial_complete`, is enabled/unpaused and has a 30-yuan monthly budget. The key was saved through the validated settings service only in the stopped installation's private configuration. The protected AI restart returned 202 and produced a new PID with the saved default active and no pending configuration change. No key appears in public files, reports or command arguments.

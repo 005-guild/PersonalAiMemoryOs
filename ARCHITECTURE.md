@@ -1,5 +1,9 @@
 # ARCHITECTURE.md
 
+## 最新增量（2026-11-15，应用 `0.12.0` / 数据库 `0008`）
+
+阅读书架沿用 FastAPI、Repository/Service/API 分层、原生模块化 JavaScript 与桌面宿主。`app/repositories/collection_views.py` 共享有效收藏与关键词条件；`reading.py` 仓储只投影列表所需字段，服务拼装当前 Knowledge 与 OrganizationItem 原文快照，API 只开放 GET。网页 `pages/reading*.js`、`reading-renderer.js`、`reading-gallery.js` 是独立入口，沿用现有 Markdown 解析器和净化器；不改变编辑器、同步、向量或生成链路。主题是现有分类的查询投影，不建立主题实体或第二份权威存储。
+
 ## 最新增量（2026-11-14，应用 `0.11.0` / 数据库 `0008`）
 
 知乎同步与收藏整理现在分别由独立 worker 管理。收藏保留原始导出，通过阶段缓存、样本确认、费用预留生成独立知识笔记和分类镜像，再进入既有本地检索。支持官方 DeepSeek Chat 与 OpenAI Responses；OpenAI 复用 HTTPX 和四协议适配层，生成前计算包含图片的输入 tokens，任务及调用冻结价格与模型指纹。明确的模型切换可沿用已确认样式，发布后的笔记不重新生成。

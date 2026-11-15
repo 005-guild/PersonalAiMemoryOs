@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.12.0 — 2026-11-15
+
+- Add a read-only bookshelf for published Zhihu favorites with topic overview, combined filters, keyword excerpts and stable pagination.
+- Preserve current manual edits, original snapshots, local images and partial-image warnings; support complete long-form reading and return position.
+- Share collection visibility and keyword rules; keep schema 0008, model settings, existing search and editor behavior unchanged.
+- Add synthetic source/frozen browser acceptance with zero reading writes or model calls.
+
 ## 0.11.0 — 2026-11-14
 
 - Support OpenAI Responses JSON and inline image inputs, with bounded input-token counting.
