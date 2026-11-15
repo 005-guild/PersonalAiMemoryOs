@@ -4,7 +4,9 @@
 
 Source and fixed installation are delivered **0.14.2 / 0009** after three targeted dependency security updates: 53 public package/version combinations rechecked through OSV, 1369 local tests passed, actual frozen EXE/bookshelf and bundled security checks passed, verified backup and in-place upgrade completed. The code commit passed remote Windows CI. Native production Save As save/cancel is now verified with a synthetic input in an isolated copy. Both 0.14.1 code and native maintenance commits passed actual remote Windows CI. Seven fixed real model quality cases passed at their stated scope; same-host full model/runtime/EXE relocation and Qdrant snapshot restore also passed. See [current delivery evidence](IMPLEMENTATION_TASKS.md).
 
-The remaining physical/event gates are Windows cold boot (user still forbids reboot), a second Windows environment (only this computer is available) and a real newly-favorited media arrival. Manual topic generation and draft adoption retain the user's workflow. Earlier dated sections below describe historical checkpoints, not outstanding implementation requests.
+Historical image acceptance is now complete at the user's revised scope: all1325 local image files decoded, seven real historical items/eleven images passed byte/order fidelity, repeat and independent-process deduplication, and offline interruption recovery. The maintenance-only addition keeps0.14.2/0009 and preserves formal data with zero model calls. See [historical image acceptance](docs/maintenance-cn.md#历史带图收藏补验).
+
+The remaining physical gates are Windows cold boot (user still forbids reboot) and a second Windows environment (only this computer is available). A newly-favorited remote event was not observed and is outside the revised historical-image acceptance scope. Manual topic generation and draft adoption retain the user's workflow. Earlier dated sections below describe historical checkpoints, not outstanding implementation requests.
 
 ## Follow-up implementation (2026-11-15)
 

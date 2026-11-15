@@ -55,8 +55,17 @@ def select_samples(identities,database):
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--runtime',type=Path,default=ROOT/'dist/PersonalAiMemoryOs-0.6.6')
-    parser.add_argument('--execute',action='store_true',help='Export three existing favorites into a new .cache target, then verify deduplication')
+    parser.add_argument('--suite',choices=('smoke','historical-images'),default='smoke',
+                        help='Historical mode previews all local images; --execute adds representative live exports and recovery')
+    parser.add_argument('--reopen-worker',type=Path,help=argparse.SUPPRESS)
+    parser.add_argument('--execute',action='store_true',help='Export selected existing favorites into fresh .cache targets and verify deduplication')
     args=parser.parse_args()
+    if args.reopen_worker:
+        from scripts.historical_media_verification import reopen_worker
+        return reopen_worker(args.reopen_worker)
+    if args.suite=='historical-images':
+        from scripts.historical_media_verification import run_historical
+        return run_historical(args.runtime,execute=args.execute)
     output=ROOT/'.cache/zhihu-media'/uuid4().hex;output.mkdir(parents=True)
     report={'status':'failed','model_calls':0,'newly_favorited_content':False,
             'scope':'Three existing accessible favorites, exported for the first time into a fresh isolated target.'}

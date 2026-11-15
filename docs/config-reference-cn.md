@@ -1,5 +1,9 @@
 # 配置完整参考（v0.12.0）
 
+## 历史图片验收工具（2026-11-15）
+
+没有新增正式配置项。`scripts/verify_zhihu_media.py --suite historical-images`读取现有同步目标，离线检查原文引用和所有图片帧；不使用登录资料、不占用桌面互斥锁。追加`--execute`才使用已有登录资料，在新的`.cache/zhihu-media/<随机目录>`隔离导出6–8篇历史样本并验证去重、独立进程重读账本和失败续传；此时需要先正常关闭桌面，完成后重新打开。原有`smoke`模式和默认命令行为保留，区别及结果见[维护手册](maintenance-cn.md#历史带图收藏补验)。工具不写正式同步目标、模型配置或预算账本；桌面版本保持0.14.2／0009。
+
 ## 0.14.2 依赖安全下限
 
 `pyproject.toml` 的 `tool.uv.constraint-dependencies`约束certifi≥2026.10.19、opentelemetry-api≥1.45.2、setuptools≥84.1.0；`build-constraint-dependencies`另约束隔离构建的setuptools。约束不会主动新增运行包，实际版本仍由uv.lock固定。没有新增正式应用设置或迁移。更新依赖后构建需同步隔离构建环境；`--skip-sync`仅适用于与同一锁文件已同步的环境。公告与验证范围见[维护手册](maintenance-cn.md#安全依赖更新与公告复查)。
