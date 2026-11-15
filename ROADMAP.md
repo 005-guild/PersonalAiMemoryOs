@@ -2,16 +2,16 @@
 
 ## Follow-up implementation (2026-11-15)
 
-Detailed summaries were delivered at 0.13.0 with ten cached adoptions and eleven classification updates. Source 0.14.0 / 0009 adds optional manual topic synthesis, grounded cross-article links, shared monthly accounting, candidate-only legacy search and bounded logs for new Ollama processes. Seven fixed real quality cases passed. Final packaging is in progress. Physical cold boot, whole-stack second-machine transfer and account-dependent new media acceptance retain their actual-environment prerequisites. Startup-helper output also drains into a bounded rotating log.
+Detailed summaries were delivered at 0.13.0 with ten cached adoptions and eleven classification updates. Source 0.14.0 / 0009 adds optional manual topic synthesis, grounded cross-article links, shared monthly accounting, candidate-only legacy search and bounded logs for new Ollama processes. Seven fixed real quality cases passed. Final reviewed desktop is installed and verified, preserving 578 sources and all 1903 originals. 1354 full-suite checks passed, with subsequent focused fixes verified. Physical cold boot, whole-stack second-machine transfer and account-dependent new media acceptance retain their actual-environment prerequisites. Startup-helper output also drains into a bounded rotating log.
 
 
 # MVP Roadmap
 
-## Current delivery and approved implementation (2026-11-15)
+## Earlier 0.12.0 delivery and approved scope (2026-11-15)
 
-Current source and fixed desktop are **0.12.0 / 0008**. Authenticated append-only Zhihu sync, 578 organized favorites, OpenAI defaults, local reranking and the reading bookshelf are delivered. The ten-article detailed-summary pilot is approved for those samples and new articles. Existing articles upgrade on demand. Next work integrates summary candidates, manual topic synthesis with stale-member detection, shared CNY 30 monthly accounting, classification review and bounded quality acceptance. Source work is committed locally. Remote publication and physical-machine acceptance retain their explicit authorization/environment prerequisites. The dated sections below describe earlier deliveries.
+At the start of this implementation source and fixed desktop were **0.12.0 / 0008**. Authenticated append-only Zhihu sync, 578 organized favorites, OpenAI defaults, local reranking and the reading bookshelf are delivered. The ten-article detailed-summary pilot is approved for those samples and new articles. Existing articles upgrade on demand. Next work integrates summary candidates, manual topic synthesis with stale-member detection, shared CNY 30 monthly accounting, classification review and bounded quality acceptance. Source work is committed locally. Remote publication and physical-machine acceptance retain their explicit authorization/environment prerequisites. The dated sections below describe earlier deliveries.
 
-## Current Summary and Follow-up Review (2026-10-19)
+## Historical Summary and Follow-up Review (2026-10-19)
 
 Current source and fixed desktop: **0.9.0 / 0006**; the historical name `PersonalAiMemoryOs-0.6.6` is retained. Answer-first UI, grouped retrieval, full short-note/section reading and pinned local TEI reranking passed browser/EXE acceptance and were delivered after verified backup. Existing AI/RAG/key settings and 571 Sources/two notes retained; reranking enabled. Clean distributions default off. The independent old Docker API was not redeployed. See the [instance matrix](docs/project-audit-cn.md#current).
 
